@@ -55,7 +55,7 @@ import { perfLogger } from '../core/util/performance-logger.js';
 // Enable performance logging
 // perfLogger.enable(5000);
 
-const PAGE_TITLE = "KasmVNC";
+const PAGE_TITLE = "察元AI";
 
 var currentEventCount = -1;
 var idleCounter = 0;
