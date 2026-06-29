@@ -610,6 +610,9 @@ const UI = {
         UI.addClickHandle('chatop_upload_button', UI.toggleFilesPanel);
         UI.addClickHandle('chatop_download_button', UI.toggleFilesPanel);
 
+        // chatop: 应用管理器入口按钮
+        UI.addClickHandle('chatop_apps_button', () => ChatopApps.open());
+
         // Apply permission gating: hide a direction's wrapping button div when disabled.
         const cfg = window.CHATOP_FILES || { upload: true, download: true };
         if (!cfg.upload) {
@@ -3698,5 +3701,80 @@ if (l10n.language === "en" || l10n.dictionary !== undefined) {
         .catch(err => Log.Error("Failed to load translations: " + err))
         .then(UI.prime);
 }
+
+// chatop: 应用管理器前端逻辑
+const ChatopApps = {
+  catalog: [], status: {},
+  async open() {
+    document.getElementById('chatop_apps_modal').style.display = 'flex';
+    document.getElementById('chatop_apps_detail').style.display = 'none';
+    await this.refresh();
+  },
+  close() { document.getElementById('chatop_apps_modal').style.display = 'none'; },
+  async refresh() {
+    try {
+      const [c, s] = await Promise.all([
+        fetch('/apps/catalog').then(r=>r.json()),
+        fetch('/apps/status').then(r=>r.json())
+      ]);
+      this.catalog = c.apps || []; this.status = s || {};
+    } catch(e) { this.catalog = []; this.status = {}; }
+    this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
+  },
+  renderGrid(filter='') {
+    const g = document.getElementById('chatop_apps_grid'); g.innerHTML='';
+    this.catalog.filter(a => (a.name+a.description+a.id).toLowerCase().includes(filter))
+      .forEach(a => {
+        const installed = !!this.status[a.id];
+        const card = document.createElement('div'); card.className='chatop_app_card';
+        card.innerHTML = `<img src="app-icons/${a.icon}" onerror="this.style.visibility='hidden'">
+          <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}`;
+        card.querySelector('.chatop_app_name').textContent = a.name;
+        card.onclick = () => this.detail(a);
+        g.appendChild(card);
+      });
+  },
+  detail(a) {
+    const installed = !!this.status[a.id];
+    const d = document.getElementById('chatop_apps_detail');
+    d.style.display='block';
+    d.innerHTML = `<button id="chatop_apps_back">← 返回</button>
+      <img src="app-icons/${a.icon}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
+      <h3></h3><p class="chatop_app_desc"></p><p class="chatop_app_notes"></p>
+      <button id="chatop_app_action" class="${installed?'remove':'install'}">${installed?'卸载':'安装'}</button>
+      <pre id="chatop_app_log"></pre>`;
+    d.querySelector('h3').textContent = a.name;
+    d.querySelector('.chatop_app_desc').textContent = a.description || '';
+    d.querySelector('.chatop_app_notes').textContent = a.notes || '';
+    document.getElementById('chatop_apps_back').onclick=()=>{d.style.display='none';};
+    document.getElementById('chatop_app_action').onclick=()=>this.act(a, installed?'remove':'install');
+  },
+  async act(a, action) {
+    const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';
+    try {
+      await fetch('/apps/'+action, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id:a.id})});
+    } catch(e) { log.textContent='请求失败：'+e; return; }
+    const poll = setInterval(async () => {
+      try {
+        const r = await fetch('/apps/logs?id='+encodeURIComponent(a.id)).then(r=>r.json());
+        log.textContent = r.log || '';
+        if (r.state==='success' || r.state==='failed') {
+          clearInterval(poll); await this.refresh(); this.detail(a);
+        }
+      } catch(e) {}
+    }, 1500);
+  }
+};
+// 入口按钮 + 搜索 + 关闭 + 点遮罩关闭
+(function(){
+  const bindOnce = () => {
+    const c=document.getElementById('chatop_apps_close'); if(c) c.onclick=()=>ChatopApps.close();
+    const s=document.getElementById('chatop_apps_search'); if(s) s.oninput=e=>ChatopApps.renderGrid(e.target.value.toLowerCase());
+    const m=document.getElementById('chatop_apps_modal');
+    if(m) m.addEventListener('mousedown', e=>{ if(e.target===m) ChatopApps.close(); });
+  };
+  if (document.readyState!=='loading') bindOnce(); else document.addEventListener('DOMContentLoaded', bindOnce);
+})();
 
 export default UI;

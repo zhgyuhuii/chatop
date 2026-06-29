@@ -128,6 +128,12 @@
                     </div>
                 </div>
 
+                <!-- 应用管理器入口 -->
+                <div class="noVNC_button_div noVNC_hide_on_disconnect">
+                    <input type="image" alt="应用" src="app/images/icons/kasm_logo.svg"
+                        id="chatop_apps_button" class="noVNC_button" title="应用管理">
+                </div>
+
                 <!-- Drag/Pan the viewport -->
                 <div class="noVNC_button_div noVNC_hidden noVNC_hide_on_disconnect" >
                     <input type="image" alt="Drag" src="app/images/drag.svg"
@@ -642,6 +648,19 @@
         <div id="noVNC_control_bar_hint"></div>
 
     </div> <!-- End of noVNC_control_bar -->
+
+    <!-- chatop: 应用管理器模态框 -->
+    <div id="chatop_apps_modal" class="chatop_apps_modal" style="display:none">
+      <div class="chatop_apps_dialog">
+        <div class="chatop_apps_head">
+          <span>应用管理</span>
+          <input id="chatop_apps_search" placeholder="搜索应用…">
+          <button id="chatop_apps_close" title="关闭">×</button>
+        </div>
+        <div id="chatop_apps_grid" class="chatop_apps_grid"></div>
+        <div id="chatop_apps_detail" class="chatop_apps_detail" style="display:none"></div>
+      </div>
+    </div>
 
     <!-- Status Dialog -->
     <div id="noVNC_status"></div>

@@ -1548,3 +1548,28 @@ body.chatop-theme-light .noVNC_panel input[type=password] {
   color: #1c1f23;
   border: 1px solid rgb(0 0 0 / 0.2);
 }
+
+/* chatop: 应用管理器模态框 */
+.chatop_apps_modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;}
+.chatop_apps_dialog{width:min(900px,92vw);height:min(640px,88vh);background:#1b1f27;color:#eee;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.chatop_apps_head{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.12);}
+.chatop_apps_head span{font-weight:600;white-space:nowrap;}
+.chatop_apps_head input{flex:1;padding:6px 10px;border-radius:6px;border:1px solid #444;background:#11141a;color:#eee;}
+.chatop_apps_head button{background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;}
+.chatop_apps_grid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;padding:16px;}
+.chatop_app_card{background:#232834;border:1px solid #333;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:transform .15s;position:relative;}
+.chatop_app_card:hover{transform:translateY(-4px);}
+.chatop_app_card img{width:48px;height:48px;object-fit:contain;}
+.chatop_app_name{margin-top:8px;font-size:13px;color:#eee;}
+.chatop_app_badge{position:absolute;top:6px;right:6px;background:#2e7d32;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;}
+.chatop_apps_detail{padding:20px;overflow:auto;}
+.chatop_app_dicon{width:72px;height:72px;object-fit:contain;}
+.chatop_app_desc{color:#ccc;}
+.chatop_app_notes{color:#f0ad4e;font-size:12px;}
+#chatop_apps_back{background:none;border:none;color:#8ab4f8;cursor:pointer;margin-bottom:10px;}
+#chatop_app_action{margin-top:12px;padding:8px 18px;border:none;border-radius:6px;color:#fff;cursor:pointer;}
+#chatop_app_action.install{background:#1976d2;} #chatop_app_action.remove{background:#c62828;}
+#chatop_app_log{margin-top:14px;background:#0d0f14;padding:10px;border-radius:6px;max-height:220px;overflow:auto;font-size:12px;white-space:pre-wrap;color:#ccc;}
+body.chatop-theme-light .chatop_apps_dialog{background:#fff;color:#1c1f23;}
+body.chatop-theme-light .chatop_app_card{background:#f3f4f6;border-color:#ddd;}
+body.chatop-theme-light .chatop_app_name{color:#1c1f23;}
