@@ -25,8 +25,24 @@ RUN set -eux; \
     chmod +x /usr/local/bin/filebrowser; \
     /usr/local/bin/filebrowser version
 COPY filebrowser/start-filebrowser.sh /usr/local/bin/start-filebrowser.sh
+
+# === Caddy 反向代理（单端口收口：KasmVNC + filebrowser → 一个对外端口/证书） ===
+# 官方 GitHub release 静态二进制（caddyserver.com/api/download 在该环境会挂起，
+# 改用 release tarball；与 filebrowser 同走 GitHub，实测秒级可达）。
+ARG CADDY_VERSION=2.11.4
+RUN set -eux; \
+    curl -fsSL -o /tmp/caddy.tar.gz "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_linux_amd64.tar.gz"; \
+    tar -xzf /tmp/caddy.tar.gz -C /usr/local/bin caddy; \
+    rm -f /tmp/caddy.tar.gz; \
+    chmod +x /usr/local/bin/caddy; \
+    /usr/local/bin/caddy version
+COPY caddy/Caddyfile /etc/caddy/Caddyfile
+COPY caddy/start-caddy.sh /usr/local/bin/start-caddy.sh
+# Caddy 以 uid 1000 运行：data/config 写到 /tmp 下可写目录
+ENV XDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy
+
 RUN mkdir -p /dockerstartup && \
-    chmod +x /usr/local/bin/start-filebrowser.sh && \
-    printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n' > /dockerstartup/custom_startup.sh && \
+    chmod +x /usr/local/bin/start-filebrowser.sh /usr/local/bin/start-caddy.sh && \
+    printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 USER 1000

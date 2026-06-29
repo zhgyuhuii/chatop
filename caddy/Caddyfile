@@ -1,0 +1,17 @@
+{
+    auto_https off
+    admin off
+}
+:7443 {
+    tls /tmp/caddy/tls.crt /tmp/caddy/tls.key
+    handle /files* {
+        reverse_proxy 127.0.0.1:8585
+    }
+    handle {
+        reverse_proxy https://127.0.0.1:6901 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+}

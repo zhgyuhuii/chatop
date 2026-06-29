@@ -1741,14 +1741,14 @@ const UI = {
         UI.closeAllPanels();
         UI.openControlbar();
 
-        // Lazy-load the filebrowser sidecar on first open. It lives on its own
-        // origin (separate port 8585, HTTPS, own login = same VNC password), so
-        // it is NOT same-origin with noVNC and may be COEP-blocked in the iframe;
-        // the "open in new tab" link is the reliable fallback.
+        // Lazy-load the filebrowser sidecar on first open. It is now served
+        // SAME-ORIGIN under /files/ (Caddy reverse-proxies it on the single
+        // external port), so it is no longer COEP-blocked and renders inline;
+        // the "open in new tab" link remains as a convenience fallback.
         const iframe = document.getElementById('chatop_files_iframe');
         const newtab = document.getElementById('chatop_files_newtab');
         if (iframe && !iframe.getAttribute('src')) {
-            const url = 'https://' + location.hostname + ':8585/';
+            const url = '/files/';
             iframe.setAttribute('src', url);
             if (newtab) newtab.setAttribute('href', url);
         }

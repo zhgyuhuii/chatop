@@ -9,8 +9,8 @@ services:
     environment:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
     ports:
-      - "${PORT:-6901}:6901"
-      # filebrowser 旁挂（HTTPS，独立端口，文件上传/下载）
-      - "${FB_PORT:-8585}:8585"
+      # 单一对外端口 → 容器内 Caddy(7443)；Caddy 再反代 KasmVNC(6901) 与 filebrowser(8585)。
+      # KasmVNC 的 6901 与 filebrowser 的 8585 仅容器内可达，不再对外发布。
+      - "${PORT:-6901}:7443"
     shm_size: "1gb"
     restart: unless-stopped
