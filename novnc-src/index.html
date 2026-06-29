@@ -18,6 +18,11 @@
 
     <meta charset="utf-8">
 
+    <!-- chatop: filebrowser direction permission gating (later build/env may override) -->
+    <script>
+        window.CHATOP_FILES = window.CHATOP_FILES || { upload: true, download: true };
+    </script>
+
     <!-- Icons (see app/images/icons/Makefile for what the sizes are for) -->
     <link rel="icon" sizes="16x16" type="image/png" href="app/images/icons/368_kasm_logo_only_16x16.png">
     <link rel="icon" sizes="24x24" type="image/png" href="app/images/icons/368_kasm_logo_only_24x24.png">
@@ -180,6 +185,31 @@
                                 value="Clear" class="noVNC_submit">
                         </div>
                     </div>
+                </div>
+
+                <!-- chatop: Upload files -->
+                <div class="noVNC_button_div noVNC_hide_on_disconnect" >
+                    <input type="image" alt="上传文件" src="app/images/clipboard.svg"
+                        id="chatop_upload_button" class="noVNC_button"
+                        title="上传文件">
+                    上传
+                    <div class="noVNC_vcenter">
+                        <div id="chatop_files_panel" class="noVNC_panel">
+                            <div class="noVNC_heading">
+                                <img alt="" src="app/images/clipboard.svg"> 文件
+                                <a id="chatop_files_newtab" target="_blank" rel="noopener">在新标签打开</a>
+                            </div>
+                            <iframe id="chatop_files_iframe" title="文件管理"></iframe>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- chatop: Download files -->
+                <div class="noVNC_button_div noVNC_hide_on_disconnect" >
+                    <input type="image" alt="下载文件" src="app/images/clipboard.svg"
+                        id="chatop_download_button" class="noVNC_button"
+                        title="下载文件">
+                    下载
                 </div>
 
                 <!-- Toggle fullscreen -->

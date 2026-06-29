@@ -173,6 +173,7 @@ const UI = {
         UI.addMachineHandlers();
         UI.addConnectionControlHandlers();
         UI.addClipboardHandlers();
+        UI.addFilesHandlers();
         UI.addSettingsHandlers();
         UI.addDisplaysHandler();
         // UI.addMultiMonitorAddHandler();
@@ -597,6 +598,24 @@ const UI = {
             .addEventListener('change', UI.clipboardSend);
         document.getElementById("noVNC_clipboard_clear_button")
             .addEventListener('click', UI.clipboardClear);
+    },
+
+    addFilesHandlers() {
+        // chatop: both upload and download buttons open the same filebrowser panel;
+        // the direction distinction is enforced via window.CHATOP_FILES gating below.
+        UI.addClickHandle('chatop_upload_button', UI.toggleFilesPanel);
+        UI.addClickHandle('chatop_download_button', UI.toggleFilesPanel);
+
+        // Apply permission gating: hide a direction's wrapping button div when disabled.
+        const cfg = window.CHATOP_FILES || { upload: true, download: true };
+        if (!cfg.upload) {
+            const up = document.getElementById('chatop_upload_button');
+            if (up && up.parentNode) up.parentNode.classList.add('noVNC_hidden');
+        }
+        if (!cfg.download) {
+            const down = document.getElementById('chatop_download_button');
+            if (down && down.parentNode) down.parentNode.classList.add('noVNC_hidden');
+        }
     },
 
     // Add a call to save settings when the element changes,
@@ -1523,6 +1542,7 @@ const UI = {
         UI.closeSettingsPanel();
         UI.closePowerPanel();
         UI.closeClipboardPanel();
+        UI.closeFilesPanel();
         UI.closeExtraKeys();
     },
 
@@ -1672,6 +1692,58 @@ const UI = {
             UI.closeClipboardPanel();
         } else {
             UI.openClipboardPanel();
+        }
+    },
+
+/* ------^-------
+ *   /CLIPBOARD
+ * ==============
+ * FILES (chatop)
+ * ------v------*/
+
+    openFilesPanel() {
+        UI.closeAllPanels();
+        UI.openControlbar();
+
+        // Lazy-load the filebrowser sidecar on first open. It lives on its own
+        // origin (separate port 8585, HTTPS, own login = same VNC password), so
+        // it is NOT same-origin with noVNC and may be COEP-blocked in the iframe;
+        // the "open in new tab" link is the reliable fallback.
+        const iframe = document.getElementById('chatop_files_iframe');
+        const newtab = document.getElementById('chatop_files_newtab');
+        if (iframe && !iframe.getAttribute('src')) {
+            const url = 'https://' + location.hostname + ':8585/';
+            iframe.setAttribute('src', url);
+            if (newtab) newtab.setAttribute('href', url);
+        }
+
+        document.getElementById('chatop_files_panel')
+            .classList.add("noVNC_open");
+        document.getElementById('chatop_upload_button')
+            .classList.add("noVNC_selected");
+        document.getElementById('chatop_download_button')
+            .classList.add("noVNC_selected");
+    },
+
+    closeFilesPanel() {
+        document.getElementById('chatop_files_panel')
+            .classList.remove("noVNC_open");
+        document.getElementById('chatop_upload_button')
+            .classList.remove("noVNC_selected");
+        document.getElementById('chatop_download_button')
+            .classList.remove("noVNC_selected");
+    },
+
+    toggleFilesPanel(e) {
+        if (!UI.isControlPanelItemClick(e)) {
+            return false;
+        }
+
+        if (document.getElementById('chatop_files_panel')
+            .classList.contains("noVNC_open")) {
+            UI.closeFilesPanel();
+        } else {
+            UI.openFilesPanel();
         }
     },
 
