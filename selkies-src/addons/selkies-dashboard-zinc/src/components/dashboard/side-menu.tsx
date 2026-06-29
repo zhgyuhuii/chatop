@@ -262,7 +262,7 @@ export function MenuComponent({ isGamepadEnabled, onGamepadToggle }) {
 		const renderMenuFooter = () => (
 			<div className="border-t p-2">
 				<div className="flex items-center justify-between">
-					<a href="http://192.168.1.2/" target="_blank" rel="noopener noreferrer">
+					<a href="https://aidooo.com/" target="_blank" rel="noopener noreferrer">
 						<img
 							src="/logo.png"
 							alt="footer Logo"

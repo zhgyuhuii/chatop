@@ -9,12 +9,14 @@ import yaml from "js-yaml";
 
 const REPO_BASE_URL = 'https://raw.githubusercontent.com/linuxserver/proot-apps/master/metadata/';
 const METADATA_URL = `${REPO_BASE_URL}metadata.yml`;
-const IMAGE_BASE_URL = `${REPO_BASE_URL}img/`;
+const IMAGE_BASE_URL = 'https://cdn.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/img/';
+// Manage Apps 列表源：国内可达、带 CORS 的有序回退（实测 2026-06-29，jsDelivr 优先；ghproxy 已废）
 const METADATA_URLS = [
+    'https://cdn.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml',
+    'https://fastly.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml',
+    'https://gcore.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml',
+    'https://ghfast.top/https://raw.githubusercontent.com/linuxserver/proot-apps/master/metadata/metadata.yml',
     METADATA_URL,
-    'https://ghproxy.com/' + METADATA_URL,
-    'https://mirror.ghproxy.com/' + METADATA_URL,
-    'https://raw.staticdn.net/linuxserver/proot-apps/master/metadata/metadata.yml',
 ];
 const INSTALLED_APPS_STORAGE_KEY = 'prootInstalledApps';
 

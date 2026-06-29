@@ -712,7 +712,7 @@ export function TopMenu({
 
                 <div className="flex items-center justify-between w-full px-2 py-1">
                   <a
-                    href="http://192.168.1.2/"
+                    href="https://aidooo.com/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 hover:text-primary transition-colors"

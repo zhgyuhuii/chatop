@@ -71,14 +71,42 @@ const DEFAULT_ENABLE_BINARY_CLIPBOARD = false;
 const REPO_BASE_URL =
   "https://raw.githubusercontent.com/linuxserver/proot-apps/master/metadata/";
 const METADATA_URL = `${REPO_BASE_URL}metadata.yml`;
-const IMAGE_BASE_URL = `${REPO_BASE_URL}img/`;
-// 备用镜像（raw.githubusercontent.com 在国内可能无法访问）
+// 应用图标也走 jsDelivr，国内可达
+const IMAGE_BASE_URL =
+  "https://cdn.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/img/";
+// Manage Apps 列表源：国内可达、带 CORS 的有序回退（实测 2026-06-29）。
+// jsDelivr CDN 优先；已废弃的 ghproxy.com / mirror.ghproxy.com 已移除。
 const METADATA_URLS = [
+  "https://cdn.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml",
+  "https://fastly.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml",
+  "https://gcore.jsdelivr.net/gh/linuxserver/proot-apps@master/metadata/metadata.yml",
+  "https://ghfast.top/https://raw.githubusercontent.com/linuxserver/proot-apps/master/metadata/metadata.yml",
   METADATA_URL,
-  "https://ghproxy.com/" + METADATA_URL,
-  "https://mirror.ghproxy.com/" + METADATA_URL,
-  "https://raw.staticdn.net/linuxserver/proot-apps/master/metadata/metadata.yml",
 ];
+
+// 工具条语言切换器支持的语言（母语名显示）；优先列用户常用语言。
+// 翻译数据已在 translations.js 内置，无需新增。
+const SUPPORTED_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "zh", name: "中文" },
+  { code: "ja", name: "日本語" },
+  { code: "ko", name: "한국어" },
+  { code: "ru", name: "Русский" },
+  { code: "de", name: "Deutsch" },
+  { code: "it", name: "Italiano" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "pt", name: "Português" },
+  { code: "nl", name: "Nederlands" },
+  { code: "tr", name: "Türkçe" },
+  { code: "ar", name: "العربية" },
+  { code: "hi", name: "हिन्दी" },
+  { code: "vi", name: "Tiếng Việt" },
+  { code: "th", name: "ไทย" },
+  { code: "fil", name: "Filipino" },
+  { code: "da", name: "Dansk" },
+];
+const LANG_STORAGE_KEY = "selkies_lang";
 
 const MAX_NOTIFICATIONS = 3;
 const NOTIFICATION_TIMEOUT_SUCCESS = 5000;
@@ -718,14 +746,34 @@ function Sidebar() {
   };
 
   useEffect(() => {
-    const browserLang = navigator.language || navigator.userLanguage || "en";
-    const primaryLang = browserLang.split("-")[0].toLowerCase();
-    console.log(
-      `Dashboard: Detected browser language: ${browserLang}, using primary: ${primaryLang}`
-    );
-    setLangCode(primaryLang);
-    setTranslator(getTranslator(primaryLang));
+    const supported = SUPPORTED_LANGUAGES.map((l) => l.code);
+    let initial = null;
+    try {
+      const saved = localStorage.getItem(LANG_STORAGE_KEY);
+      if (saved && supported.includes(saved)) initial = saved; // 用户手动选过的优先
+    } catch (e) {
+      /* localStorage 不可用，忽略 */
+    }
+    if (!initial) {
+      const browserLang = navigator.language || navigator.userLanguage || "en";
+      const primaryLang = browserLang.split("-")[0].toLowerCase();
+      initial = supported.includes(primaryLang) ? primaryLang : "en";
+    }
+    setLangCode(initial);
+    setTranslator(getTranslator(initial));
   }, []);
+
+  // 手动切换语言：更新状态并记忆到 localStorage（123 处 t() 会随 translator 变化实时刷新）
+  const handleLanguageChange = (e) => {
+    const newLang = e.target.value;
+    setLangCode(newLang);
+    setTranslator(getTranslator(newLang));
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, newLang);
+    } catch (err) {
+      /* localStorage 不可用，忽略 */
+    }
+  };
 
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
@@ -2167,7 +2215,7 @@ function Sidebar() {
           <div className="sidebar-header">
             {uiShowLogo && (
               <a
-                href="http://192.168.1.2/"
+                href="https://aidooo.com/"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -2175,13 +2223,26 @@ function Sidebar() {
               </a>
             )}
             <a
-              href="http://192.168.1.2/"
+              href="https://aidooo.com/"
               target="_blank"
               rel="noopener noreferrer"
             >
               <h2>{uiTitle}</h2>
             </a>
             <div className="header-controls">
+            <select
+              className="language-select"
+              value={langCode}
+              onChange={handleLanguageChange}
+              title={t("languageSelectTitle", "Language")}
+              aria-label={t("languageSelectTitle", "Language")}
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
             <div
               className={`theme-toggle ${theme}`}
               onClick={toggleTheme}
