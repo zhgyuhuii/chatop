@@ -10,5 +10,7 @@ services:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
     ports:
       - "${PORT:-6901}:6901"
+      # filebrowser 旁挂（HTTPS，独立端口，文件上传/下载）
+      - "${FB_PORT:-8585}:8585"
     shm_size: "1gb"
     restart: unless-stopped
