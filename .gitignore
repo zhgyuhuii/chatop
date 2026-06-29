@@ -7,3 +7,6 @@ novnc-src/dist/
 # 本地临时
 *.tmp
 .DS_Store
+# Python 缓存
+__pycache__/
+*.pyc
