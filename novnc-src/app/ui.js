@@ -175,6 +175,7 @@ const UI = {
         UI.addClipboardHandlers();
         UI.addFilesHandlers();
         UI.addSettingsHandlers();
+        UI.setupThemeSelector();
         UI.addDisplaysHandler();
         // UI.addMultiMonitorAddHandler();
         document.getElementById("noVNC_status").addEventListener('click', UI.hideStatus);
@@ -631,6 +632,41 @@ const UI = {
     addSettingChangeHandlerByName(name) {
         this.addSettingChangeHandler(name, UI.updatePropertyName(name));
     },
+
+    // chatop-ai: lightweight light/dark theme switcher for the noVNC chrome.
+    // Default is dark (no body class); 'light' is an opt-in body-class override.
+    setupThemeSelector() {
+        const select = document.getElementById('noVNC_setting_theme');
+        if (!select) {
+            return;
+        }
+
+        const applyTheme = (theme) => {
+            if (theme === 'light') {
+                document.body.classList.add('chatop-theme-light');
+            } else {
+                document.body.classList.remove('chatop-theme-light');
+            }
+        };
+
+        let stored = 'dark';
+        try {
+            stored = localStorage.getItem('chatop_theme') || 'dark';
+        } catch (e) {
+            stored = 'dark';
+        }
+
+        applyTheme(stored);
+        select.value = stored;
+
+        select.addEventListener('change', () => {
+            const val = select.value;
+            try {
+                localStorage.setItem('chatop_theme', val);
+            } catch (e) { /* ignore storage failures */ }
+            applyTheme(val);
+        });
+    }
 
     addSettingsHandlers() {
         UI.addClickHandle('noVNC_settings_button', UI.toggleSettingsPanel);

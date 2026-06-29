@@ -1457,3 +1457,51 @@ a:visited {
   border: 1px solid #ececec;
   border-radius: 8px;
 }
+
+/* ============================================================
+ * chatop-ai: lightweight light theme override (opt-in)
+ * Activated by body.chatop-theme-light (set from the Settings
+ * "主题 / Theme" selector). Dark mode is the unchanged default
+ * (no body class). Scope intentionally covers only the main
+ * visible noVNC chrome: control bar, open panels, settings list,
+ * headings and general text — NOT the remote desktop pixels.
+ * ============================================================ */
+
+/* Control bar */
+body.chatop-theme-light #noVNC_control_bar {
+  background-color: rgb(245 246 248 / 0.92);
+  border-color: rgb(0 0 0 / 0.25);
+}
+
+/* Panels (settings, clipboard, files, etc.) */
+body.chatop-theme-light .noVNC_panel {
+  background: rgb(248 249 251 / 0.97);
+  color: #1c1f23;
+  border: 1px solid rgb(0 0 0 / 0.12);
+}
+
+/* General panel text / labels */
+body.chatop-theme-light .noVNC_panel label {
+  color: #1c1f23;
+}
+
+/* Section headings */
+body.chatop-theme-light .noVNC_panel .noVNC_heading {
+  background-color: #e3e6ea;
+  color: #1c1f23;
+}
+
+/* Divider lines */
+body.chatop-theme-light .noVNC_panel hr {
+  border-top: 1px solid rgb(0 0 0 / 0.15);
+}
+
+/* Form controls inside panels */
+body.chatop-theme-light .noVNC_panel select,
+body.chatop-theme-light .noVNC_panel input[type=text],
+body.chatop-theme-light .noVNC_panel input[type=number],
+body.chatop-theme-light .noVNC_panel input[type=password] {
+  background-color: #ffffff;
+  color: #1c1f23;
+  border: 1px solid rgb(0 0 0 / 0.2);
+}
