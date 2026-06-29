@@ -144,12 +144,20 @@ ENV LOGIN_USER=admin
 # + "kill (137) No such process"，高频循环拖累 VNC bridge->relay 导致连不上。wait 让脚本常驻即解决。
 RUN printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
+# 应用管理器二期：Python 3.11（Sovyx 需 >=3.11；deadsnakes PPA）
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && apt-get update && \
+    apt-get install -y --no-install-recommends python3.11 python3.11-venv python3.11-distutils && \
+    python3.11 --version && rm -rf /var/lib/apt/lists/*
 # === 应用管理器：后端 + catalog + 图标 + 启动脚本 ===
 RUN mkdir -p /usr/local/lib/chatop /etc/chatop
 COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
 COPY app-manager/apps-catalog.json /etc/chatop/apps-catalog.json
 COPY app-manager/icons/ /usr/share/kasmvnc/www/app-icons/
 COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
+# 应用管理器二期：GUI（AppImage）安装/卸载脚本
+COPY app-manager/gui-install.sh app-manager/gui-uninstall.sh /usr/local/lib/chatop/
+RUN chmod +x /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-uninstall.sh
 RUN chmod +x /usr/local/bin/start-app-manager.sh
 # 末尾再次 COPY Caddyfile（覆盖前面层的旧版），使 Caddyfile 改动只重建末尾层、不触发 WPS 重下
 COPY caddy/Caddyfile /etc/caddy/Caddyfile
