@@ -1573,3 +1573,8 @@ body.chatop-theme-light .noVNC_panel input[type=password] {
 body.chatop-theme-light .chatop_apps_dialog{background:#fff;color:#1c1f23;}
 body.chatop-theme-light .chatop_app_card{background:#f3f4f6;border-color:#ddd;}
 body.chatop-theme-light .chatop_app_name{color:#1c1f23;}
+.chatop_apps_tabs{display:flex;gap:6px;padding:8px 16px 0;flex-wrap:wrap;}
+.chatop_apps_tab{background:#232834;color:#bbb;border:1px solid #333;border-radius:14px;padding:4px 14px;font-size:12px;cursor:pointer;}
+.chatop_apps_tab.active{background:#1976d2;color:#fff;border-color:#1976d2;}
+body.chatop-theme-light .chatop_apps_tab{background:#eef0f3;color:#555;border-color:#ddd;}
+body.chatop-theme-light .chatop_apps_tab.active{background:#1976d2;color:#fff;}

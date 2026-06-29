@@ -3704,7 +3704,7 @@ if (l10n.language === "en" || l10n.dictionary !== undefined) {
 
 // chatop: 应用管理器前端逻辑
 const ChatopApps = {
-  catalog: [], status: {},
+  catalog: [], status: {}, category: '',
   async open() {
     document.getElementById('chatop_apps_modal').style.display = 'flex';
     document.getElementById('chatop_apps_detail').style.display = 'none';
@@ -3719,11 +3719,25 @@ const ChatopApps = {
       ]);
       this.catalog = c.apps || []; this.status = s || {};
     } catch(e) { this.catalog = []; this.status = {}; }
+    this.renderTabs();
     this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
+  },
+  renderTabs() {
+    const tabs = [['','全部'],['ai-cli','AI CLI'],['ai-runtime','智能体'],['gui','GUI'],['vscode-ext','插件']];
+    const box = document.getElementById('chatop_apps_tabs'); box.innerHTML='';
+    tabs.forEach(([cat,label]) => {
+      const b = document.createElement('button');
+      b.className = 'chatop_apps_tab' + (this.category===cat ? ' active' : '');
+      b.textContent = label;
+      b.onclick = () => { this.category = cat; this.renderTabs();
+        this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase()); };
+      box.appendChild(b);
+    });
   },
   renderGrid(filter='') {
     const g = document.getElementById('chatop_apps_grid'); g.innerHTML='';
-    this.catalog.filter(a => (a.name+a.description+a.id).toLowerCase().includes(filter))
+    this.catalog.filter(a => (!this.category || a.category===this.category) &&
+                             (a.name+a.description+a.id).toLowerCase().includes(filter))
       .forEach(a => {
         const installed = !!this.status[a.id];
         const card = document.createElement('div'); card.className='chatop_app_card';
