@@ -1,0 +1,18 @@
+#!/bin/bash
+# 1. 将 KDE 面板左下角显示的用户名设置为 CUSTOM_USER
+# 2. 将 root 和 abc 的 su 密码设为 PASSWORD，使 su 命令可用
+# 加载容器环境变量（s6）
+if [ -d /var/run/s6/container_environment ]; then
+  for f in /var/run/s6/container_environment/*; do
+    [ -f "$f" ] && export "$(basename "$f")=$(cat "$f" 2>/dev/null)"
+  done
+fi
+
+if [ -n "${CUSTOM_USER}" ]; then
+  echo "**** Setting display name to ${CUSTOM_USER} ****"
+  chfn -f "${CUSTOM_USER}" abc 2>/dev/null || true
+fi
+
+# 设置 root 和 abc 的密码，使 su/su - 可用（优先用 PASSWORD，否则用 abc）
+PASS="${PASSWORD:-abc}"
+printf 'root:%s\nabc:%s\n' "$PASS" "$PASS" | chpasswd 2>/dev/null && echo "**** root/abc password set ****" || true

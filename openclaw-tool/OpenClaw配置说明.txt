@@ -1,0 +1,65 @@
+OpenClaw 配置工具（openclaw-tool）
+====================================
+
+本工具目录：/openclaw-tool
+- openclaw_config_gui.py  可视化配置程序
+- start_ollama.sh         后台启动 Ollama 服务
+- start_ports_1080_4901_5901.sh  开机/手动打开端口 1080、4901、5901（已配置登录自启）
+- OpenClaw配置.desktop    配置程序快捷方式（可在此目录双击）
+- 启动Ollama.desktop      启动 Ollama 快捷方式（可在此目录双击）
+
+一、启动 OpenClaw 配置（可视化）
+-------------------------------
+1. 双击桌面上的「启动OpenClaw配置」图标，或终端执行：
+   python3 /openclaw-tool/openclaw_config_gui.py
+   （建议在终端运行前：cd /openclaw-tool）
+
+2. 若首次运行提示“未找到 tkinter”，请先安装：
+   sudo apt-get install python3-tk
+
+3. 分步配置：
+   - 步骤1 网关：端口、绑定地址、认证方式、Tailscale
+   - 步骤2 模型与工作区：主模型（如 ollama/模型名）、工作区目录
+   - 步骤3 通道：Telegram / Discord / WhatsApp 的开关、Token、DM 策略
+   - 步骤4 会话与工具：DM 范围、工具策略、是否启用网页搜索
+
+4. 点击「保存配置」将写入 ~/.openclaw/openclaw.json（会自动备份）。
+5. 点击「保存并重启 OpenClaw」会先保存，再尝试重启网关。
+6. 「打开控制台 (Dashboard)」在浏览器打开 http://127.0.0.1:18789（端口以网关配置为准）。
+   - 若出现「unauthorized: gateway token missing」：请在控制台页面中打开「Control UI 设置」（或设置/齿轮图标），
+     将「网关 Token」一栏填入与 openclaw.json 中 gateway.auth.token 一致的值（本机当前为「ollama」），保存后刷新即可。
+
+二、启动 Ollama
+--------------
+- 在配置界面（模型与认证 → 选择 Ollama）点击「在终端打开 Ollama」在终端运行 ollama serve；
+- 或直接执行：/openclaw-tool/start_ollama.sh
+  会在后台启动 ollama serve；若已在运行会提示「Ollama 已在运行」。
+
+三、端口 1080 / 4901 / 5901（开机自启）
+--------------------------------------
+- 登录桌面后会自动运行 /openclaw-tool/start_ports_1080_4901_5901.sh。
+- 4901：系统 kasm_audio_out 服务；1080：脚本在未监听时启动占位 TCP；5901：VNC（见下）。
+- 自启项：~/.config/autostart/openclaw-ports-1080-4901-5901.desktop
+- 手动执行：/openclaw-tool/start_ports_1080_4901_5901.sh
+- 日志：/tmp/ports-1080-4901-5901.log
+
+三（补充）、OpenClaw 网关（机器人服务）开机自启
+--------------------------------------
+- 若希望登录后自动启动 OpenClaw 网关（即机器人后端），已提供自启项。
+- 自启项：~/.config/autostart/openclaw-gateway.desktop（默认启用）
+- 脚本：/openclaw-tool/start_openclaw_gateway.sh（从 openclaw.json 读端口，延迟约 5 秒后启动）
+- 日志：/tmp/openclaw-gateway.log
+- 不需要网关自启时：在「启动应用程序」中取消勾选「OpenClaw 网关（开机自启）」或删除该 desktop 文件。
+
+四、VNC 无法连接 / 如何连接桌面
+-------------------------------
+- 浏览器连接（推荐）：使用 Kasm 提供的 Web 地址，端口一般为 6901（noVNC）。在浏览器中打开会话链接即可，无需单独填 5901。
+- 传统 VNC 客户端连 5901：本环境默认仅提供 Web VNC(6901)。若需用 VNC 客户端（如 Remmina、TigerVNC）连 5901，请先安装 x11vnc，安装后开机脚本会自动在 5901 启动：
+    sudo apt-get update && sudo apt-get install -y x11vnc
+  然后重新登录或手动执行：/openclaw-tool/start_ports_1080_4901_5901.sh
+- 若之前“VNC 无法连接”：已修正脚本不再占用 5901 端口，避免占位程序阻挡真实 VNC 服务。
+
+五、路径说明
+------------
+- 配置与数据仍保存在用户目录：~/.openclaw/openclaw.json
+- 本工具仅程序与脚本放在 /openclaw-tool，无相对路径依赖，可在任意位置通过上述命令调用。

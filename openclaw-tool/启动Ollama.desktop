@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=启动 Ollama
+Name[zh_CN]=启动 Ollama
+Comment=在后台启动 Ollama 本地大模型服务
+Comment[zh_CN]=在后台启动 Ollama 本地大模型服务
+Exec=/openclaw-tool/start_ollama.sh
+Icon=network-server
+Path=/openclaw-tool
+Terminal=false
+Categories=Network;Development;
+StartupNotify=true

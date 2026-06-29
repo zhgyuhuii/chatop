@@ -1,0 +1,9 @@
+# 减小构建上下文，排除无需传入的文件
+**/.git
+**/.gitignore
+**/node_modules
+**/dist
+**/__pycache__
+**/*.log
+.cursor
+.vscode

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Comment=自定义 Webtop 开机动画
+Encoding=UTF-8
+Keywords=Desktop;Workspace;Appearance;Look and Feel;Splash;
+Name=Webtop Custom Splash
+Type=Service
+
+X-KDE-ServiceTypes=Plasma/LookAndFeel
+X-KDE-ParentApp=
+X-KDE-PluginInfo-Author=Webtop
+X-KDE-PluginInfo-Category=
+X-KDE-PluginInfo-Email=
+X-KDE-PluginInfo-License=GPLv3+
+X-KDE-PluginInfo-Name=org.webtop.custom-splash
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-Website=
+X-Plasma-MainScript=defaults

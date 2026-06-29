@@ -1,0 +1,5 @@
+# Selkies 源码（由 build-and-run.sh 克隆）
+selkies-src/
+
+# 本地环境变量（含密码等敏感信息）
+.env
