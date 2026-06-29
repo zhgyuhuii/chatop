@@ -142,8 +142,17 @@ ENV LOGIN_USER=admin
 # 修复：custom_startup 必须常驻(末尾 wait)。kasm vnc_startup 把它当 service 监控(KASM_PROCS)，
 # 一次性脚本退出后会被监控循环判定为"死亡"并无限重启，日志狂刷 "Unknown Service: custom_startup"
 # + "kill (137) No such process"，高频循环拖累 VNC bridge->relay 导致连不上。wait 让脚本常驻即解决。
-RUN printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
+# === 应用管理器：后端 + catalog + 图标 + 启动脚本 ===
+RUN mkdir -p /usr/local/lib/chatop /etc/chatop
+COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
+COPY app-manager/apps-catalog.json /etc/chatop/apps-catalog.json
+COPY app-manager/icons/ /usr/share/kasmvnc/www/app-icons/
+COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
+RUN chmod +x /usr/local/bin/start-app-manager.sh
+# 末尾再次 COPY Caddyfile（覆盖前面层的旧版），使 Caddyfile 改动只重建末尾层、不触发 WPS 重下
+COPY caddy/Caddyfile /etc/caddy/Caddyfile
 # 删除桌面(/home/kasm-user/Desktop)上对应已卸载应用的快捷方式，避免无效图标
 RUN rm -f /home/kasm-default-profile/Desktop/firefox.desktop \
           /home/kasm-default-profile/Desktop/thunderbird.desktop \

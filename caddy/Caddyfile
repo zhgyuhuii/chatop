@@ -7,6 +7,9 @@
     handle /files* {
         reverse_proxy 127.0.0.1:8585
     }
+    handle /apps* {
+        reverse_proxy 127.0.0.1:8686
+    }
     handle {
         reverse_proxy https://127.0.0.1:6901 {
             transport http {
