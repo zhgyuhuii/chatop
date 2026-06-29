@@ -9,3 +9,5 @@ ARG VERSION=1.1.0
 LABEL maintainer="chatop-ai" build_version="chatop-ai ${VERSION}"
 # 覆盖 KasmVNC 自带 noVNC 前端（合并覆盖，不删 www 中镜像自带、dist 没有的文件）
 COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
+# 保留镜像原有 KasmVNC override 配置，并显式声明剪贴板上/下行权限默认
+COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
