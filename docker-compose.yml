@@ -96,7 +96,9 @@ services:
     # 设置 hostname 避免显示容器 ID（如 abc@3579d035063d），改为 admin@chatop
 
     ports:
-      - "3001:3001"
+      # 主机端口可用 HOST_PORT 覆盖（容器内固定 3001）。
+      # 例：与已占用 3001 的其它容器共存时 HOST_PORT=3002
+      - "${HOST_PORT:-3001}:3001"
     volumes:
       - chatop-config:/config
       # 自定义 logo 运行时覆盖（二选一，需文件存在）：
