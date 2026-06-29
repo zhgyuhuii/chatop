@@ -3528,8 +3528,9 @@ const UI = {
 
     updateDesktopName(e) {
         UI.desktopName = e.detail.name;
-        // Display the desktop name in the document title
-        document.title = e.detail.name + " - " + PAGE_TITLE;
+        // Always keep the brand (PAGE_TITLE) leading so the tab title never
+        // gets fully replaced by the server-provided desktop name.
+        document.title = e.detail.name ? PAGE_TITLE + " — " + e.detail.name : PAGE_TITLE;
     },
 
     inputLockChanged(e) {
