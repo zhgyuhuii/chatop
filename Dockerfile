@@ -21,6 +21,10 @@ ARG SELKIES_COMMIT=7dd6a93065332e5b3fe48fe5e5eb911a91f82746
 
 RUN apk add --no-cache cmake git nodejs npm
 
+# 限制 Node/Vite 构建的 V8 堆，防止单次构建内存失控把宿主机 dockerd 拖到 OOM
+# （宿主仅 7.3G 内存；此前多套 dashboard 构建峰值 ~4.7G 导致 dockerd 被 OOM 杀掉）
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
 # 优先使用本地 selkies-src，不存在则克隆；复制 logo.png 或 logo.svg 到各 dashboard
 COPY . /build-context
 RUN if [ -f /build-context/logo.png ] || [ -f /build-context/logo.svg ]; then \
