@@ -116,6 +116,20 @@ RUN set -ux; \
     (apt-get install -y --no-install-recommends libtiff5 2>/dev/null || true); \
     rm -rf /var/lib/apt/lists/*
 
+# === 应用管理器基础：Node 22（npm 类 AI 工具前提）+ pipx ===
+RUN set -eux; \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; \
+    apt-get install -y --no-install-recommends nodejs; \
+    node -v; npm -v; \
+    apt-get install -y --no-install-recommends pipx; \
+    rm -rf /var/lib/apt/lists/*
+
+# npm 用户级全局前缀（装到家目录 → home 数据卷持久），并把 ~/.npm-global/bin、~/.local/bin 入 PATH
+RUN set -eux; \
+    printf '\n# chatop app-manager user-level tooling\nexport NPM_CONFIG_PREFIX="$HOME/.npm-global"\nexport PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"\n' \
+      > /etc/profile.d/chatop-apps.sh; \
+    chmod +x /etc/profile.d/chatop-apps.sh
+
 USER root
 # 登录名可配：把 vnc_startup.sh 里硬编码的 kasm_user(仅这两类:kasmvncpasswd -u 和 辅助服务 auth-token)
 # 改为运行时变量 ${LOGIN_USER:-admin};绝不动 kasm_user_name / kasm_viewer / KASM_USER
