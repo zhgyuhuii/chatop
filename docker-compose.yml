@@ -1,0 +1,14 @@
+services:
+  chatop-ai:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-1.0.0}
+    image: chatop-ai:${VERSION:-1.0.0}
+    container_name: chatop-ai
+    environment:
+      - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
+    ports:
+      - "${PORT:-6901}:6901"
+    shm_size: "1gb"
+    restart: unless-stopped
