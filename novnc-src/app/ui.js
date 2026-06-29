@@ -666,7 +666,7 @@ const UI = {
             } catch (e) { /* ignore storage failures */ }
             applyTheme(val);
         });
-    }
+    },
 
     addSettingsHandlers() {
         UI.addClickHandle('noVNC_settings_button', UI.toggleSettingsPanel);

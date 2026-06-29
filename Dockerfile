@@ -15,10 +15,15 @@ COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
 # === filebrowser 旁挂（文件上传/下载，KasmVNC 开源版无文件传输） ===
 # 装 filebrowser 需 root 写 /usr/local/bin 与 /dockerstartup；装完恢复运行用户 1000(kasm-user)
 USER root
-RUN curl -fsSL https://raw.githubusercontent.com/filebrowser/filebrowser/master/get.sh | bash || \
-    ( set -e; ARCH=linux-amd64; \
-      curl -fsSL -o /tmp/fb.tar.gz "https://github.com/filebrowser/filebrowser/releases/latest/download/${ARCH}-filebrowser.tar.gz"; \
-      tar -xzf /tmp/fb.tar.gz -C /usr/local/bin filebrowser; rm -f /tmp/fb.tar.gz; chmod +x /usr/local/bin/filebrowser )
+# 直接拉官方 release 二进制（get.sh 在内部 404 时仍 exit 0，会跳过 || 兜底，故不再用它）。
+# 装完显式校验二进制存在且可执行，缺失则让构建当场失败，避免产出无文件传输能力的坏镜像。
+ARG FB_ARCH=linux-amd64
+RUN set -eux; \
+    curl -fsSL -o /tmp/fb.tar.gz "https://github.com/filebrowser/filebrowser/releases/latest/download/${FB_ARCH}-filebrowser.tar.gz"; \
+    tar -xzf /tmp/fb.tar.gz -C /usr/local/bin filebrowser; \
+    rm -f /tmp/fb.tar.gz; \
+    chmod +x /usr/local/bin/filebrowser; \
+    /usr/local/bin/filebrowser version
 COPY filebrowser/start-filebrowser.sh /usr/local/bin/start-filebrowser.sh
 RUN mkdir -p /dockerstartup && \
     chmod +x /usr/local/bin/start-filebrowser.sh && \
