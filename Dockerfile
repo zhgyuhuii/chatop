@@ -32,16 +32,30 @@ RUN if [ -f /build-context/logo.png ] || [ -f /build-context/logo.svg ]; then \
         mkdir -p /build-context/selkies-src/addons/$d/public 2>/dev/null || true; \
       done; \
     fi
-RUN if [ -d /build-context/selkies-src ] && [ -f /build-context/selkies-src/addons/gst-web-core/package.json ]; then \
+# 取源：本地 selkies-src 优先；否则联网。务必带重试 + 失败显式报错 + 取源后校验结构，
+# 否则瞬时网络失败会被吞掉，留下空 /src，下游误报 "can't cd to gst-web-core"。
+RUN set -e; \
+    if [ -d /build-context/selkies-src ] && [ -f /build-context/selkies-src/addons/gst-web-core/package.json ]; then \
       cp -a /build-context/selkies-src /src; \
       echo "使用本地 selkies-src"; \
     elif [ -n "$SELKIES_COMMIT" ]; then \
-      mkdir -p /src && cd /src && git init -q && git remote add origin "$SELKIES_REPO" && \
-      git fetch --depth 1 origin "$SELKIES_COMMIT" && git checkout -f FETCH_HEAD; \
+      mkdir -p /src && cd /src && git init -q && git remote add origin "$SELKIES_REPO"; \
+      ok=0; i=1; while [ "$i" -le 3 ]; do \
+        if git fetch --depth 1 origin "$SELKIES_COMMIT"; then ok=1; break; fi; \
+        echo "**** git fetch 第 $i/3 次失败，5s 后重试 ****"; i=$((i+1)); sleep 5; \
+      done; \
+      [ "$ok" = 1 ] || { echo "ERROR: 无法从 $SELKIES_REPO 取 commit $SELKIES_COMMIT（网络/代理？可 --build-arg SELKIES_REPO=<镜像> 或放本地 selkies-src/）"; exit 1; }; \
+      git checkout -f FETCH_HEAD; \
       echo "从 GitHub 浅取指定 commit $SELKIES_COMMIT"; \
     else \
       git clone --depth 1 "$SELKIES_REPO" /src; \
       echo "从 GitHub 克隆 Selkies main 最新"; \
+    fi; \
+    if [ ! -f /src/addons/gst-web-core/package.json ]; then \
+      echo "ERROR: Selkies 源缺少 addons/gst-web-core/package.json"; \
+      echo "       原因：取源失败/网络中断，或上游已把 gst-web-core 改名 selkies-web-core（需用 2026-03-27 之前的 SELKIES_COMMIT）"; \
+      ls -la /src/addons 2>/dev/null || echo "(/src/addons 不存在)"; \
+      exit 1; \
     fi
 
 # 将 logo 复制到各 dashboard 的 public 目录；支持 logo.png 或 logo.svg
