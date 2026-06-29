@@ -139,6 +139,11 @@ RUN sed -i 's/-u kasm_user -wo/-u "${LOGIN_USER:-admin}" -wo/' /dockerstartup/vn
 ENV LOGIN_USER=admin
 
 # ============ 轻量资源层（置于重型下载层之后，便于前端/资源快速迭代）============
+# 修复：custom_startup 必须常驻(末尾 wait)。kasm vnc_startup 把它当 service 监控(KASM_PROCS)，
+# 一次性脚本退出后会被监控循环判定为"死亡"并无限重启，日志狂刷 "Unknown Service: custom_startup"
+# + "kill (137) No such process"，高频循环拖累 VNC bridge->relay 导致连不上。wait 让脚本常驻即解决。
+RUN printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
+    chmod +x /dockerstartup/custom_startup.sh
 # 删除桌面(/home/kasm-user/Desktop)上对应已卸载应用的快捷方式，避免无效图标
 RUN rm -f /home/kasm-default-profile/Desktop/firefox.desktop \
           /home/kasm-default-profile/Desktop/thunderbird.desktop \
