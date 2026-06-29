@@ -14,4 +14,9 @@ services:
       # KasmVNC 的 6901 与 filebrowser 的 8585 仅容器内可达，不再对外发布。
       - "${PORT:-6901}:7443"
     shm_size: "1gb"
+    volumes:
+      - chatop-home:/home/kasm-user
     restart: unless-stopped
+
+volumes:
+  chatop-home:
