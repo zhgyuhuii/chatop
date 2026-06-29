@@ -101,18 +101,32 @@
 
             <div class="noVNC_scroll">
 
-                <!-- 察元AI brand, always visible while connected -->
-                <div class="chatop_brand" title="察元AI">
+                <!-- 察元AI 顶部一行栏：logo + 名称 + 全屏 + 游戏 + 增加屏幕 -->
+                <div class="chatop_header" title="察元AI">
                     <img src="app/images/icons/kasm_logo.svg" alt="察元AI" class="chatop_brand_logo">
                     <span class="chatop_brand_name">察元AI</span>
+                    <!-- Toggle fullscreen -->
+                    <div class="noVNC_button_div noVNC_hidden" >
+                        <input type="image" alt="Fullscreen" src="app/images/fullscreen.svg"
+                            id="noVNC_fullscreen_button" class="noVNC_button"
+                            title="Fullscreen">
+                        Fullscreen
+                    </div>
+                    <!-- Toggle game mode -->
+                    <div class="noVNC_button_div noVNC_hidden noVNC_hide_on_disconnect" >
+                        <input type="image" alt="Game Mode" src="app/images/gamepad.png"
+                            id="noVNC_game_mode_button" class="noVNC_button"
+                            title="Game Pointer Mode">
+                        Game Cursor Mode
+                    </div>
+                    <!-- Add Second Screen -->
+                    <div class="noVNC_button_div noVNC_hidden" >
+                        <input type="image" alt="Displays" src="app/images/desktop-regular.svg"
+                            id="noVNC_displays_button" class="noVNC_button"
+                            title="Show Displays">
+                        Displays
+                    </div>
                 </div>
-
-                <h1 class="noVNC_logo">
-                    <a href="https://www.kasmweb.com/kasmvnc" target="_blank"
-                        title="察元AI Learn More">
-                        <img src="app/images/icons/kasm_logo.svg" alt="察元AI Learn More"/>
-                    </a>
-                </h1>
 
                 <!-- Drag/Pan the viewport -->
                 <div class="noVNC_button_div noVNC_hidden noVNC_hide_on_disconnect" >
@@ -218,30 +232,7 @@
                     下载
                 </div>
 
-                <!-- Toggle fullscreen -->
-                <div class="noVNC_button_div noVNC_hidden" >
-                    <input type="image" alt="Fullscreen" src="app/images/fullscreen.svg"
-                        id="noVNC_fullscreen_button" class="noVNC_button"
-                        title="Fullscreen">
-                    Fullscreen
-                </div>
-
-                <!-- Add Second Screen -->
-                <div class="noVNC_button_div noVNC_hidden" >
-                    <input type="image" alt="Fullscreen" src="app/images/desktop-regular.svg"
-                        id="noVNC_displays_button" class="noVNC_button"
-                        style="margin: 10px 3px;"
-                        title="Show Displays">
-                    Displays
-                </div>
-
-                <!-- Toggle game mode -->
-                <div class="noVNC_button_div noVNC_hidden noVNC_hide_on_disconnect" >
-                    <input type="image" alt="Game Mode" src="app/images/gamepad.png"
-                        id="noVNC_game_mode_button" class="noVNC_button"
-                        title="Game Pointer Mode">
-                    Game Cursor Mode
-                </div>
+                <!-- (Add Second Screen 已移至顶部品牌区横排) -->
 
                 <!-- Settings -->
                 <div class="noVNC_button_div" >
@@ -618,7 +609,7 @@
                                     <span>Version:</span>
                                     <span class="noVNC_version"></span>
 				    <span class="slider-label">
-                                        <a href="https://www.kasmweb.com/kasmvnc/docs/latest/index.html" target="_blank">
+                                        <a href="https://aidooo.com" target="_blank">
                                             Documentation
                                         </a>
                                     </span>

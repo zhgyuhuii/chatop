@@ -7,10 +7,8 @@ RUN --mount=type=cache,target=/root/.npm npm install && npm run build
 FROM kasmweb/ubuntu-jammy-desktop:1.19.0
 ARG VERSION=1.1.0
 LABEL maintainer="chatop-ai" build_version="chatop-ai ${VERSION}"
-# 覆盖 KasmVNC 自带 noVNC 前端（合并覆盖，不删 www 中镜像自带、dist 没有的文件）
-COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
-# 保留镜像原有 KasmVNC override 配置，并显式声明剪贴板上/下行权限默认
-COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
+# 注：前端注入(COPY --from=web)与资源层移至 Dockerfile 末尾，置于 WPS/字体等重型下载层之后，
+# 使前端 UI 迭代只重跑最后一层，不再触发 WPS(319MB) 等重新下载。
 
 # === filebrowser 旁挂（文件上传/下载，KasmVNC 开源版无文件传输） ===
 # 装 filebrowser 需 root 写 /usr/local/bin 与 /dockerstartup；装完恢复运行用户 1000(kasm-user)
@@ -125,6 +123,26 @@ RUN sed -i 's/-u kasm_user -wo/-u "${LOGIN_USER:-admin}" -wo/' /dockerstartup/vn
     sed -i 's/kasm_user:\$VNC_PW/${LOGIN_USER:-admin}:\$VNC_PW/g' /dockerstartup/vnc_startup.sh && \
     echo "=== patched login-user lines ===" && grep -nE 'LOGIN_USER|kasm_user' /dockerstartup/vnc_startup.sh
 ENV LOGIN_USER=admin
+
+# ============ 轻量资源层（置于重型下载层之后，便于前端/资源快速迭代）============
+# 删除桌面(/home/kasm-user/Desktop)上对应已卸载应用的快捷方式，避免无效图标
+RUN rm -f /home/kasm-default-profile/Desktop/firefox.desktop \
+          /home/kasm-default-profile/Desktop/thunderbird.desktop \
+          /home/kasm-default-profile/Desktop/com.obsproject.Studio.desktop \
+          /home/kasm-default-profile/Desktop/gimp.desktop \
+          /home/kasm-default-profile/Desktop/nextcloud.desktop \
+          /home/kasm-default-profile/Desktop/onlyoffice-desktopeditors.desktop \
+          /home/kasm-default-profile/Desktop/org.remmina.Remmina.desktop \
+          /home/kasm-default-profile/Desktop/signal-desktop.desktop \
+          /home/kasm-default-profile/Desktop/slack.desktop \
+          /home/kasm-default-profile/Desktop/telegram.desktop \
+          /home/kasm-default-profile/Desktop/Zoom.desktop || true
+# 炫酷品牌桌面壁纸（覆盖默认壁纸；xfce backdrop 已指向 bg_default.png）
+COPY assets/wallpaper.png /usr/share/backgrounds/bg_default.png
+# KasmVNC 剪贴板上/下行权限默认
+COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
+# 注入定制 noVNC 前端（放最后：前端迭代只重跑这一层，不影响上面重型层缓存）
+COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
 
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

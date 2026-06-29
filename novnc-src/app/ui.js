@@ -478,6 +478,9 @@ const UI = {
     },
 
     addControlbarHandlers() {
+        // 点击桌面任意空白处：折叠控制栏 + 关闭所有弹出面板(closeControlbar 内含 closeAllPanels)
+        document.getElementById("noVNC_container")
+            .addEventListener('mousedown', () => UI.closeControlbar());
         document.getElementById("noVNC_control_bar")
             .addEventListener('mousemove', UI.activateControlbar);
         document.getElementById("noVNC_control_bar")
@@ -3528,9 +3531,8 @@ const UI = {
 
     updateDesktopName(e) {
         UI.desktopName = e.detail.name;
-        // Always keep the brand (PAGE_TITLE) leading so the tab title never
-        // gets fully replaced by the server-provided desktop name.
-        document.title = e.detail.name ? PAGE_TITLE + " — " + e.detail.name : PAGE_TITLE;
+        // 标题始终只显示品牌名，绝不拼接服务器桌面名(如 hostname:1(kasm-user))。
+        document.title = PAGE_TITLE;
     },
 
     inputLockChanged(e) {

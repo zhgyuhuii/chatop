@@ -675,20 +675,26 @@ select:active {
 }
 
 /* 察元AI brand block — fits the narrow vertical control bar, always visible */
-.chatop_brand {
+/* 顶部一行栏：logo + 察元AI + 全屏 + 游戏 + 增加屏幕，全部横排一行 */
+.chatop_header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 3px;
-  padding: 6px 2px 8px;
+  gap: 6px;
+  padding: 8px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgb(255 255 255 / 0.18);
+  white-space: nowrap;
 }
+/* 行内按钮只显图标(隐藏文字标签)，隐藏的(noVNC_hidden)不占位 */
+.chatop_header .noVNC_button_div { font-size: 0; margin: 0; }
+body.chatop-theme-light .chatop_header { border-bottom-color: rgb(0 0 0 / 0.12); }
 
 .chatop_brand_logo {
   display: block;
-  width: 100%;
-  max-width: 40px;
+  width: auto;
+  max-width: 26px;
   height: auto;
 }
 
