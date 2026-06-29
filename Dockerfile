@@ -118,5 +118,13 @@ RUN set -ux; \
     (apt-get install -y --no-install-recommends libtiff5 2>/dev/null || true); \
     rm -rf /var/lib/apt/lists/*
 
+USER root
+# 登录名可配：把 vnc_startup.sh 里硬编码的 kasm_user(仅这两类:kasmvncpasswd -u 和 辅助服务 auth-token)
+# 改为运行时变量 ${LOGIN_USER:-admin};绝不动 kasm_user_name / kasm_viewer / KASM_USER
+RUN sed -i 's/-u kasm_user -wo/-u "${LOGIN_USER:-admin}" -wo/' /dockerstartup/vnc_startup.sh && \
+    sed -i 's/kasm_user:\$VNC_PW/${LOGIN_USER:-admin}:\$VNC_PW/g' /dockerstartup/vnc_startup.sh && \
+    echo "=== patched login-user lines ===" && grep -nE 'LOGIN_USER|kasm_user' /dockerstartup/vnc_startup.sh
+ENV LOGIN_USER=admin
+
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

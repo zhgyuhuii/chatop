@@ -6,7 +6,7 @@ set -e
 ROOT="${FB_ROOT:-$HOME}"
 PORT="${FB_PORT:-8585}"
 DB="${HOME}/.filebrowser.db"
-USER_NAME="${CUSTOM_USER:-kasm_user}"
+USER_NAME="${LOGIN_USER:-admin}"
 PASS="${VNC_PW:-password}"
 # 初始化数据库与全局配置(幂等)
 if [ ! -f "$DB" ]; then

@@ -8,6 +8,7 @@ services:
     container_name: chatop-ai
     environment:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
+      - LOGIN_USER=${LOGIN_USER:-admin}
     ports:
       # 单一对外端口 → 容器内 Caddy(7443)；Caddy 再反代 KasmVNC(6901) 与 filebrowser(8585)。
       # KasmVNC 的 6901 与 filebrowser 的 8585 仅容器内可达，不再对外发布。
