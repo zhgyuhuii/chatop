@@ -37,9 +37,9 @@ docker build --build-arg VERSION=$(cat VERSION) -t chatop:$(cat VERSION) .
 - **openclaw-tool**：OpenClaw 配置程序，桌面有快捷方式
 - **WhiteSur GTK 主题 + WhiteSur 图标**：用仓库根目录的 `WhiteSur-*-theme-master.zip` 安装，首次启动自动应用
 
-> 注意：原 MacVentura-Dark KDE 主题依赖未提供的 `*-kde*.zip`，构建会失败，现已从 Dockerfile 移除。
-> `/etc/skel/.config/kdeglobals` 仍写着 MacVentura，缺该主题时 KDE 回退默认 Breeze。
-> 如需 Mac 风外观，请把对应 KDE Look-and-Feel zip 放进根目录并恢复 Dockerfile 中的 KDE 主题安装块。
+> KDE 桌面外观：根目录的 `*-kde*.zip`（当前为 `MacVentura-kde-main.zip`）会在构建时安装为
+> KDE Look-and-Feel；`custom-cont-init.d/92` 与 `/etc/skel` 默认外观用 `com.github.vinceliuice.MacVentura-Dark`
+> + WhiteSur 图标。如需更多外观，把对应 `*-kde*.zip` 放进根目录即可（`COPY *-kde*.zip` 会一并安装）。
 
 **Dockerfile 构建参数：**
 - `VERSION`：镜像版本号（默认取自 `VERSION` 文件，写入镜像 LABEL）

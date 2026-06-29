@@ -1,5 +1,8 @@
-# Selkies 源码（由 build-and-run.sh 克隆）
-selkies-src/
+# Selkies 源码：纳入版本控制（含本项目对 dashboard 的界面/图标改造），
+# 但忽略其构建产物，避免仓库臃肿
+selkies-src/**/node_modules/
+selkies-src/**/dist/
+selkies-src/**/.vite/
 
 # 本地环境变量（含密码等敏感信息）
 .env

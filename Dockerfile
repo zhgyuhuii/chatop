@@ -121,6 +121,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       gtk2-engines-murrine gtk2-engines-pixbuf gnome-themes-extra && \
     pip3 install --no-cache-dir customtkinter 2>/dev/null || true
 
+# 安装 KDE Look-and-Feel 桌面外观（仓库根目录的 *-kde*.zip，含 MacVentura-Dark）。
+# custom-cont-init.d/92 与 /etc/skel 默认外观依赖 com.github.vinceliuice.MacVentura-Dark，
+# 缺此主题 KDE 会回退默认 Breeze（桌面外观会"不对"）。
+COPY *-kde*.zip /tmp/kde-themes/
+RUN cd /tmp/kde-themes && for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done && rm -f *.zip && \
+    export HOME=/root USER=root && \
+    for d in */; do (cd "$d" 2>/dev/null && [ -f install.sh ] && chmod +x install.sh && ./install.sh) || true; done && \
+    echo "=== 已安装 KDE Look and Feel ===" && ls /usr/share/plasma/look-and-feel/ 2>/dev/null | head -30 && \
+    rm -rf /tmp/kde-themes
+
 # 仅安装仓库中实际存在的 WhiteSur GTK 主题与图标主题
 COPY WhiteSur-gtk-theme-master.zip WhiteSur-icon-theme-master.zip /tmp/themes/
 RUN cd /tmp/themes && for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done && rm -f *.zip && \
