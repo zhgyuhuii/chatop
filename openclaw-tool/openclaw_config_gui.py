@@ -7,6 +7,7 @@ OpenClaw 可视化配置程序 — 完整复刻官方 onboard 引导流程
 
 import json
 import os
+import shlex
 import socket
 import subprocess
 import sys
@@ -680,7 +681,8 @@ SKILL_INSTALL_GUIDE = """
 def run_in_system_terminal(cmd):
     """在系统终端中执行命令，便于交互（如 openclaw onboard）。先加载 nvm 再执行，避免未找到命令；命令结束后等待回车再关闭。"""
     nvm_sh = Path(os.environ.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
-    nvm_load = f'[ -s "{nvm_sh}" ] && . "{nvm_sh}" ; ' if nvm_sh.exists() else ""
+    nvm_q = shlex.quote(str(nvm_sh))
+    nvm_load = f'[ -s {nvm_q} ] && . {nvm_q} ; ' if nvm_sh.exists() else ""
     hold = '; echo ""; read -p "按回车键关闭此窗口..." -r'
     cmd_hold = nvm_load + cmd + hold
     if sys.platform == "darwin":
@@ -696,12 +698,13 @@ def run_in_system_terminal(cmd):
             return True, "已在 Windows 命令行中启动，请在窗口内按提示操作。"
         except Exception as e:
             return False, str(e)
+    # 一律把命令作为独立 argv 元素传给 bash -lc，避免拼进被 shell 二次解析的引号串
     for term_cmd in [
         ["gnome-terminal", "--", "bash", "-lc", cmd_hold],
-        ["x-terminal-emulator", "-e", f"bash -lc '{cmd_hold}'"],
+        ["x-terminal-emulator", "-e", "bash", "-lc", cmd_hold],
         ["konsole", "-e", "bash", "-lc", cmd_hold],
-        ["xfce4-terminal", "-e", f"bash -lc '{cmd_hold}'"],
-        ["xterm", "-e", f"bash -lc '{cmd_hold}'"],
+        ["xfce4-terminal", "-x", "bash", "-lc", cmd_hold],
+        ["xterm", "-e", "bash", "-lc", cmd_hold],
     ]:
         try:
             subprocess.Popen(term_cmd, start_new_session=True, cwd=os.path.expanduser("~"))
@@ -716,7 +719,8 @@ def run_in_system_terminal(cmd):
 def run_openclaw_cmd_sync(cmd, timeout=30):
     """在当前进程同步执行 openclaw 命令（先加载 nvm），返回 (成功, 输出文本)。用于界面内配对批准等。"""
     nvm_sh = Path(os.environ.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
-    nvm_load = f'[ -s "{nvm_sh}" ] && . "{nvm_sh}" ; ' if nvm_sh.exists() else ""
+    nvm_q = shlex.quote(str(nvm_sh))
+    nvm_load = f'[ -s {nvm_q} ] && . {nvm_q} ; ' if nvm_sh.exists() else ""
     full = nvm_load + cmd
     try:
         r = subprocess.run(
@@ -1163,7 +1167,8 @@ def restart_openclaw(port=None):
         except Exception:
             port = 18789
     nvm_sh = Path(os.environ.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
-    cmd = f'[ -s "{nvm_sh}" ] && . "{nvm_sh}" && openclaw gateway --port {port}' if nvm_sh.exists() else f"openclaw gateway --port {port}"
+    nvm_q = shlex.quote(str(nvm_sh))
+    cmd = f'[ -s {nvm_q} ] && . {nvm_q} && openclaw gateway --port {port}' if nvm_sh.exists() else f"openclaw gateway --port {port}"
     for name in ("openclaw", "openclaw-gateway"):
         try:
             r = subprocess.run(["systemctl", "--user", "restart", name], capture_output=True, text=True, timeout=10)
@@ -1846,7 +1851,7 @@ class OpenClawConfigApp:
             messagebox.showwarning("安装飞书 SDK", "extensions/feishu 下未找到 package.json，请先通过「安装选中的通道插件」或 openclaw plugins install @openclaw/feishu 安装完整插件。")
             open_url(FEISHU_SDK_DOC_URL)
             return
-        ok, out = run_openclaw_cmd_sync(f'cd "{feishu_dir}" && npm install', timeout=120)
+        ok, out = run_openclaw_cmd_sync(f'cd {shlex.quote(str(feishu_dir))} && npm install', timeout=120)
         if ok:
             messagebox.showinfo("安装飞书 SDK", "飞书插件依赖（含飞书官方 Node SDK @larksuiteoapi/node-sdk）已安装完成。\n\n请重启网关后生效。")
         else:
@@ -1884,7 +1889,7 @@ class OpenClawConfigApp:
         if not code:
             messagebox.showwarning("配对", "请输入从机器人处获得的配对码（通常为 8 位）。")
             return
-        cmd = f"openclaw pairing approve {ch_key} {code}"
+        cmd = f"openclaw pairing approve {shlex.quote(ch_key)} {shlex.quote(code)}"
         ok, out = run_openclaw_cmd_sync(cmd)
         if ok:
             messagebox.showinfo("配对", "批准成功。\n\n" + (out or "该用户/账号已可与机器人对话。"))
@@ -2290,7 +2295,7 @@ class OpenClawConfigApp:
             pull_arg = model_name
         else:
             pull_arg = f"{model_name}:{tag}"
-        ok, msg = run_in_system_terminal(f"ollama pull {pull_arg}")
+        ok, msg = run_in_system_terminal(f"ollama pull {shlex.quote(pull_arg)}")
         if not ok:
             messagebox.showerror("Ollama 安装", msg)
 
@@ -2707,13 +2712,13 @@ class OpenClawConfigApp:
         workspace = os.path.expanduser(workspace.strip())
         Path(workspace).mkdir(parents=True, exist_ok=True)
         open_url(CLAWHUB_URL)
-        install_cmds = [f"{SKILL_INSTALL_CMD} {name}" for name in names]
+        install_cmds = [f"{SKILL_INSTALL_CMD} {shlex.quote(name)}" for name in names]
         # 多个技能时在命令间加入 sleep，降低 npm/ClawHub Rate limit exceeded 概率（仅 Unix）
         if len(install_cmds) > 1 and sys.platform != "win32":
             delay = f"sleep {SKILL_INSTALL_DELAY_SEC}"
-            cmd = f'cd "{workspace}" && ' + f" && {delay} && ".join(install_cmds)
+            cmd = f'cd {shlex.quote(workspace)} && ' + f" && {delay} && ".join(install_cmds)
         else:
-            cmd = f'cd "{workspace}" && ' + " && ".join(install_cmds)
+            cmd = f'cd {shlex.quote(workspace)} && ' + " && ".join(install_cmds)
         ok, msg = run_in_system_terminal(cmd)
         if not ok:
             err = "技能安装启动失败：" + msg
@@ -2728,7 +2733,7 @@ class OpenClawConfigApp:
         workspace = os.path.expanduser(workspace.strip())
         if not messagebox.askyesno("卸载技能", f"确定要在工作区中卸载技能「{skill_name}」吗？\n\n将执行: {SKILL_UNINSTALL_CMD} {skill_name}"):
             return
-        cmd = f'cd "{workspace}" && {SKILL_UNINSTALL_CMD} {skill_name}'
+        cmd = f'cd {shlex.quote(workspace)} && {SKILL_UNINSTALL_CMD} {shlex.quote(skill_name)}'
         ok, msg = run_in_system_terminal(cmd)
         if not ok:
             messagebox.showerror("技能卸载", msg)

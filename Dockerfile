@@ -1,16 +1,23 @@
+# syntax=docker/dockerfile:1.7
 # =============================================================================
 # Selkies + Webtop 构建
 # 对应 build-and-run.sh 的逻辑：构建 Selkies → 注入 baseimage → 构建 Webtop
 # 使用：存在 selkies-src 时用本地代码，否则从 GitHub 克隆
+# 需启用 BuildKit（Docker 23+ 默认开启）以支持 RUN --mount=type=cache 缓存加速
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # Stage 1: 构建 Selkies 前端
 # -----------------------------------------------------------------------------
-FROM ghcr.io/linuxserver/baseimage-alpine:3.22 AS selkies-build
+# 锁 digest 保证可复现构建（如需升级：重新解析 tag 的 digest 后更新此处）
+FROM ghcr.io/linuxserver/baseimage-alpine:3.22@sha256:97004e5491cae35367e243bc4fa9db1468f3c8e1ee8819ed212f28d39b86954a AS selkies-build
 
 ARG SELKIES_REPO=https://github.com/selkies-project/selkies.git
-ARG SELKIES_COMMIT=
+# 锁定到验证过的 Selkies commit，避免跟随 main 漂移导致前端 break；置空则取 main 最新。
+# 必须用 2026-03-27 之前的 commit：之后上游把 addons/gst-web-core 改名为 selkies-web-core
+# 并移除了 selkies-dashboard-zinc，本 Dockerfile 仍按旧结构构建三套 dashboard。
+# 7dd6a93(2026-03-24) 已核对含 gst-web-core + 三个 dashboard + universal-touch-gamepad。
+ARG SELKIES_COMMIT=7dd6a93065332e5b3fe48fe5e5eb911a91f82746
 
 RUN apk add --no-cache cmake git nodejs npm
 
@@ -24,12 +31,13 @@ RUN if [ -f /build-context/logo.png ] || [ -f /build-context/logo.svg ]; then \
 RUN if [ -d /build-context/selkies-src ] && [ -f /build-context/selkies-src/addons/gst-web-core/package.json ]; then \
       cp -a /build-context/selkies-src /src; \
       echo "使用本地 selkies-src"; \
+    elif [ -n "$SELKIES_COMMIT" ]; then \
+      mkdir -p /src && cd /src && git init -q && git remote add origin "$SELKIES_REPO" && \
+      git fetch --depth 1 origin "$SELKIES_COMMIT" && git checkout -f FETCH_HEAD; \
+      echo "从 GitHub 浅取指定 commit $SELKIES_COMMIT"; \
     else \
       git clone --depth 1 "$SELKIES_REPO" /src; \
-      if [ -n "$SELKIES_COMMIT" ]; then \
-        cd /src && git fetch origin && git checkout -f "$SELKIES_COMMIT"; \
-      fi; \
-      echo "从 GitHub 克隆 Selkies"; \
+      echo "从 GitHub 克隆 Selkies main 最新"; \
     fi
 
 # 将 logo 复制到各 dashboard 的 public 目录；支持 logo.png 或 logo.svg
@@ -49,7 +57,9 @@ RUN if [ -f /build-context/logo.png ]; then \
       echo "已添加 logo.svg"; \
     fi
 
-RUN cd /src/addons/gst-web-core && npm install && npm run build && \
+# npm 缓存挂载：4 次 npm install 复用同一下载缓存，重建大幅提速（缓存不进镜像层）
+RUN --mount=type=cache,target=/root/.npm \
+  cd /src/addons/gst-web-core && npm install && npm run build && \
   DASHBOARDS="selkies-dashboard selkies-dashboard-zinc selkies-dashboard-wish" && \
   mkdir /buildout && \
   for DASH in $DASHBOARDS; do \
@@ -68,7 +78,8 @@ RUN cd /src/addons/gst-web-core && npm install && npm run build && \
 # -----------------------------------------------------------------------------
 # Stage 2: 基于 Ubuntu KDE Webtop，注入自定义 Selkies 与 logo
 # -----------------------------------------------------------------------------
-FROM ghcr.io/linuxserver/webtop:ubuntu-kde
+# 锁 digest 保证可复现构建（如需升级：重新解析 tag 的 digest 后更新此处）
+FROM ghcr.io/linuxserver/webtop:ubuntu-kde@sha256:32fb57cb5a97314faf690935b1b973562982afb5463a35764e3a57e7bcd40476
 
 ARG BUILD_DATE
 ARG VERSION
@@ -82,33 +93,25 @@ COPY --from=selkies-build /buildout/selkies-dashboard /usr/share/selkies/selkies
 COPY --from=selkies-build /buildout/selkies-dashboard-zinc /usr/share/selkies/selkies-dashboard-zinc
 COPY --from=selkies-build /buildout/selkies-dashboard-wish /usr/share/selkies/selkies-dashboard-wish
 
-# ========== openclaw-tool + 6 个主题（同目录下 zip）==========
-RUN apt-get update && apt-get install -y unzip sassc libxml2-utils python3-tk python3-pip gtk2-engines-murrine gtk2-engines-pixbuf gnome-themes-extra && \
-    pip3 install customtkinter 2>/dev/null || true && \
-    rm -rf /var/lib/apt/lists/*
+# ========== openclaw-tool + WhiteSur GTK/图标主题（仓库根目录的 zip）==========
+# apt 缓存挂载：包下载缓存复用，重建提速；缓存为外部挂载不进镜像层，故无需手动 rm lists
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      unzip sassc libxml2-utils python3-tk python3-pip \
+      gtk2-engines-murrine gtk2-engines-pixbuf gnome-themes-extra && \
+    pip3 install --no-cache-dir customtkinter 2>/dev/null || true
 
-# 复制并安装根目录下所有 KDE 主题（*-kde*.zip）
-COPY *-kde*.zip /tmp/kde-themes/
-RUN cd /tmp/kde-themes && for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done && rm -f *.zip && \
-    export HOME=/root USER=root && \
-    for d in */; do (cd "$d" 2>/dev/null && [ -f install.sh ] && chmod +x install.sh && ./install.sh) || true; done && \
-    echo "=== 已安装 KDE Look and Feel ===" && ls /usr/share/plasma/look-and-feel/ 2>/dev/null | head -30 && \
-    rm -rf /tmp/kde-themes
-
-# 复制并安装 GTK 主题与图标主题
-COPY Orchis-theme-master.zip Tela-icon-theme-master.zip Vimix-gtk-themes-master.zip \
-     WhiteSur-gtk-theme-master.zip WhiteSur-icon-theme-master.zip \
-     /tmp/themes/
+# 仅安装仓库中实际存在的 WhiteSur GTK 主题与图标主题
+COPY WhiteSur-gtk-theme-master.zip WhiteSur-icon-theme-master.zip /tmp/themes/
 RUN cd /tmp/themes && for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done && rm -f *.zip && \
     export HOME=/root USER=root && \
-    (cd Orchis-theme-master 2>/dev/null && chmod +x install.sh && ./install.sh -t all -c all) || true && \
-    (cd Vimix-gtk-themes-master 2>/dev/null && (chmod +x install.sh Install 2>/dev/null) && (./install.sh 2>/dev/null || ./Install 2>/dev/null)) || true && \
     (cd WhiteSur-gtk-theme-master 2>/dev/null && chmod +x install.sh && ./install.sh) || true && \
-    (cd Tela-icon-theme-master 2>/dev/null && chmod +x install.sh && ./install.sh -a) || true && \
     (cd WhiteSur-icon-theme-master 2>/dev/null && chmod +x install.sh && ./install.sh -a) || true && \
     gtk-update-icon-cache -f /usr/share/icons 2>/dev/null || true && \
     echo "=== 已安装 GTK 主题 ===" && ls /usr/share/themes/ 2>/dev/null | head -20 && \
-    echo "=== 已安装图标主题 ===" && ls /usr/share/icons/ 2>/dev/null | grep -E "WhiteSur|Tela|Orchis" | head -20 && \
+    echo "=== 已安装图标主题 ===" && ls /usr/share/icons/ 2>/dev/null | grep -E "WhiteSur" | head -20 && \
     rm -rf /tmp/themes
 
 # openclaw-tool 配置程序

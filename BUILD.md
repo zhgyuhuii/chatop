@@ -22,11 +22,16 @@ docker build -t webtop:custom .
 
 **构建时自动安装：**
 - **openclaw-tool**：OpenClaw 配置程序，桌面有快捷方式
-- **MacVentura-Dark 主题** + **WhiteSur 图标**：构建时从 GitHub 下载安装，首次启动自动应用
+- **WhiteSur GTK 主题 + WhiteSur 图标**：用仓库根目录的 `WhiteSur-*-theme-master.zip` 安装，首次启动自动应用
+
+> 注意：原 MacVentura-Dark KDE 主题依赖未提供的 `*-kde*.zip`，构建会失败，现已从 Dockerfile 移除。
+> `/etc/skel/.config/kdeglobals` 仍写着 MacVentura，缺该主题时 KDE 回退默认 Breeze。
+> 如需 Mac 风外观，请把对应 KDE Look-and-Feel zip 放进根目录并恢复 Dockerfile 中的 KDE 主题安装块。
 
 **Dockerfile 构建参数：**
 - `SELKIES_REPO`：Selkies 仓库地址（默认 selkies-project/selkies）
-- `SELKIES_COMMIT`：指定 commit，空则使用 main 最新；存在 `selkies-src/` 时优先用本地代码
+- `SELKIES_COMMIT`：默认锁定到验证过的 commit（可复现）；置空则取 main 最新；存在 `selkies-src/` 时优先用本地代码
+- 基础镜像（`baseimage-alpine:3.22`、`webtop:ubuntu-kde`）已用 `@sha256:` 锁 digest，升级时需重新解析 digest
 
 **docker-compose 环境变量：** 可在 `docker-compose.yml` 或 `.env` 中修改 `PUID`、`PGID`、`TZ`、`CUSTOM_USER`、`PASSWORD` 等。
 
@@ -37,93 +42,30 @@ docker build -t webtop:custom .
 ./build-and-run.sh down    # docker compose down
 ```
 
-## 已完成的修改
+## 构建结构（根目录 Dockerfile）
 
-### 1. Webtop 界面修改 (docker-webtop-master)
+当前唯一生效的构建是仓库根目录的 `Dockerfile`，两阶段：
 
-| 文件 | 修改内容 |
-|------|----------|
-| `root/defaults/xfce/xfwm4.xml` | 窗口透明度：frame_opacity=90, inactive_opacity=85 等 |
-| `root/defaults/xfce/xfce4-panel.xml` | 面板位置：从底部(p=6)改为左侧(p=12) |
-| `root/defaults/selkies-custom/custom.css` | Selkies 侧边栏透明度与按钮位置 |
+1. **Stage 1（selkies-build, Alpine）**：克隆/使用本地 Selkies 源码，构建三套 dashboard
+   （`selkies-dashboard` / `-zinc` / `-wish`），并把根目录 logo 注入各 dashboard。
+2. **Stage 2（webtop:ubuntu-kde）**：注入构建好的 Selkies、安装 WhiteSur 主题与 openclaw-tool、
+   写入 SDDM 登录主题与开机动画、放置 9 个 `custom-cont-init.d/*.sh` 首启脚本，最后跑
+   `scripts/cleanup-image.sh` 瘦身。
 
-### 2. Selkies Baseimage 修改 (docker-baseimage-selkies-master)
-
-| 文件 | 修改内容 |
-|------|----------|
-| `root/etc/s6-overlay/s6-rc.d/init-nginx/run` | 支持从 `/defaults/selkies-custom/` 加载自定义 CSS 覆盖 |
+> 早期版本曾保留 `docker-webtop-master/`、`docker-baseimage-selkies-master/` 两个上游整仓拷贝
+> 作为 XFCE 备用构建路径，但主镜像是 **KDE 非 XFCE**，这两目录从不参与根 Dockerfile 构建，
+> 已删除。若日后需要 XFCE 变体或自定义 baseimage，从 linuxserver 上游重新获取即可。
 
 ## 进一步自定义
 
-### 修改 XFCE 透明度
-编辑 `docker-webtop-master/root/defaults/xfce/xfwm4.xml`：
-- `frame_opacity` (0-100): 活动窗口透明度
-- `inactive_opacity` (0-100): 非活动窗口透明度
-- 数值越小越透明
-
-### 修改 XFCE 面板位置
-编辑 `docker-webtop-master/root/defaults/xfce/xfce4-panel.xml`：
-- `p=0`: 顶部
-- `p=6`: 底部
-- `p=12`: 左侧
-- `p=18`: 右侧
-- `x`/`y`: 偏移量
-
-### 修改主题
-编辑 `docker-webtop-master/root/defaults/xfce/xsettings.xml`：
-- `ThemeName`: 如 `adw-gtk3-dark`、`adw-gtk3`(浅色)、`Arc-Dark` 等
-- `IconThemeName`: 图标主题，如 `adwaita-xfce`
-
-### 修改 Selkies 侧边栏样式
-编辑 `docker-webtop-master/root/defaults/selkies-custom/custom.css`，可调整：
-- 侧边栏透明度 (`opacity`)
-- 背景色 (`background-color`)
-- 切换按钮位置 (`top`, `left`)
-
-## 构建步骤
-
-### 方式一：使用官方镜像（仅 Webtop 修改生效）
-
-若只修改了 Webtop 相关文件，可直接构建 webtop：
-
-```bash
-cd docker-webtop-master
-docker build -t webtop:custom .
-```
-
-**注意**：Selkies 自定义 CSS 需要 baseimage 支持。使用官方 `ghcr.io/linuxserver/baseimage-selkies:alpine323` 时，init-nginx 不含自定义 overlay 逻辑，`selkies-custom` 不会生效。
-
-### 方式二：完整自定义（Baseimage + Webtop）
-
-需要同时修改 Selkies 和 Webtop 时，先构建 baseimage，再构建 webtop：
-
-```bash
-# 1. 构建自定义 baseimage-selkies（包含 Selkies CSS overlay 支持）
-cd docker-baseimage-selkies-master
-docker build -t baseimage-selkies:custom .
-
-# 2. 修改 webtop Dockerfile 第一行为：
-#    FROM baseimage-selkies:custom
-
-# 3. 构建 webtop
-cd ../docker-webtop-master
-docker build -t webtop:custom .
-```
-
-**说明**：
-- 官方 `baseimage-selkies:alpine323` 为 Alpine 变体，本地仓库中的主 Dockerfile 构建的是 Debian 镜像。若需 Alpine 版本，需使用与 linuxserver CI 相同的构建流程。
-- 若仅需 XFCE 修改（透明度、面板位置）而无需 Selkies CSS 覆盖，可直接用方式一构建 webtop。
-
-### 方式三：多阶段构建（推荐）
-
-在 `docker-webtop-master/Dockerfile` 中，将第一行改为使用本地 baseimage：
-
-```dockerfile
-# 若已构建 baseimage-selkies:custom，使用：
-FROM baseimage-selkies:custom
-# 否则使用官方：
-# FROM ghcr.io/linuxserver/baseimage-selkies:alpine323
-```
+| 想改什么 | 改哪里 |
+|------|----------|
+| 桌面/面板/主题等首启默认配置 | `custom-defaults/`（首次启动、空 volume 时复制到 `/config`） |
+| KDE 面板居中、默认浏览器、终端、用户名、提示符等 | `custom-cont-init.d/9x-*.sh` |
+| Selkies 前端版本 | Dockerfile `ARG SELKIES_COMMIT`，或放本地 `selkies-src/` |
+| Logo | 根目录 `logo.png` 或 `logo.svg` |
+| GTK/图标主题 | 替换根目录 `WhiteSur-*-theme-master.zip`，并按需调整 Dockerfile 安装块 |
+| 登录界面 / 开机动画 | `custom-sddm/`、`custom-splash/` |
 
 ## 运行容器
 

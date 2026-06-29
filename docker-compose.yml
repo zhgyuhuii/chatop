@@ -29,10 +29,11 @@ services:
 
       # -----------------------------------------------------------------------
       # HTTP 认证（Webtop / Selkies 共用）
-      # 不设 PASSWORD 则无认证；.env 中可设置 PASSWORD 覆盖
+      # 强制要求设置 PASSWORD：未在 .env 设置则 compose 拒绝启动，
+      # 避免弱口令/空认证暴露在对外端口 3001（PASSWORD 同时是 root/abc 的 su 密码）
       # -----------------------------------------------------------------------
       - CUSTOM_USER=${CUSTOM_USER:-admin}
-      - PASSWORD=${PASSWORD:-123456}
+      - PASSWORD=${PASSWORD:?请在 .env 中设置强密码 PASSWORD，参考 env.example}
       - CUSTOM_HOSTNAME=${CUSTOM_HOSTNAME:-webtop}
       # 使用 secrets：- FILE__PASSWORD=/run/secrets/webtop_password
 
