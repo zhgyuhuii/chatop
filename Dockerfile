@@ -45,4 +45,78 @@ RUN mkdir -p /dockerstartup && \
     chmod +x /usr/local/bin/start-filebrowser.sh /usr/local/bin/start-caddy.sh && \
     printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
+
+# ================== S7：定制桌面内置软件 ==================
+# 以 root 卸载 11 个不需要的内置应用 + 安装中文办公栈（搜狗输入法/WPS/CJK 字体/fcitx 框架）
+USER root
+
+# --- Task A：卸载 11 个内置应用 ---
+# apt 安装的（含其插件/本地化子包）走 purge + autoremove；
+# /opt 直装的（gimp、telegram，dpkg 查不到）走 rm -rf 目录 + 删 .desktop。
+# 逐项 || true，缺失不致命；最后列残留以便核对。
+RUN set -ux; \
+    apt-get remove --purge -y \
+        firefox xul-ext-ubufox \
+        thunderbird \
+        remmina remmina-common remmina-plugin-rdp remmina-plugin-secret remmina-plugin-spice remmina-plugin-vnc \
+        obs-studio obs-v4l2sink \
+        onlyoffice-desktopeditors \
+        signal-desktop \
+        slack-desktop \
+        zoom \
+        nextcloud-desktop nextcloud-desktop-common nextcloud-desktop-l10n \
+        || true; \
+    apt-get autoremove -y || true; \
+    # 非 apt（/opt 直装）：gimp、telegram
+    rm -rf /opt/gimp-3 /opt/Telegram \
+           /usr/share/applications/gimp.desktop \
+           /usr/share/applications/telegram.desktop || true; \
+    # 兜底清理 purge 后可能残留的 /opt 目录与 .desktop
+    rm -rf /opt/Signal /opt/zoom /opt/onlyoffice || true; \
+    rm -f /usr/share/applications/signal-desktop.desktop \
+          /usr/share/applications/slack.desktop \
+          /usr/share/applications/Zoom.desktop \
+          /usr/share/applications/firefox.desktop \
+          /usr/share/applications/thunderbird.desktop \
+          /usr/share/applications/onlyoffice-desktopeditors.desktop \
+          /usr/share/applications/com.obsproject.Studio.desktop \
+          /usr/share/applications/com.nextcloud.desktopclient.nextcloud.desktop \
+          /usr/share/applications/org.remmina.Remmina.desktop \
+          /usr/share/applications/org.remmina.Remmina-file.desktop \
+          /usr/share/applications/remmina-gnome.desktop || true; \
+    echo "=== S7 卸载后残留检查 ==="; \
+    ls /usr/share/applications | grep -iE "signal|firefox|thunderbird|remmina|obs|telegram|onlyoffice|nextcloud|zoom|slack|gimp" || echo "（无残留 .desktop）"
+
+# --- Task B-1：CJK 字体 + fcitx4 输入法框架（jammy 上搜狗适配 fcitx4）---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      fonts-noto-cjk fonts-noto-color-emoji \
+      fcitx fcitx-bin fcitx-config-gtk fcitx-frontend-all fcitx-module-cloudpinyin \
+      libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 libgsettings-qt1 \
+    && (apt-get remove --purge -y 'ibus*' 'fcitx5*' 2>/dev/null || true)
+
+# --- Task B-2：系统级输入法环境变量 + fcitx 自启动 ---
+RUN printf 'GTK_IM_MODULE=fcitx\nQT_IM_MODULE=fcitx\nXMODIFIERS=@im=fcitx\n' >> /etc/environment && \
+    (cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/ 2>/dev/null || true)
+
+# --- Task B-3：搜狗拼音 .deb（gtimg CDN 在本环境 403，故 guard 后回退 fcitx 谷歌/sunpinyin 拼音）---
+ARG SOGOU_URL="https://ime-sec.gtimg.com/pc/dl/gzindex/1680521603/sogoupinyin_4.2.1.145_amd64.deb"
+RUN set -ux; \
+    if curl -fsSL -o /tmp/sogou.deb "$SOGOU_URL"; then \
+        (dpkg -i /tmp/sogou.deb || apt-get install -f -y); rm -f /tmp/sogou.deb; \
+        echo "SOGOU_INSTALLED"; \
+    else \
+        echo "SOGOU_UNREACHABLE：回退 fcitx-googlepinyin/fcitx-sunpinyin 作为可用中文输入"; \
+    fi; \
+    apt-get install -y --no-install-recommends fcitx-googlepinyin fcitx-sunpinyin
+
+# --- Task B-4：WPS Office .deb（wpscdn 实测 200 / 319MB）---
+ARG WPS_URL="https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/11664/wps-office_11.1.0.11664.XA_amd64.deb"
+RUN set -ux; \
+    curl -fsSL -o /tmp/wps.deb "$WPS_URL"; \
+    (dpkg -i /tmp/wps.deb || apt-get install -f -y); \
+    rm -f /tmp/wps.deb; \
+    (apt-get install -y --no-install-recommends libtiff5 2>/dev/null || true); \
+    rm -rf /var/lib/apt/lists/*
+
+# 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000
