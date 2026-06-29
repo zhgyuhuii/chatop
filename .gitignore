@@ -1,0 +1,9 @@
+# 构建 / 运行产物
+*.log
+.env
+novnc-src/node_modules/
+novnc-src/build/
+novnc-src/dist/
+# 本地临时
+*.tmp
+.DS_Store
