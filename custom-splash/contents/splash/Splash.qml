@@ -1,5 +1,5 @@
 /*
- * 统御至诚 - 自定义开机动画
+ * 察元AI - 自定义开机动画
  * 渐变背景、Logo 缩放、旋转加载、文字淡入
  * 使用 QtQuick 2.5，避免 ksplashqml 崩溃
  */
@@ -87,7 +87,7 @@ Rectangle {
                 horizontalCenter: parent.horizontalCenter
                 topMargin: 24
             }
-            text: "统御至诚"
+            text: "察元AI"
             color: "#ffffff"
             font.pixelSize: 32
             font.bold: true
@@ -101,7 +101,7 @@ Rectangle {
                 horizontalCenter: parent.horizontalCenter
                 topMargin: 8
             }
-            text: "统御至诚云桌面"
+            text: "察元AI云桌面"
             color: "rgba(255,255,255,0.9)"
             font.pixelSize: 16
         }
@@ -159,7 +159,7 @@ Rectangle {
             }
             Text {
                 color: "rgba(255,255,255,0.85)"
-                text: "统御至诚"
+                text: "察元AI"
                 font.pixelSize: 13
                 anchors.verticalCenter: parent.verticalCenter
             }

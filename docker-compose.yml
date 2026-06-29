@@ -1,20 +1,25 @@
 # =============================================================================
-# Webtop (Custom Selkies) - 构建与运行
+# 察元AI (Custom Selkies) - 构建与运行
 # 使用：docker compose up -d --build
 # 可选：cp env.example .env 并修改，用于覆盖下方默认值
+# 镜像版本：由根目录 VERSION 文件控制（默认与 ${VERSION} 同步），每次发布 +1
+# 推荐用 ./build-and-run.sh，它会自动读取 VERSION 并打 chatop:<版本> 与 chatop:latest
 # =============================================================================
 
 services:
-  webtop:
+  chatop:
     # 可选：创建 .env 文件（参考 env.example），用于覆盖下方变量
     build:
       context: .
-      dockerfile: Dockerfile 
-    image: webtop:custom
-    container_name: webtop-custom
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-1.0.0}
+        BUILD_DATE: ${BUILD_DATE:-}
+    image: chatop:${VERSION:-1.0.0}
+    container_name: chatop
 
     # -------------------------------------------------------------------------
-    # Webtop 用户与权限
+    # 察元AI 用户与权限
     # -------------------------------------------------------------------------
     environment:
       # 用户/组 ID，用于卷权限映射，执行 id 命令查看当前用户
@@ -23,19 +28,19 @@ services:
       # 时区
       - TZ=${TZ:-Asia/Shanghai}
       # 页面标题
-      - TITLE=${TITLE:-统御至诚}
+      - TITLE=${TITLE:-察元AI}
       # 新建文件默认权限 (可选)
       # - UMASK=022
 
       # -----------------------------------------------------------------------
-      # HTTP 认证（Webtop / Selkies 共用）
+      # HTTP 认证（察元AI / Selkies 共用）
       # 强制要求设置 PASSWORD：未在 .env 设置则 compose 拒绝启动，
       # 避免弱口令/空认证暴露在对外端口 3001（PASSWORD 同时是 root/abc 的 su 密码）
       # -----------------------------------------------------------------------
       - CUSTOM_USER=${CUSTOM_USER:-admin}
       - PASSWORD=${PASSWORD:?请在 .env 中设置强密码 PASSWORD，参考 env.example}
-      - CUSTOM_HOSTNAME=${CUSTOM_HOSTNAME:-webtop}
-      # 使用 secrets：- FILE__PASSWORD=/run/secrets/webtop_password
+      - CUSTOM_HOSTNAME=${CUSTOM_HOSTNAME:-chatop}
+      # 使用 secrets：- FILE__PASSWORD=/run/secrets/chatop_password
 
       # -----------------------------------------------------------------------
       # Selkies 界面与功能
@@ -44,7 +49,7 @@ services:
       # 仪表盘: selkies-dashboard | selkies-dashboard-zinc | selkies-dashboard-wish
       - FILE_MANAGER_PATH=${FILE_MANAGER_PATH:-/config/Desktop}
       # 上传/下载默认路径
-      - SELKIES_UI_TITLE=${SELKIES_UI_TITLE:-统御至诚}
+      - SELKIES_UI_TITLE=${SELKIES_UI_TITLE:-察元AI}
       # 侧边栏标题，可在 .env 中配置
       - SELKIES_UI_SHOW_SIDEBAR=true
       - SELKIES_UI_SHOW_LOGO=true
@@ -53,7 +58,7 @@ services:
       # 剪贴板同步
       - SELKIES_CLIPBOARD_ENABLED=true
       - SELKIES_CLIPBOARD_IN_ENABLED=false
-      - SELKIES_CLIPBOARD_OUT_ENABLED=true      
+      - SELKIES_CLIPBOARD_OUT_ENABLED=true
       # 麦克风
       - SELKIES_MICROPHONE_ENABLED=true
       # 手柄
@@ -87,13 +92,13 @@ services:
       # - DRI_NODE=/dev/dri/renderD128
       # - DRINODE=/dev/dri/renderD128
 
-    hostname: ${CUSTOM_HOSTNAME:-webtop}
-    # 设置 hostname 避免显示容器 ID（如 abc@3579d035063d），改为 admin@webtop
+    hostname: ${CUSTOM_HOSTNAME:-chatop}
+    # 设置 hostname 避免显示容器 ID（如 abc@3579d035063d），改为 admin@chatop
 
     ports:
       - "3001:3001"
     volumes:
-      - webtop-config:/config
+      - chatop-config:/config
       # 自定义 logo 运行时覆盖（二选一，需文件存在）：
       # - ./logo.png:/custom-logo/logo.png:ro
       # - ./assets:/custom-logo:ro
@@ -105,4 +110,4 @@ services:
     #   - /dev/dri:/dev/dri
 
 volumes:
-  webtop-config:
+  chatop-config:

@@ -1,12 +1,12 @@
 [SddmGreeterTheme]
-Name=统御至诚
-Description=统御至诚 SDDM 登录主题
+Name=察元AI
+Description=察元AI SDDM 登录主题
 Type=sddm-theme
-Author=Webtop
+Author=chatop
 Copyright=(c) 2024
 License=GPL
 Version=1.0
 MainScript=Main.qml
 ConfigFile=theme.conf
-Theme-Id=tongyu-zhicheng
+Theme-Id=chatop
 Theme-API=2.0

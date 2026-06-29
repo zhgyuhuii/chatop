@@ -8,7 +8,7 @@ if [ -d /var/run/s6/container_environment ]; then
   done
 fi
 
-HOST="${CUSTOM_HOSTNAME:-webtop}"
+HOST="${CUSTOM_HOSTNAME:-chatop}"
 echo "**** Setting hostname to ${HOST} ****"
 echo "$HOST" > /etc/hostname
 hostname "$HOST" 2>/dev/null || true

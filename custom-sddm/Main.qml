@@ -1,6 +1,6 @@
 /*
- * 统御至诚 - SDDM 登录主题
- * Logo + 统御至诚 + 系统名称 + 登录表单
+ * 察元AI - SDDM 登录主题
+ * Logo + 察元AI + 系统名称 + 登录表单
  * 使用 config 避免空内容报错
  */
 import QtQuick 2.15
@@ -15,8 +15,8 @@ Rectangle {
     LayoutMirroring.childrenInherit: true
 
     // 可配置文本（避免空值）
-    property string systemName: config.stringValue("SystemName") || "统御至诚云桌面"
-    property string slogan: config.stringValue("Slogan") || "统御至诚"
+    property string systemName: config.stringValue("SystemName") || "察元AI云桌面"
+    property string slogan: config.stringValue("Slogan") || "察元AI"
     property string logoPath: config.stringValue("LogoPath") || "images/logo.png"
     property string logoPathSvg: "images/logo.svg"
 
@@ -41,7 +41,7 @@ Rectangle {
         }
     }
 
-    // 顶部品牌区：Logo + 统御至诚 + 系统名称
+    // 顶部品牌区：Logo + 察元AI + 系统名称
     Column {
         id: brandArea
         anchors {

@@ -1,4 +1,4 @@
-# 统御至诚 - 自定义开机动画
+# 察元AI - 自定义开机动画
 
 完整自定义开机动画，包含：
 - **渐变背景**：蓝色渐变（#0d47a1 → #1565c0）
@@ -48,11 +48,11 @@ docker compose build --no-cache
 
 ## ksplashqml 崩溃排查
 
-若仍崩溃，编辑 `custom-cont-init.d/92-themes-and-openclaw.sh`，将 `Theme=org.webtop.custom-splash` 改为 `Theme=org.kde.breeze.desktop` 使用默认 Breeze。
+若仍崩溃，编辑 `custom-cont-init.d/92-themes-and-openclaw.sh`，将 `Theme=org.chatop.custom-splash` 改为 `Theme=org.kde.breeze.desktop` 使用默认 Breeze。
 
 ## 技术说明
 
 - 基于 Plasma Look and Feel 包，仅包含 splash 部分
 - QML 使用 `stage` 属性（1–5）表示加载进度
-- 安装路径：`/usr/share/plasma/look-and-feel/org.webtop.custom-splash/`
-- 配置：`~/.config/ksplashrc` 中 `[KSplash] Theme=org.webtop.custom-splash`
+- 安装路径：`/usr/share/plasma/look-and-feel/org.chatop.custom-splash/`
+- 配置：`~/.config/ksplashrc` 中 `[KSplash] Theme=org.chatop.custom-splash`

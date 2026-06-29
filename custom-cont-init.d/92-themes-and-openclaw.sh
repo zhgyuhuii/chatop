@@ -54,7 +54,7 @@ for target in /defaults /config; do
   cat > "$target/.config/ksplashrc" << 'KSPLASH_EOF'
 [KSplash]
 Engine=KSplashQML
-Theme=org.webtop.custom-splash
+Theme=org.chatop.custom-splash
 KSPLASH_EOF
 done 2>/dev/null
 

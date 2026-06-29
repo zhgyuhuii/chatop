@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # =============================================================================
-# Selkies + Webtop 构建
-# 对应 build-and-run.sh 的逻辑：构建 Selkies → 注入 baseimage → 构建 Webtop
+# Selkies + 察元AI (chatop) 构建
+# 对应 build-and-run.sh 的逻辑：构建 Selkies → 注入 baseimage → 构建 察元AI
 # 使用：存在 selkies-src 时用本地代码，否则从 GitHub 克隆
 # 需启用 BuildKit（Docker 23+ 默认开启）以支持 RUN --mount=type=cache 缓存加速
 # =============================================================================
@@ -76,17 +76,17 @@ RUN --mount=type=cache,target=/root/.npm \
   done
 
 # -----------------------------------------------------------------------------
-# Stage 2: 基于 Ubuntu KDE Webtop，注入自定义 Selkies 与 logo
+# Stage 2: 基于 linuxserver webtop:ubuntu-kde 上游基础镜像，注入自定义 Selkies 与 logo
 # -----------------------------------------------------------------------------
 # 锁 digest 保证可复现构建（如需升级：重新解析 tag 的 digest 后更新此处）
 FROM ghcr.io/linuxserver/webtop:ubuntu-kde@sha256:32fb57cb5a97314faf690935b1b973562982afb5463a35764e3a57e7bcd40476
 
 ARG BUILD_DATE
-ARG VERSION
-LABEL build_version="Custom Webtop Ubuntu KDE - ${VERSION} Build-date:- ${BUILD_DATE}"
-LABEL maintainer="custom"
+ARG VERSION=1.0.0
+LABEL build_version="察元AI (chatop) Ubuntu KDE - ${VERSION} Build-date:- ${BUILD_DATE}"
+LABEL maintainer="chatop"
 
-ENV TITLE="Ubuntu KDE (Custom Selkies)"
+ENV TITLE="察元AI"
 
 # 注入自定义构建的 Selkies
 COPY --from=selkies-build /buildout/selkies-dashboard /usr/share/selkies/selkies-dashboard
@@ -140,20 +140,20 @@ RUN echo "**** add logo ****" && \
     curl -sLo /usr/share/selkies/www/icon.png \
       https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/webtop-logo.png; \
   fi && \
-  mkdir -p /usr/share/plasma/look-and-feel/org.webtop.custom-splash && \
-  cp -a /tmp/custom-splash/* /usr/share/plasma/look-and-feel/org.webtop.custom-splash/ 2>/dev/null || true && \
-  mkdir -p /usr/share/plasma/look-and-feel/org.webtop.custom-splash/contents/splash/images && \
-  curl -sLo /usr/share/plasma/look-and-feel/org.webtop.custom-splash/contents/splash/images/busywidget.svgz \
+  mkdir -p /usr/share/plasma/look-and-feel/org.chatop.custom-splash && \
+  cp -a /tmp/custom-splash/* /usr/share/plasma/look-and-feel/org.chatop.custom-splash/ 2>/dev/null || true && \
+  mkdir -p /usr/share/plasma/look-and-feel/org.chatop.custom-splash/contents/splash/images && \
+  curl -sLo /usr/share/plasma/look-and-feel/org.chatop.custom-splash/contents/splash/images/busywidget.svgz \
     "https://raw.githubusercontent.com/KDE/plasma-workspace/master/lookandfeel/org.kde.breeze/contents/splash/images/busywidget.svgz" 2>/dev/null || true && \
-  ( [ -f /tmp/logo.png ] && cp /tmp/logo.png /usr/share/plasma/look-and-feel/org.webtop.custom-splash/contents/splash/images/logo.png ) || \
-  ( [ -f /tmp/logo.svg ] && cp /tmp/logo.svg /usr/share/plasma/look-and-feel/org.webtop.custom-splash/contents/splash/images/logo.svg ) || \
-  ( curl -sLo /usr/share/plasma/look-and-feel/org.webtop.custom-splash/contents/splash/images/logo.png \
+  ( [ -f /tmp/logo.png ] && cp /tmp/logo.png /usr/share/plasma/look-and-feel/org.chatop.custom-splash/contents/splash/images/logo.png ) || \
+  ( [ -f /tmp/logo.svg ] && cp /tmp/logo.svg /usr/share/plasma/look-and-feel/org.chatop.custom-splash/contents/splash/images/logo.svg ) || \
+  ( curl -sLo /usr/share/plasma/look-and-feel/org.chatop.custom-splash/contents/splash/images/logo.png \
     https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/webtop-logo.png ) && \
-  mkdir -p /usr/share/sddm/themes/tongyu-zhicheng /tmp/custom-sddm/images && \
-  cp -a /tmp/custom-sddm/* /usr/share/sddm/themes/tongyu-zhicheng/ && \
-  ( [ -f /tmp/logo.png ] && cp /tmp/logo.png /usr/share/sddm/themes/tongyu-zhicheng/images/logo.png ) || \
-  ( [ -f /tmp/logo.svg ] && cp /tmp/logo.svg /usr/share/sddm/themes/tongyu-zhicheng/images/logo.svg ) || true && \
-  mkdir -p /etc/sddm.conf.d && printf '[Theme]\nCurrent=tongyu-zhicheng\n' > /etc/sddm.conf.d/theme.conf && \
+  mkdir -p /usr/share/sddm/themes/chatop /tmp/custom-sddm/images && \
+  cp -a /tmp/custom-sddm/* /usr/share/sddm/themes/chatop/ && \
+  ( [ -f /tmp/logo.png ] && cp /tmp/logo.png /usr/share/sddm/themes/chatop/images/logo.png ) || \
+  ( [ -f /tmp/logo.svg ] && cp /tmp/logo.svg /usr/share/sddm/themes/chatop/images/logo.svg ) || true && \
+  mkdir -p /etc/sddm.conf.d && printf '[Theme]\nCurrent=chatop\n' > /etc/sddm.conf.d/theme.conf && \
   rm -rf /config/.cache /tmp/*
 
 # 构建时界面定制：custom-defaults 在首次启动时复制到 /config
