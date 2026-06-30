@@ -196,6 +196,40 @@ class GroupStore:
             json.dump(data, f, ensure_ascii=False)
         os.replace(tmp, self.path)
 
+    SYS_GROUP_ID = "__system__"
+
+    def reconcile(self, layout, installed):
+        valid = {a["key"] for a in installed}
+        sys_keys = {a["key"] for a in installed if a.get("source") == "system"}
+        pulled = [k for k in layout.get("pulled_out_system", []) if k in valid]
+        referenced = set()
+        items = []
+        for it in layout.get("items", []):
+            if it.get("type") == "app":
+                k = it.get("key")
+                if k in valid and k not in referenced:
+                    referenced.add(k); items.append({"type": "app", "key": k})
+            elif it.get("type") == "group":
+                apps = [k for k in it.get("apps", []) if k in valid and k not in referenced]
+                referenced.update(apps)
+                if apps:
+                    items.append({"type": "group", "id": it.get("id") or ("g" + str(len(items))),
+                                  "name": it.get("name") or "新建分组", "apps": apps,
+                                  **({"auto": True} if it.get("auto") else {})})
+        new_keys = [a["key"] for a in installed if a["key"] not in referenced]
+        sys_new = [k for k in new_keys if k in sys_keys and k not in pulled]
+        usr_new = [k for k in new_keys if k not in sys_new]
+        if sys_new:
+            grp = next((g for g in items if g.get("type") == "group" and g.get("auto")), None)
+            if grp:
+                grp["apps"].extend(sys_new)
+            else:
+                items.append({"type": "group", "id": self.SYS_GROUP_ID,
+                              "name": "系统应用", "apps": sys_new, "auto": True})
+        for k in usr_new:
+            items.append({"type": "app", "key": k})
+        return {"version": 1, "items": items, "pulled_out_system": pulled}
+
 class AppManager:
     def __init__(self, catalog_path=CATALOG_PATH):
         self.catalog_path = catalog_path

@@ -53,3 +53,53 @@ def test_groupstore_load_corrupt_returns_empty():
     with tempfile.TemporaryDirectory() as t:
         p = os.path.join(t, "groups.json"); open(p, "w").write("{not json")
         assert am.GroupStore(p).load() == {"version": 1, "items": [], "pulled_out_system": []}
+
+def _layout(items, pulled=None):
+    return {"version": 1, "items": items, "pulled_out_system": pulled or []}
+
+def _inst(key, source="user"):
+    return {"key": key, "name": key, "source": source}
+
+def test_reconcile_drops_uninstalled_apps():
+    gs = am.GroupStore("/x")
+    layout = _layout([{"type": "app", "key": "gone"}, {"type": "app", "key": "chrome"}])
+    out = gs.reconcile(layout, [_inst("chrome")])
+    keys = [i["key"] for i in out["items"] if i["type"] == "app"]
+    assert keys == ["chrome"]
+
+def test_reconcile_drops_empty_group():
+    gs = am.GroupStore("/x")
+    layout = _layout([{"type": "group", "id": "g1", "name": "空", "apps": ["gone"]}])
+    out = gs.reconcile(layout, [_inst("chrome")])
+    groups = [i for i in out["items"] if i["type"] == "group"]
+    assert groups == []
+    assert [i["key"] for i in out["items"] if i["type"] == "app"] == ["chrome"]
+
+def test_reconcile_new_user_app_goes_top_level_end():
+    gs = am.GroupStore("/x")
+    layout = _layout([{"type": "app", "key": "chrome"}])
+    out = gs.reconcile(layout, [_inst("chrome"), _inst("newapp")])
+    assert [i["key"] for i in out["items"] if i["type"] == "app"] == ["chrome", "newapp"]
+
+def test_reconcile_system_app_auto_grouped():
+    gs = am.GroupStore("/x")
+    out = gs.reconcile(_layout([]), [_inst("thunar", "system")])
+    grp = [i for i in out["items"] if i["type"] == "group"]
+    assert len(grp) == 1 and grp[0].get("auto") is True
+    assert "thunar" in grp[0]["apps"]
+
+def test_reconcile_pulled_out_system_not_regrouped():
+    gs = am.GroupStore("/x")
+    layout = _layout([{"type": "app", "key": "thunar"}], pulled=["thunar"])
+    out = gs.reconcile(layout, [_inst("thunar", "system")])
+    grp = [i for i in out["items"] if i["type"] == "group"]
+    assert grp == []
+    assert [i["key"] for i in out["items"] if i["type"] == "app"] == ["thunar"]
+
+def test_reconcile_keeps_existing_group_membership():
+    gs = am.GroupStore("/x")
+    layout = _layout([{"type": "group", "id": "g1", "name": "办公", "apps": ["wps"]}])
+    out = gs.reconcile(layout, [_inst("wps"), _inst("chrome")])
+    grp = [i for i in out["items"] if i["type"] == "group"][0]
+    assert grp["apps"] == ["wps"]
+    assert [i["key"] for i in out["items"] if i["type"] == "app"] == ["chrome"]
