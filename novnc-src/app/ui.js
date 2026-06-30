@@ -3946,10 +3946,14 @@ const ChatopApps = {
     card.addEventListener('dragstart', e=>{ this._drag={kind:'app',key:a.key};
       e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
     card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
-    card.addEventListener('dragover', e=>{ if(this._drag){ e.preventDefault(); card.classList.add('dragover'); }});
-    card.addEventListener('dragleave', ()=>card.classList.remove('dragover'));
-    card.addEventListener('drop', e=>{ e.preventDefault(); card.classList.remove('dragover');
-      this.dropOnApp(a.key); });
+    const zoneOf = (e) => { const r=card.getBoundingClientRect(); const f=(r.width?(e.clientX-r.left)/r.width:0.5);
+      return f<0.3 ? 'before' : (f>0.7 ? 'after' : 'group'); };
+    card.addEventListener('dragover', e=>{ if(this._drag){ e.preventDefault();
+      const z=zoneOf(e); card.classList.remove('dz-before','dz-after','dz-group');
+      card.classList.add('dz-'+z); }});
+    card.addEventListener('dragleave', ()=>card.classList.remove('dz-before','dz-after','dz-group'));
+    card.addEventListener('drop', e=>{ e.preventDefault(); const z=zoneOf(e);
+      card.classList.remove('dz-before','dz-after','dz-group'); this.dropOnApp(a.key, z); });
     return card;
   },
   groupCard(group){
@@ -3974,14 +3978,28 @@ const ChatopApps = {
       this.saveGroups(); this.renderGrid(''); this.openGroup(id); };
     return card;
   },
-  dropOnApp(targetKey){
-    const d=this._drag; this._drag=null; if(!d||d.kind!=='app'||d.key===targetKey) return;
-    // 应用叠应用：若目标在顶层 → 两者建组；否则把拖动应用排到目标前
-    const ti=this.topIndexOfApp(targetKey);
-    if (ti>=0){
+  dropOnApp(targetKey, zone){   // zone: 'before' | 'after' | 'group'
+    const d=this._drag; this._drag=null;
+    if(!d || d.kind!=='app' || d.key===targetKey) return;
+    if(this.openGroupId){
+      // 浮层内：组内重排（只换位，不再建子组）
+      const g=this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId); if(!g) return;
+      const from=g.apps.indexOf(d.key); if(from>=0) g.apps.splice(from,1);
+      let to=g.apps.indexOf(targetKey); if(to<0){ g.apps.push(d.key); }
+      else g.apps.splice(zone==='after'?to+1:to, 0, d.key);
+      this.saveGroups(); this.renderGroupGrid(g); return;
+    }
+    if(zone==='group'){
+      const ti=this.topIndexOfApp(targetKey);
+      if(ti>=0){
+        this.removeAppFromAnywhere(d.key);
+        const idx=this.topIndexOfApp(targetKey);
+        this.groups.items.splice(idx,1,{type:'group',id:'g'+Date.now(),name:'新建分组',apps:[targetKey,d.key]});
+      }
+    } else {
       this.removeAppFromAnywhere(d.key);
-      const idx=this.topIndexOfApp(targetKey);
-      this.groups.items.splice(idx,1,{type:'group',id:'g'+Date.now(),name:'新建分组',apps:[targetKey,d.key]});
+      let idx=this.topIndexOfApp(targetKey); if(idx<0) idx=this.groups.items.length;
+      this.groups.items.splice(zone==='after'?idx+1:idx, 0, {type:'app',key:d.key});
     }
     this.saveGroups(); this.renderGrid('');
   },
