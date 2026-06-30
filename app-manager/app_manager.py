@@ -268,10 +268,12 @@ class AppManager:
                     "key": key, "name": info["name"],
                     "icon": ("/apps/icon?p=" + quote(os.path.realpath(ic))) if ic else "",
                     "catalog_id": c["id"] if c else None,
-                    "removable": bool(c and c.get("remove")),
+                    "removable": False,  # 循环后统一回填
                     "source": "user" if os.path.realpath(d).startswith(
                         os.path.realpath(os.path.expanduser("~"))) else "system",
                 }
+        for v in seen.values():
+            v["removable"] = bool(v["source"] == "user" and self.uninstall_cmd(v["key"]))
         return sorted(seen.values(), key=lambda x: (x["source"] != "user", x["name"].lower()))
     def desktop_exec(self, key):
         """按 key 取已扫描 .desktop 的清理后 Exec（受信任的系统文件，非前端字符串）。"""
@@ -281,6 +283,26 @@ class AppManager:
             if os.path.isfile(p):
                 info = _parse_desktop(p)
                 if info: return _exec_clean(info["exec"])
+        return None
+    def uninstall_cmd(self, key):
+        """按 key 从 .desktop 安装特征推断卸载命令；系统应用/无法推断 → None。"""
+        if not key or "/" in key or ".." in key:
+            return None
+        home = os.path.realpath(os.path.expanduser("~"))
+        for d in APP_DIRS:
+            p = os.path.join(d, key + ".desktop")
+            if not os.path.isfile(p):
+                continue
+            if not os.path.realpath(d).startswith(home):
+                return None  # 系统目录 = apt 装的系统应用，不可卸
+            info = _parse_desktop(p); ex = info["exec"] if info else ""
+            if "proot-apps run " in ex:
+                return "proot-apps remove " + ex.split("proot-apps run ", 1)[1].split()[0]
+            if key.startswith("chatop-") and os.path.isdir(
+                    os.path.expanduser("~/Applications/" + key[len("chatop-"):])):
+                return "bash /usr/local/lib/chatop/gui-uninstall.sh " + key[len("chatop-"):]
+            c = {a["id"]: a for a in self._load()["apps"]}.get(key)
+            return c["remove"] if c and c.get("remove") else None
         return None
     def _app(self, app_id):
         for a in self._load()["apps"]:
@@ -297,19 +319,26 @@ class AppManager:
         self._app(app_id)
         if action not in ("install","remove"): raise ValueError(action)
         self._state[app_id] = "queued"; self._tasks.put((app_id, action)); return True
+    def enqueue_cmd(self, log_id, command):
+        self._state[log_id] = "queued"
+        self._tasks.put(("__cmd__", (log_id, command)))
+        return True
     def task_state(self, app_id): return self._state.get(app_id, "unknown")
     def _worker(self):
         while True:
             app_id, action = self._tasks.get()
-            cmd = self.command_for(app_id, action)
-            self._state[app_id] = "running"
-            logf = os.path.join(LOG_DIR, f"{app_id}.log")
+            if app_id == "__cmd__":
+                log_id, cmd = action
+            else:
+                log_id, cmd = app_id, self.command_for(app_id, action)
+            self._state[log_id] = "running"
+            logf = os.path.join(LOG_DIR, f"{log_id}.log")
             with open(logf,"w") as lf:
                 lf.write(f"$ {cmd}\n"); lf.flush()
                 rc = subprocess.run(["bash","-lc",cmd], stdout=lf, stderr=subprocess.STDOUT).returncode
-            self._state[app_id] = "success" if rc==0 else "failed"
-            if rc == 0 and action == "install":
-                # 安装成功后刷新 XFCE 桌面，让新生成的桌面快捷方式立即出现
+            self._state[log_id] = "success" if rc==0 else "failed"
+            if rc == 0:
+                # 安装/卸载成功后刷新 XFCE 桌面，让快捷方式增删立即生效
                 subprocess.run(["bash","-lc","DISPLAY=:1 xfdesktop --reload"],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self._tasks.task_done()
@@ -410,6 +439,15 @@ class Handler(BaseHTTPRequestHandler):
             body.setdefault("version", 1); body.setdefault("pulled_out_system", [])
             GROUPS.save(body)
             return self._json(200, {"ok": True})
+        if self.path.rstrip("/") == "/apps/uninstall":
+            n = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(n) or b"{}")
+            key = body.get("key", "")
+            cmd = MGR.uninstall_cmd(key)
+            if not cmd:
+                return self._json(400, {"error": "not uninstallable"})
+            MGR.enqueue_cmd(key, cmd)
+            return self._json(202, {"key": key, "state": "queued"})
         if self.path.rstrip("/") in ("/apps/install","/apps/remove"):
             n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
             action="install" if self.path.rstrip("/").endswith("install") else "remove"

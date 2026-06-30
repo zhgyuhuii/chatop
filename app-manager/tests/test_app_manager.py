@@ -103,3 +103,39 @@ def test_reconcile_keeps_existing_group_membership():
     grp = [i for i in out["items"] if i["type"] == "group"][0]
     assert grp["apps"] == ["wps"]
     assert [i["key"] for i in out["items"] if i["type"] == "app"] == ["chrome"]
+
+def _write_desktop(d, key, exec_line):
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, key + ".desktop"), "w").write(
+        "[Desktop Entry]\nType=Application\nName=%s\nExec=%s\nIcon=x\n" % (key, exec_line))
+
+def test_uninstall_cmd_proot(monkeypatch):
+    with tempfile.TemporaryDirectory() as t:
+        home = os.path.join(t, "home"); appdir = os.path.join(home, ".local/share/applications")
+        monkeypatch.setenv("HOME", home)
+        monkeypatch.setattr(am, "APP_DIRS", [appdir])
+        _write_desktop(appdir, "wechat-pa", "proot-apps run wechat")
+        assert _mgr(t).uninstall_cmd("wechat-pa") == "proot-apps remove wechat"
+
+def test_uninstall_cmd_appimage(monkeypatch):
+    with tempfile.TemporaryDirectory() as t:
+        home = os.path.join(t, "home"); appdir = os.path.join(home, ".local/share/applications")
+        os.makedirs(os.path.join(home, "Applications", "void"))
+        monkeypatch.setenv("HOME", home)
+        monkeypatch.setattr(am, "APP_DIRS", [appdir])
+        _write_desktop(appdir, "chatop-void", "/home/x/Applications/void/squashfs-root/AppRun")
+        assert _mgr(t).uninstall_cmd("chatop-void") == \
+            "bash /usr/local/lib/chatop/gui-uninstall.sh void"
+
+def test_uninstall_cmd_system_returns_none(monkeypatch):
+    with tempfile.TemporaryDirectory() as t:
+        home = os.path.join(t, "home"); sysdir = os.path.join(t, "usr/share/applications")
+        monkeypatch.setenv("HOME", home)
+        monkeypatch.setattr(am, "APP_DIRS", [sysdir])
+        _write_desktop(sysdir, "thunar", "thunar %F")
+        assert _mgr(t).uninstall_cmd("thunar") is None
+
+def test_uninstall_cmd_unknown_returns_none(monkeypatch):
+    with tempfile.TemporaryDirectory() as t:
+        monkeypatch.setattr(am, "APP_DIRS", [t])
+        assert _mgr(t).uninstall_cmd("nope") is None
