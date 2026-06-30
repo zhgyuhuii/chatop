@@ -3763,6 +3763,13 @@ const ChatopApps = {
   catalog: [], status: {}, installed: [], category: '',
   groups: {items:[], pulled_out_system:[]}, openGroupId: null,
   selectMode: false, selected: new Set(), _saveTimer: null,
+  _drag: null,
+  topIndexOfApp(key){ return this.groups.items.findIndex(i=>i.type==='app'&&i.key===key); },
+  topIndexOfGroup(gid){ return this.groups.items.findIndex(i=>i.type==='group'&&i.id===gid); },
+  removeAppFromAnywhere(key){
+    this.groups.items = this.groups.items.filter(i=>!(i.type==='app'&&i.key===key));
+    this.groups.items.forEach(i=>{ if(i.type==='group') i.apps=i.apps.filter(k=>k!==key); });
+  },
   async open() {
     document.getElementById('chatop_apps_modal').style.display = 'flex';
     this.showList();
@@ -3923,6 +3930,13 @@ const ChatopApps = {
     } else {
       card.onclick = () => this.runInstalled(a);   // 点卡片本体=启动（设计 2.2）
     }
+    card.addEventListener('dragstart', e=>{ this._drag={kind:'app',key:a.key};
+      e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
+    card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
+    card.addEventListener('dragover', e=>{ if(this._drag){ e.preventDefault(); card.classList.add('dragover'); }});
+    card.addEventListener('dragleave', ()=>card.classList.remove('dragover'));
+    card.addEventListener('drop', e=>{ e.preventDefault(); card.classList.remove('dragover');
+      this.dropOnApp(a.key); });
     return card;
   },
   groupCard(group){
@@ -3930,6 +3944,13 @@ const ChatopApps = {
     card.draggable = !this.selectMode; card.dataset.gid = group.id;
     card.innerHTML = this.groupCoverHTML(group);
     if (!this.selectMode) card.onclick = () => this.openGroup(group.id);
+    card.addEventListener('dragstart', e=>{ this._drag={kind:'group',gid:group.id};
+      e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
+    card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
+    card.addEventListener('dragover', e=>{ if(this._drag){ e.preventDefault(); card.classList.add('dragover'); }});
+    card.addEventListener('dragleave', ()=>card.classList.remove('dragover'));
+    card.addEventListener('drop', e=>{ e.preventDefault(); card.classList.remove('dragover');
+      this.dropOnGroup(group.id); });
     return card;
   },
   newGroupCard(){
@@ -3938,6 +3959,28 @@ const ChatopApps = {
     card.onclick = () => { this.groups.items.push({type:'group', id:'g'+Date.now(), name:'新建分组', apps:[]});
       this.saveGroups(); this.renderGrid(''); };
     return card;
+  },
+  dropOnApp(targetKey){
+    const d=this._drag; this._drag=null; if(!d||d.kind!=='app'||d.key===targetKey) return;
+    // 应用叠应用：若目标在顶层 → 两者建组；否则把拖动应用排到目标前
+    const ti=this.topIndexOfApp(targetKey);
+    if (ti>=0){
+      this.removeAppFromAnywhere(d.key);
+      const idx=this.topIndexOfApp(targetKey);
+      this.groups.items.splice(idx,1,{type:'group',id:'g'+Date.now(),name:'新建分组',apps:[targetKey,d.key]});
+    }
+    this.saveGroups(); this.renderGrid('');
+  },
+  dropOnGroup(gid){
+    const d=this._drag; this._drag=null; if(!d) return;
+    if (d.kind==='app'){
+      this.removeAppFromAnywhere(d.key);
+      const g=this.groups.items.find(i=>i.type==='group'&&i.id===gid); if(g) g.apps.push(d.key);
+    } else if (d.kind==='group' && d.gid!==gid){
+      const from=this.topIndexOfGroup(d.gid), to=this.topIndexOfGroup(gid);
+      if(from>=0&&to>=0){ const [m]=this.groups.items.splice(from,1); this.groups.items.splice(to,0,m); }
+    }
+    this.saveGroups(); this.renderGrid('');
   },
   async uninstallInstalled(a){
     const log=document.getElementById('chatop_app_log'); if(log) log.textContent='卸载中…';
