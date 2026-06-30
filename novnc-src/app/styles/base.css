@@ -1664,3 +1664,36 @@ body.chatop-theme-light #chatop_app_log{background:#f3f4f6;color:#333;}
 body.chatop-theme-light .chatop_files_list,
 body.chatop-theme-light .chatop_file_row{color:#1c1f23;}
 body.chatop-theme-light .chatop_file_row:hover{background:rgb(0 0 0 / 0.06);}
+/* 应用分组：分组卡封面 2x2 拼贴 */
+.chatop_group_card { position: relative; }
+.chatop_group_cover { display:grid; gap:2px; width:48px; height:48px; margin:0 auto 6px; }
+.chatop_group_cover.n1 { grid-template-columns:1fr; }
+.chatop_group_cover.n2 { grid-template-columns:1fr 1fr; }
+.chatop_group_cover.n3, .chatop_group_cover.n4 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.chatop_group_cover img { width:100%; height:100%; object-fit:contain; }
+.chatop_group_count { position:absolute; top:4px; right:6px; font-size:11px;
+  background:rgba(0,0,0,.55); color:#fff; border-radius:8px; padding:0 5px; }
+.chatop_newgroup_card { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border:1px dashed rgba(255,255,255,.3); opacity:.8; }
+.chatop_newgroup_plus { font-size:28px; line-height:1; }
+.chatop_apps_toolbar { grid-column:1/-1; display:flex; gap:8px; padding:0 0 6px; }
+.chatop_apps_toolbar button { padding:4px 12px; border-radius:6px; cursor:pointer; }
+.chatop_app_card.dragging { opacity:.45; }
+.chatop_app_card.dragover { outline:2px solid #3b82f6; outline-offset:2px; }
+.chatop_app_check { position:absolute; top:4px; left:6px; width:16px; height:16px;
+  border:2px solid #3b82f6; border-radius:50%; }
+.chatop_app_check.on { background:#3b82f6; }
+/* 分组居中浮层 */
+.chatop_group_overlay { position:absolute; inset:0; background:rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center; z-index:30; }
+.chatop_group_panel { width:min(560px,86%); max-height:78%; overflow:auto;
+  background:#1b2230; border-radius:14px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.chatop_group_head { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+.chatop_group_title { flex:1; font-size:16px; padding:6px 10px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:#fff; }
+.chatop_group_add { margin-top:12px; padding:8px 14px; border-radius:8px; cursor:pointer; }
+.chatop_group_pick_hint { grid-column:1/-1; font-size:12px; opacity:.7; padding-bottom:6px; }
+/* 浅色主题 */
+body.chatop-theme-light .chatop_group_panel { background:#fff; color:#1b2230; }
+body.chatop-theme-light .chatop_group_title { background:#f3f4f6; color:#111; border-color:#d1d5db; }
+body.chatop-theme-light .chatop_newgroup_card { border-color:rgba(0,0,0,.25); }
