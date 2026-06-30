@@ -4,7 +4,13 @@ WORKDIR /src
 COPY novnc-src/ ./
 RUN --mount=type=cache,target=/root/.npm npm install && npm run build
 
-FROM kasmweb/ubuntu-jammy-desktop:1.19.0
+# 精简 base：用 core(只含 XFCE + KasmVNC + 音频 + 文件传输，无任何 GUI 应用)而非
+# desktop(= core + 一堆内置 GUI 应用)。省去"装完再卸载内置应用"(apt purge 只加白障层、
+# 镜像反而更大)的整段无用功。镜像 12.4G → ~3G。
+# 版本必须用 1.19：本项目原 base 即 desktop:1.19.0，Dockerfile/kasmvnc.yaml/vnc_startup 补丁
+# 都按 1.19 写的。1.14 太老(差 ~2 年)不认 kasmvnc.yaml 里的
+# server.allow_environment_variables_to_override_config_settings，会崩溃重启。
+FROM kasmweb/core-ubuntu-jammy:1.19.0
 ARG VERSION=1.1.0
 LABEL maintainer="chatop-ai" build_version="chatop-ai ${VERSION}"
 # 注：前端注入(COPY --from=web)与资源层移至 Dockerfile 末尾，置于 WPS/字体等重型下载层之后，
@@ -45,76 +51,14 @@ RUN mkdir -p /dockerstartup && \
     chmod +x /dockerstartup/custom_startup.sh
 
 # ================== S7：定制桌面内置软件 ==================
-# 以 root 卸载 11 个不需要的内置应用 + 安装中文办公栈（搜狗输入法/WPS/CJK 字体/fcitx 框架）
+# === 桌面零应用 ===
+# core base 不含任何内置 GUI 应用；按需求本镜像也不预装 WPS/fcitx 输入法等任何 GUI 应用，
+# 桌面开机即干净空白，一切应用都走应用市场(proot-apps)按需安装。
+# 唯一保留的是 CJK 字体——它是中文「渲染」前提(不是应用)，否则桌面/文件名/察元AI 全是豆腐块。
 USER root
-
-# --- Task A：卸载 11 个内置应用 ---
-# apt 安装的（含其插件/本地化子包）走 purge + autoremove；
-# /opt 直装的（gimp、telegram，dpkg 查不到）走 rm -rf 目录 + 删 .desktop。
-# 逐项 || true，缺失不致命；最后列残留以便核对。
-RUN set -ux; \
-    apt-get remove --purge -y \
-        firefox xul-ext-ubufox \
-        thunderbird \
-        remmina remmina-common remmina-plugin-rdp remmina-plugin-secret remmina-plugin-spice remmina-plugin-vnc \
-        obs-studio obs-v4l2sink \
-        onlyoffice-desktopeditors \
-        signal-desktop \
-        slack-desktop \
-        zoom \
-        nextcloud-desktop nextcloud-desktop-common nextcloud-desktop-l10n \
-        || true; \
-    apt-get autoremove -y || true; \
-    # 非 apt（/opt 直装）：gimp、telegram
-    rm -rf /opt/gimp-3 /opt/Telegram \
-           /usr/share/applications/gimp.desktop \
-           /usr/share/applications/telegram.desktop || true; \
-    # 兜底清理 purge 后可能残留的 /opt 目录与 .desktop
-    rm -rf /opt/Signal /opt/zoom /opt/onlyoffice || true; \
-    rm -f /usr/share/applications/signal-desktop.desktop \
-          /usr/share/applications/slack.desktop \
-          /usr/share/applications/Zoom.desktop \
-          /usr/share/applications/firefox.desktop \
-          /usr/share/applications/thunderbird.desktop \
-          /usr/share/applications/onlyoffice-desktopeditors.desktop \
-          /usr/share/applications/com.obsproject.Studio.desktop \
-          /usr/share/applications/com.nextcloud.desktopclient.nextcloud.desktop \
-          /usr/share/applications/org.remmina.Remmina.desktop \
-          /usr/share/applications/org.remmina.Remmina-file.desktop \
-          /usr/share/applications/remmina-gnome.desktop || true; \
-    echo "=== S7 卸载后残留检查 ==="; \
-    ls /usr/share/applications | grep -iE "signal|firefox|thunderbird|remmina|obs|telegram|onlyoffice|nextcloud|zoom|slack|gimp" || echo "（无残留 .desktop）"
-
-# --- Task B-1：CJK 字体 + fcitx4 输入法框架（jammy 上搜狗适配 fcitx4）---
 RUN apt-get update && apt-get install -y --no-install-recommends \
       fonts-noto-cjk fonts-noto-color-emoji \
-      fcitx fcitx-bin fcitx-config-gtk fcitx-frontend-all fcitx-module-cloudpinyin \
-      libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 libgsettings-qt1 \
-    && (apt-get remove --purge -y 'ibus*' 'fcitx5*' 2>/dev/null || true)
-
-# --- Task B-2：系统级输入法环境变量 + fcitx 自启动 ---
-RUN printf 'GTK_IM_MODULE=fcitx\nQT_IM_MODULE=fcitx\nXMODIFIERS=@im=fcitx\n' >> /etc/environment && \
-    (cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/ 2>/dev/null || true)
-
-# --- Task B-3：搜狗拼音 .deb（gtimg CDN 在本环境 403，故 guard 后回退 fcitx 谷歌/sunpinyin 拼音）---
-ARG SOGOU_URL="https://ime-sec.gtimg.com/pc/dl/gzindex/1680521603/sogoupinyin_4.2.1.145_amd64.deb"
-RUN set -ux; \
-    if curl -fsSL -o /tmp/sogou.deb "$SOGOU_URL"; then \
-        (dpkg -i /tmp/sogou.deb || apt-get install -f -y); rm -f /tmp/sogou.deb; \
-        echo "SOGOU_INSTALLED"; \
-    else \
-        echo "SOGOU_UNREACHABLE：回退 fcitx-googlepinyin/fcitx-sunpinyin 作为可用中文输入"; \
-    fi; \
-    apt-get install -y --no-install-recommends fcitx-googlepinyin fcitx-sunpinyin
-
-# --- Task B-4：WPS Office .deb（wpscdn 实测 200 / 319MB）---
-ARG WPS_URL="https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/11664/wps-office_11.1.0.11664.XA_amd64.deb"
-RUN set -ux; \
-    curl -fsSL -o /tmp/wps.deb "$WPS_URL"; \
-    (dpkg -i /tmp/wps.deb || apt-get install -f -y); \
-    rm -f /tmp/wps.deb; \
-    (apt-get install -y --no-install-recommends libtiff5 2>/dev/null || true); \
-    rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # === 应用管理器基础：Node 22（npm 类 AI 工具前提）+ pipx ===
 RUN set -eux; \
@@ -161,23 +105,12 @@ RUN chmod +x /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-unin
 RUN chmod +x /usr/local/bin/start-app-manager.sh
 # 末尾再次 COPY Caddyfile（覆盖前面层的旧版），使 Caddyfile 改动只重建末尾层、不触发 WPS 重下
 COPY caddy/Caddyfile /etc/caddy/Caddyfile
-# 删除桌面(/home/kasm-user/Desktop)上对应已卸载应用的快捷方式，避免无效图标
-RUN rm -f /home/kasm-default-profile/Desktop/firefox.desktop \
-          /home/kasm-default-profile/Desktop/thunderbird.desktop \
-          /home/kasm-default-profile/Desktop/com.obsproject.Studio.desktop \
-          /home/kasm-default-profile/Desktop/gimp.desktop \
-          /home/kasm-default-profile/Desktop/nextcloud.desktop \
-          /home/kasm-default-profile/Desktop/onlyoffice-desktopeditors.desktop \
-          /home/kasm-default-profile/Desktop/org.remmina.Remmina.desktop \
-          /home/kasm-default-profile/Desktop/signal-desktop.desktop \
-          /home/kasm-default-profile/Desktop/slack.desktop \
-          /home/kasm-default-profile/Desktop/telegram.desktop \
-          /home/kasm-default-profile/Desktop/Zoom.desktop || true
+# 注：原"删除内置应用桌面快捷方式"段已删除——core base 桌面本就没有这些 .desktop。
 # 炫酷品牌桌面壁纸。放到独立的 chayuanai 目录作为真源；运行时由 set-wallpaper.sh
 # 用 xfconf-query 强制设为 XFCE 桌面背景(monitorVNC-* 动态显示器不会自动加载磁盘
 # xml，xfdesktop 会套内置默认 xfce-verticals.png，故必须运行时主动写入)。
-COPY assets/wallpaper.png /usr/share/backgrounds/chayuanai/wallpaper.png
-COPY assets/wallpaper.png /usr/share/backgrounds/bg_default.png
+COPY assets/background.png /usr/share/backgrounds/chayuanai/wallpaper.png
+COPY assets/background.png /usr/share/backgrounds/bg_default.png
 COPY assets/set-wallpaper.sh /usr/local/bin/set-wallpaper.sh
 RUN chmod +x /usr/local/bin/set-wallpaper.sh
 # 在末尾重新生成 custom_startup（追加 set-wallpaper 后台任务）。放末尾是为了不破坏
@@ -194,7 +127,7 @@ COPY assets/logo-sm.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
 # 应用管理按钮的网格图标（与其它控制栏按钮一致的图标+文字风格）
 COPY app-manager/apps-icon.svg /usr/share/kasmvnc/www/app-icons/apps.svg
 # noVNC 网页背景(splash)换成察元壁纸
-COPY assets/wallpaper.png /usr/share/kasmvnc/www/app/images/splash.jpg
+COPY assets/background-splash.jpg /usr/share/kasmvnc/www/app/images/splash.jpg
 # filebrowser 启动脚本(幂等)：改 noauth——filebrowser 强制密码复杂度(test12345 报 too easy)无法用弱 VNC_PW
 # 做登录。改由前置 Caddy 对 /files 做 BasicAuth(同 VNC_PW)。db 放 /tmp(容器层，避开数据卷 bbolt flock 超时)。
 RUN printf '%s\n' \
@@ -213,6 +146,21 @@ RUN mkdir -p /tmp/pa && \
     curl -L "https://github.com/linuxserver/proot-apps/releases/download/${PAPPS}/proot-apps-x86_64.tar.gz" | tar -xzf - -C /tmp/pa/ && \
     install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/ && \
     rm -rf /tmp/pa
+
+# === 自定义系统用户名（kasm-user → ${APP_USER}）===
+# 让 home 目录、右上角面板、文件管理器都显示自定义名。做法（零数据迁移）：
+#  - usermod -l 把 uid 1000 改名为 ${APP_USER}，whoami/$USER/右上角随之变；
+#  - 保留 kasm-user 作同 uid 别名，兜底 KasmVNC 脚本里残留的 kasm-user 硬编码（chown 等）；
+#  - home 实体仍是 volume 挂载点 /home/kasm-user，/home/${APP_USER} 软链过去；
+#  - ENV HOME 指向 /home/${APP_USER}，桌面/文件管理器据此显示新名。
+ARG APP_USER=admin
+RUN if [ "$APP_USER" != "kasm-user" ]; then \
+      usermod -l "$APP_USER" kasm-user && \
+      usermod -d "/home/$APP_USER" "$APP_USER" && \
+      ln -sfn /home/kasm-user "/home/$APP_USER" && \
+      useradd -o -u 1000 -g 1000 -M -s /bin/sh -d /home/kasm-user kasm-user ; \
+    fi
+ENV HOME=/home/${APP_USER}
 
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

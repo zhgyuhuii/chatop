@@ -3784,7 +3784,7 @@ const ChatopApps = {
     this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
   },
   renderTabs() {
-    const tabs = [['','全部'],['ai-cli','AI CLI'],['ai-runtime','智能体'],['gui','GUI'],['vscode-ext','插件'],['proot-gui','应用市场']];
+    const tabs = [['','全部'],['ai-cli','AI CLI'],['ai-runtime','智能体'],['gui','GUI'],['vscode-ext','插件'],['proot-gui','应用市场'],['__installed__','本机已安装']];
     const box = document.getElementById('chatop_apps_tabs'); box.innerHTML='';
     tabs.forEach(([cat,label]) => {
       const b = document.createElement('button');
@@ -3797,15 +3797,24 @@ const ChatopApps = {
   },
   renderGrid(filter='') {
     const g = document.getElementById('chatop_apps_grid'); g.innerHTML='';
-    this.catalog.filter(a => (!this.category || a.category===this.category) &&
-                             (a.name+a.description+a.id).toLowerCase().includes(filter))
-      .forEach(a => {
+    const onlyInstalled = this.category === '__installed__';
+    const list = this.catalog.filter(a =>
+        (onlyInstalled ? !!this.status[a.id] : (!this.category || a.category===this.category)) &&
+        (a.name+a.description+a.id).toLowerCase().includes(filter));
+    if (onlyInstalled && !list.length) {
+      g.innerHTML = '<div class="chatop_apps_empty">本机暂无通过应用管理器安装的应用</div>';
+      return;
+    }
+    list.forEach(a => {
         const installed = !!this.status[a.id];
+        const canOpen = installed && a.launchable;
         const card = document.createElement('div'); card.className='chatop_app_card';
         const iconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
         card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="this.style.visibility='hidden'">
-          <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}`;
+          <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}
+          ${canOpen?'<button class="chatop_app_open">打开</button>':''}`;
         card.querySelector('.chatop_app_name').textContent = a.name;
+        if (canOpen) card.querySelector('.chatop_app_open').onclick = (e) => { e.stopPropagation(); this.launch(a); };
         card.onclick = () => this.detail(a);
         g.appendChild(card);
       });
@@ -3821,13 +3830,31 @@ const ChatopApps = {
     d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
       <img src="${diconSrc}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
       <h3></h3><p class="chatop_app_desc"></p><p class="chatop_app_notes"></p>
-      <button id="chatop_app_action" class="${installed?'remove':'install'}">${installed?'卸载':'安装'}</button>
+      <div class="chatop_app_actions">
+        ${installed && a.launchable ? '<button id="chatop_app_open_btn" class="open">在桌面打开</button>' : ''}
+        ${installed ? '<button id="chatop_app_reinstall" class="install">重新安装</button>' : ''}
+        <button id="chatop_app_action" class="${installed?'remove':'install'}">${installed?'卸载':'安装'}</button>
+      </div>
       <pre id="chatop_app_log"></pre>`;
     d.querySelector('h3').textContent = a.name;
     d.querySelector('.chatop_app_desc').textContent = a.description || '';
     d.querySelector('.chatop_app_notes').textContent = a.notes || '';
     document.getElementById('chatop_apps_back').onclick=()=>this.showList();
+    const ob=document.getElementById('chatop_app_open_btn'); if(ob) ob.onclick=()=>this.launch(a);
+    const rb=document.getElementById('chatop_app_reinstall'); if(rb) rb.onclick=()=>this.act(a, 'install');
     document.getElementById('chatop_app_action').onclick=()=>this.act(a, installed?'remove':'install');
+  },
+  async launch(a) {
+    try {
+      const r = await fetch('/apps/launch', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id:a.id})});
+      if (r.ok) {
+        UI.showStatus('正在桌面打开 '+a.name+' …', 'normal');
+        this.close();  // 关闭应用管理器，让用户看到桌面上启动的应用
+      } else {
+        UI.showStatus('打开失败：该应用不可启动', 'warn');
+      }
+    } catch(e) { UI.showStatus('打开失败：'+e, 'error'); }
   },
   async act(a, action) {
     const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';

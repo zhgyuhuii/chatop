@@ -48,8 +48,15 @@ class AppManager:
         with open(self.catalog_path) as f: return json.load(f)
     def public_catalog(self):
         cat = self._load()
-        cat["apps"] = [{k:a[k] for k in PUBLIC_FIELDS if k in a} for a in cat["apps"]]
+        out = []
+        for a in cat["apps"]:
+            d = {k: a[k] for k in PUBLIC_FIELDS if k in a}
+            d["launchable"] = bool(a.get("launch"))  # 有 launch 命令 = 可在桌面打开
+            out.append(d)
+        cat["apps"] = out
         return cat
+    def launch_cmd(self, app_id):
+        return self._app(app_id).get("launch")
     def _app(self, app_id):
         for a in self._load()["apps"]:
             if a["id"] == app_id: return a
@@ -76,6 +83,10 @@ class AppManager:
                 lf.write(f"$ {cmd}\n"); lf.flush()
                 rc = subprocess.run(["bash","-lc",cmd], stdout=lf, stderr=subprocess.STDOUT).returncode
             self._state[app_id] = "success" if rc==0 else "failed"
+            if rc == 0 and action == "install":
+                # 安装成功后刷新 XFCE 桌面，让新生成的桌面快捷方式立即出现
+                subprocess.run(["bash","-lc","DISPLAY=:1 xfdesktop --reload"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self._tasks.task_done()
 
 MGR = None
@@ -123,6 +134,18 @@ class Handler(BaseHTTPRequestHandler):
                 MGR.enqueue(body["id"], action); return self._json(202, {"id":body["id"],"state":"queued"})
             except KeyError: return self._json(400, {"error":"unknown app id"})
             except (ValueError,TypeError): return self._json(400, {"error":"bad request"})
+        if self.path.rstrip("/") == "/apps/launch":
+            n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
+            try:
+                cmd = MGR.launch_cmd(body["id"])
+            except (KeyError, TypeError):
+                return self._json(400, {"error":"unknown app id"})
+            if not cmd:
+                return self._json(400, {"error":"not launchable"})
+            env = dict(os.environ); env["DISPLAY"] = env.get("DISPLAY", ":1") or ":1"
+            subprocess.Popen(["bash","-lc",cmd], env=env, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return self._json(202, {"id":body["id"],"state":"launched"})
         if self.path.startswith("/apps/files/upload"):
             if not FILES_UPLOAD: return self._json(403, {"error":"upload disabled"})
             name = parse_qs(urlparse(self.path).query).get("name",[""])[0]

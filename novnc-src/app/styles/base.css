@@ -1633,6 +1633,14 @@ body.chatop-theme-light .chatop_apps_textbtn{color:#1c1f23;background:rgba(0,0,0
 #chatop_apps_back{background:none;border:none;color:#8ab4f8;cursor:pointer;margin-bottom:10px;}
 #chatop_app_action{margin-top:12px;padding:8px 18px;border:none;border-radius:6px;color:#fff;cursor:pointer;}
 #chatop_app_action.install{background:#1976d2;} #chatop_app_action.remove{background:#c62828;}
+/* 卡片悬停「打开」按钮（已安装且可启动时） */
+.chatop_app_open{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:none;padding:4px 14px;border:0;border-radius:6px;background:#0a84ff;color:#fff;font-size:12px;cursor:pointer;z-index:2;}
+.chatop_app_card:hover .chatop_app_open{display:block;}
+/* 详情页按钮行：在桌面打开 + 卸载/安装 */
+.chatop_app_actions{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px;}
+.chatop_app_actions #chatop_app_action{margin-top:0;}
+#chatop_app_open_btn.open{padding:8px 18px;border:none;border-radius:6px;background:#0a84ff;color:#fff;cursor:pointer;}
+.chatop_apps_empty{padding:48px 20px;text-align:center;color:#888;width:100%;}
 #chatop_app_log{margin-top:14px;background:#0d0f14;padding:10px;border-radius:6px;max-height:220px;overflow:auto;font-size:12px;white-space:pre-wrap;color:#ccc;}
 body.chatop-theme-light .chatop_apps_dialog{background:#fff;color:#1c1f23;}
 body.chatop-theme-light .chatop_app_card{background:#f3f4f6;border-color:#ddd;}
