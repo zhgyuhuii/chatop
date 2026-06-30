@@ -3707,8 +3707,13 @@ const ChatopApps = {
   catalog: [], status: {}, category: '',
   async open() {
     document.getElementById('chatop_apps_modal').style.display = 'flex';
-    document.getElementById('chatop_apps_detail').style.display = 'none';
+    this.showList();
     await this.refresh();
+  },
+  showList() {
+    document.getElementById('chatop_apps_tabs').style.display = '';
+    document.getElementById('chatop_apps_grid').style.display = '';
+    document.getElementById('chatop_apps_detail').style.display = 'none';
   },
   close() { document.getElementById('chatop_apps_modal').style.display = 'none'; },
   async refresh() {
@@ -3750,9 +3755,12 @@ const ChatopApps = {
   },
   detail(a) {
     const installed = !!this.status[a.id];
+    // 详情全屏：隐藏分类 tab 与卡片网格，详情占满整个对话框
+    document.getElementById('chatop_apps_tabs').style.display = 'none';
+    document.getElementById('chatop_apps_grid').style.display = 'none';
     const d = document.getElementById('chatop_apps_detail');
-    d.style.display='block';
-    d.innerHTML = `<button id="chatop_apps_back">← 返回</button>
+    d.style.display='flex';
+    d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
       <img src="app-icons/${a.icon}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
       <h3></h3><p class="chatop_app_desc"></p><p class="chatop_app_notes"></p>
       <button id="chatop_app_action" class="${installed?'remove':'install'}">${installed?'卸载':'安装'}</button>
@@ -3760,7 +3768,7 @@ const ChatopApps = {
     d.querySelector('h3').textContent = a.name;
     d.querySelector('.chatop_app_desc').textContent = a.description || '';
     d.querySelector('.chatop_app_notes').textContent = a.notes || '';
-    document.getElementById('chatop_apps_back').onclick=()=>{d.style.display='none';};
+    document.getElementById('chatop_apps_back').onclick=()=>this.showList();
     document.getElementById('chatop_app_action').onclick=()=>this.act(a, installed?'remove':'install');
   },
   async act(a, action) {

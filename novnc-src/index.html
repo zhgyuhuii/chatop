@@ -103,7 +103,7 @@
 
                 <!-- 察元AI 顶部一行栏：logo + 名称 + 全屏 + 游戏 + 增加屏幕 -->
                 <div class="chatop_header" title="察元AI">
-                    <img src="app/images/icons/kasm_logo.svg" alt="察元AI" class="chatop_brand_logo">
+                    <img src="app-icons/chatop-logo.png" alt="察元AI" class="chatop_brand_logo">
                     <span class="chatop_brand_name">察元AI</span>
                     <!-- Toggle fullscreen -->
                     <div class="noVNC_button_div noVNC_hidden" >
@@ -126,12 +126,6 @@
                             title="Show Displays">
                         Displays
                     </div>
-                </div>
-
-                <!-- 应用管理器入口 -->
-                <div class="noVNC_button_div noVNC_hide_on_disconnect">
-                    <input type="image" alt="应用" src="app/images/icons/kasm_logo.svg"
-                        id="chatop_apps_button" class="noVNC_button" title="应用管理">
                 </div>
 
                 <!-- Drag/Pan the viewport -->
@@ -236,6 +230,13 @@
                         id="chatop_download_button" class="noVNC_button"
                         title="下载文件">
                     下载
+                </div>
+
+                <!-- 应用管理器入口（置于下载按钮下方，纯文字无图标）-->
+                <div class="noVNC_button_div noVNC_hide_on_disconnect" >
+                    <input type="button" value="应用管理"
+                        id="chatop_apps_button" class="chatop_apps_textbtn"
+                        title="应用管理">
                 </div>
 
                 <!-- (Add Second Screen 已移至顶部品牌区横排) -->

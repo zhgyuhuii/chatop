@@ -142,7 +142,7 @@ ENV LOGIN_USER=admin
 # 修复：custom_startup 必须常驻(末尾 wait)。kasm vnc_startup 把它当 service 监控(KASM_PROCS)，
 # 一次性脚本退出后会被监控循环判定为"死亡"并无限重启，日志狂刷 "Unknown Service: custom_startup"
 # + "kill (137) No such process"，高频循环拖累 VNC bridge->relay 导致连不上。wait 让脚本常驻即解决。
-RUN printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nexport FILES_HASH="$(/usr/local/bin/caddy hash-password --plaintext "${FILES_PW:-${VNC_PW:-password}}" 2>/dev/null)"\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 # 应用管理器二期：Python 3.11（Sovyx 需 >=3.11；deadsnakes PPA）
 RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
@@ -179,6 +179,20 @@ COPY assets/wallpaper.png /usr/share/backgrounds/bg_default.png
 COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
 # 注入定制 noVNC 前端（放最后：前端迭代只重跑这一层，不影响上面重型层缓存）
 COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
+# 注入察元 logo（顶部品牌 + 应用按钮用；原 kasm_logo.svg 未打包进 dist 会 404）
+COPY assets/logo.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
+# noVNC 网页背景(splash)换成察元壁纸
+COPY assets/wallpaper.png /usr/share/kasmvnc/www/app/images/splash.jpg
+# filebrowser 启动脚本(幂等)：改 noauth——filebrowser 强制密码复杂度(test12345 报 too easy)无法用弱 VNC_PW
+# 做登录。改由前置 Caddy 对 /files 做 BasicAuth(同 VNC_PW)。db 放 /tmp(容器层，避开数据卷 bbolt flock 超时)。
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'set -e' \
+  'ROOT="${FB_ROOT:-$HOME}"; PORT="${FB_PORT:-8585}"; DB="/tmp/filebrowser.db"' \
+  'filebrowser -d "$DB" config init 2>/dev/null || true' \
+  'filebrowser -d "$DB" config set --address 127.0.0.1 --port "$PORT" --root "$ROOT" --baseurl /files --auth.method=noauth 2>/dev/null || true' \
+  'exec filebrowser -d "$DB"' \
+  > /usr/local/bin/start-filebrowser.sh && chmod +x /usr/local/bin/start-filebrowser.sh
 
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

@@ -5,6 +5,9 @@
 :7443 {
     tls /tmp/caddy/tls.crt /tmp/caddy/tls.key
     handle /files* {
+        basic_auth {
+            {$LOGIN_USER} {$FILES_HASH}
+        }
         reverse_proxy 127.0.0.1:8585
     }
     handle /apps* {
