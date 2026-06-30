@@ -173,14 +173,24 @@ RUN rm -f /home/kasm-default-profile/Desktop/firefox.desktop \
           /home/kasm-default-profile/Desktop/slack.desktop \
           /home/kasm-default-profile/Desktop/telegram.desktop \
           /home/kasm-default-profile/Desktop/Zoom.desktop || true
-# 炫酷品牌桌面壁纸（覆盖默认壁纸；xfce backdrop 已指向 bg_default.png）
+# 炫酷品牌桌面壁纸。放到独立的 chayuanai 目录作为真源；运行时由 set-wallpaper.sh
+# 用 xfconf-query 强制设为 XFCE 桌面背景(monitorVNC-* 动态显示器不会自动加载磁盘
+# xml，xfdesktop 会套内置默认 xfce-verticals.png，故必须运行时主动写入)。
+COPY assets/wallpaper.png /usr/share/backgrounds/chayuanai/wallpaper.png
 COPY assets/wallpaper.png /usr/share/backgrounds/bg_default.png
+COPY assets/set-wallpaper.sh /usr/local/bin/set-wallpaper.sh
+RUN chmod +x /usr/local/bin/set-wallpaper.sh
+# 在末尾重新生成 custom_startup（追加 set-wallpaper 后台任务）。放末尾是为了不破坏
+# 上方 python3.11 等重型层的构建缓存（改 custom_startup 不再触发 python3.11 重装）。
+RUN printf '#!/bin/bash\nexport FILES_HASH="$(/usr/local/bin/caddy hash-password --plaintext "${FILES_PW:-${VNC_PW:-password}}" 2>/dev/null)"\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+    chmod +x /dockerstartup/custom_startup.sh
 # KasmVNC 剪贴板上/下行权限默认
 COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
 # 注入定制 noVNC 前端（放最后：前端迭代只重跑这一层，不影响上面重型层缓存）
 COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
-# 注入察元 logo（顶部品牌 + 应用按钮用；原 kasm_logo.svg 未打包进 dist 会 404）
-COPY assets/logo.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
+# 注入察元 logo（顶部品牌 + favicon + 连接等待页用）。用 256px 压缩版(51KB)而非
+# 原图(1489px/783KB)：favicon 每个标签都拉、等待页首屏就显示，大图会明显拖慢加载。
+COPY assets/logo-sm.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
 # 应用管理按钮的网格图标（与其它控制栏按钮一致的图标+文字风格）
 COPY app-manager/apps-icon.svg /usr/share/kasmvnc/www/app-icons/apps.svg
 # noVNC 网页背景(splash)换成察元壁纸
@@ -194,6 +204,15 @@ RUN printf '%s\n' \
   'rm -f "$DB"' \
   'exec filebrowser --noauth -d "$DB" -r "$ROOT" -b /files -a 127.0.0.1 -p "$PORT"' \
   > /usr/local/bin/start-filebrowser.sh && chmod +x /usr/local/bin/start-filebrowser.sh
+
+# proot-apps：linuxserver 的 userspace PRoot GUI 应用安装器（应用市场分类的 ~94 个应用按需
+# 安装到用户目录、持久化、免 root）。工具装到 /usr/local/bin；脚本内部 hardcode
+# $HOME/.local/bin/proot，故由 custom_startup 启动时 symlink 到用户目录。
+RUN mkdir -p /tmp/pa && \
+    PAPPS=$(curl -sX GET "https://api.github.com/repos/linuxserver/proot-apps/releases/latest" | awk '/tag_name/{print $4;exit}' FS='[""]') && \
+    curl -L "https://github.com/linuxserver/proot-apps/releases/download/${PAPPS}/proot-apps-x86_64.tar.gz" | tar -xzf - -C /tmp/pa/ && \
+    install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/ && \
+    rm -rf /tmp/pa
 
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

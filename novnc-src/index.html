@@ -23,35 +23,15 @@
         window.CHATOP_FILES = window.CHATOP_FILES || { upload: true, download: true };
     </script>
 
-    <!-- Icons (see app/images/icons/Makefile for what the sizes are for) -->
-    <link rel="icon" sizes="16x16" type="image/png" href="app/images/icons/368_kasm_logo_only_16x16.png">
-    <link rel="icon" sizes="24x24" type="image/png" href="app/images/icons/368_kasm_logo_only_24x24.png">
-    <link rel="icon" sizes="32x32" type="image/png" href="app/images/icons/368_kasm_logo_only_32x32.png">
-    <link rel="icon" sizes="48x48" type="image/png" href="app/images/icons/368_kasm_logo_only_48x48.png">
-    <link rel="icon" sizes="60x60" type="image/png" href="app/images/icons/368_kasm_logo_only_60x60.png">
-    <link rel="icon" sizes="64x64" type="image/png" href="app/images/icons/368_kasm_logo_only_64x64.png">
-    <link rel="icon" sizes="72x72" type="image/png" href="app/images/icons/368_kasm_logo_only_72x72.png">
-    <link rel="icon" sizes="76x76" type="image/png" href="app/images/icons/368_kasm_logo_only_76x76.png">
-    <link rel="icon" sizes="96x96" type="image/png" href="app/images/icons/368_kasm_logo_only_96x96.png">
-    <link rel="icon" sizes="120x120" type="image/png" href="app/images/icons/368_kasm_logo_only_120x120.png">
-    <link rel="icon" sizes="144x144" type="image/png" href="app/images/icons/368_kasm_logo_only_144x144.png">
-    <link rel="icon" sizes="152x152" type="image/png" href="app/images/icons/368_kasm_logo_only_152x152.png">
-    <link rel="icon" sizes="192x192" type="image/png" href="app/images/icons/368_kasm_logo_only_192x192.png">
-    <!-- Firefox currently mishandles SVG, see #1419039
-    <link rel="icon" sizes="any" type="image/svg+xml" href="app/images/icons/kasm-icon.svg">
-    -->
-    <!-- Repeated last so that legacy handling will pick this -->
-    <link rel="icon" sizes="16x16" type="image/png" href="app/images/icons/368_kasm_logo_only_16x16.png">
+    <!-- 察元AI favicon（与左侧菜单顶部 logo 一致）。绝对路径，由 www 根目录运行时提供，
+         不参与 Vite 构建打包。 -->
+    <link rel="icon" type="image/png" href="/app-icons/chatop-logo.png">
 
     <!-- Apple iOS Safari settings -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- Home Screen Icons (favourites and bookmarks use the normal icons) -->
-    <link rel="apple-touch-icon" sizes="60x60" type="image/png" href="app/images/icons/368_kasm_logo_only_60x60.png">
-    <link rel="apple-touch-icon" sizes="76x76" type="image/png" href="app/images/icons/368_kasm_logo_only_76x76.png">
-    <link rel="apple-touch-icon" sizes="120x120" type="image/png" href="app/images/icons/368_kasm_logo_only_120x120.png">
-    <link rel="apple-touch-icon" sizes="152x152" type="image/png" href="app/images/icons/368_kasm_logo_only_152x152.png">
+    <link rel="apple-touch-icon" type="image/png" href="/app-icons/chatop-logo.png">
 
     <link rel="stylesheet" href="app/styles/base.css">
 
@@ -91,6 +71,10 @@
             <text id="noVNC_fps_chart_min" x="5" y="48" fill="#ffffff" font-size="10" font-family="monospace"></text>
         </svg>
     </div>
+
+    <!-- chatop: 控制栏展开时覆盖桌面的蒙版，点击即折叠控制栏(VNC canvas 会吞掉
+         普通 mousedown，故用蒙版承接桌面空白处的点击) -->
+    <div id="chatop_controlbar_mask"></div>
 
     <!-- noVNC Control Bar -->
     <div id="noVNC_control_bar_anchor" class="noVNC_vcenter">
@@ -207,29 +191,31 @@
                     </div>
                 </div>
 
-                <!-- chatop: Upload files -->
+                <!-- chatop: 上传文件（点击触发本地文件选择器，上传到桌面） -->
                 <div class="noVNC_button_div noVNC_hide_on_disconnect" >
                     <input type="image" alt="上传文件" src="app/images/clipboard.svg"
                         id="chatop_upload_button" class="noVNC_button"
-                        title="上传文件">
+                        title="上传文件到桌面">
                     上传
-                    <div class="noVNC_vcenter">
-                        <div id="chatop_files_panel" class="noVNC_panel">
-                            <div class="noVNC_heading">
-                                <img alt="" src="app/images/clipboard.svg"> 文件
-                                <a id="chatop_files_newtab" target="_blank" rel="noopener">在新标签打开</a>
-                            </div>
-                            <iframe id="chatop_files_iframe" title="文件管理"></iframe>
-                        </div>
-                    </div>
+                    <!-- 隐藏的原生文件选择器，由上传按钮触发 -->
+                    <input type="file" id="chatop_upload_input" multiple
+                        style="display:none">
                 </div>
 
-                <!-- chatop: Download files -->
+                <!-- chatop: 下载文件（弹面板列出桌面文件，点击下载） -->
                 <div class="noVNC_button_div noVNC_hide_on_disconnect" >
                     <input type="image" alt="下载文件" src="app/images/clipboard.svg"
                         id="chatop_download_button" class="noVNC_button"
-                        title="下载文件">
+                        title="下载桌面文件">
                     下载
+                    <div class="noVNC_vcenter">
+                        <div id="chatop_download_panel" class="noVNC_panel">
+                            <div class="noVNC_heading">
+                                <img alt="" src="app/images/clipboard.svg"> 桌面文件
+                            </div>
+                            <div id="chatop_files_list" class="chatop_files_list"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 应用管理器入口（置于下载按钮下方，图标+文字，与其它按钮一致）-->
@@ -711,6 +697,10 @@
 
     <!-- Transition Screens -->
     <div id="noVNC_transition">
+        <div class="chatop_transition_brand">
+            <img src="/app-icons/chatop-logo.png" alt="察元AI">
+            <div class="chatop_transition_title">察元AI</div>
+        </div>
         <div id="noVNC_transition_text"></div>
         <div>
         <input type="button" id="noVNC_cancel_reconnect_button" value="Cancel" class="noVNC_submit">

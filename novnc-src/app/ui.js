@@ -478,8 +478,10 @@ const UI = {
     },
 
     addControlbarHandlers() {
-        // 点击桌面任意空白处：折叠控制栏 + 关闭所有弹出面板(closeControlbar 内含 closeAllPanels)
-        document.getElementById("noVNC_container")
+        // 点击桌面蒙版：折叠控制栏 + 关闭所有弹出面板(closeControlbar 内含 closeAllPanels)。
+        // VNC canvas 会吞掉直接落在 noVNC_container 上的 mousedown，故改用控制栏展开时
+        // 覆盖在桌面上的蒙版来承接“点击空白处”。
+        document.getElementById("chatop_controlbar_mask")
             .addEventListener('mousedown', () => UI.closeControlbar());
         document.getElementById("noVNC_control_bar")
             .addEventListener('mousemove', UI.activateControlbar);
@@ -605,24 +607,32 @@ const UI = {
     },
 
     addFilesHandlers() {
-        // chatop: both upload and download buttons open the same filebrowser panel;
-        // the direction distinction is enforced via window.CHATOP_FILES gating below.
-        UI.addClickHandle('chatop_upload_button', UI.toggleFilesPanel);
-        UI.addClickHandle('chatop_download_button', UI.toggleFilesPanel);
+        // chatop 文件传输：上传走原生文件选择器存到桌面；下载弹面板列出桌面
+        // 文件点击下载。后端是 app-manager 的 /apps/files/* 接口，权限(是否
+        // 允许上传/下载)由 docker-compose 环境变量 FILES_UPLOAD/FILES_DOWNLOAD
+        // 控制，前端启动时向 /apps/files/config 查询并据此显隐按钮。
+        UI.addClickHandle('chatop_upload_button', UI.triggerUpload);
+        const inp = document.getElementById('chatop_upload_input');
+        if (inp) inp.addEventListener('change', (e) => UI.uploadFiles(e.target.files));
+        UI.addClickHandle('chatop_download_button', UI.toggleDownloadPanel);
 
         // chatop: 应用管理器入口按钮
         UI.addClickHandle('chatop_apps_button', () => ChatopApps.open());
 
-        // Apply permission gating: hide a direction's wrapping button div when disabled.
-        const cfg = window.CHATOP_FILES || { upload: true, download: true };
-        if (!cfg.upload) {
-            const up = document.getElementById('chatop_upload_button');
-            if (up && up.parentNode) up.parentNode.classList.add('noVNC_hidden');
-        }
-        if (!cfg.download) {
-            const down = document.getElementById('chatop_download_button');
-            if (down && down.parentNode) down.parentNode.classList.add('noVNC_hidden');
-        }
+        // 权限：按后端 config 显隐上传/下载按钮。
+        UI.refreshFilesPermission();
+    },
+
+    async refreshFilesPermission() {
+        let cfg = { upload: true, download: true };
+        try {
+            const r = await fetch('/apps/files/config');
+            if (r.ok) cfg = await r.json();
+        } catch (_) { /* 后端不可达时按默认全开 */ }
+        const up = document.getElementById('chatop_upload_button');
+        if (up && up.parentNode) up.parentNode.classList.toggle('noVNC_hidden', !cfg.upload);
+        const down = document.getElementById('chatop_download_button');
+        if (down && down.parentNode) down.parentNode.classList.toggle('noVNC_hidden', !cfg.download);
     },
 
     // Add a call to save settings when the element changes,
@@ -836,21 +846,21 @@ const UI = {
             case 'init':
                 break;
             case 'connecting':
-                transitionElem.textContent = _("Connecting...");
+                transitionElem.textContent = _("正在连接察元AI…");
                 document.documentElement.classList.add("noVNC_connecting");
                 break;
             case 'connected':
                 document.documentElement.classList.add("noVNC_connected");
                 break;
             case 'disconnecting':
-                transitionElem.textContent = _("Disconnecting...");
+                transitionElem.textContent = _("正在断开连接…");
                 document.documentElement.classList.add("noVNC_disconnecting");
                 break;
             case 'disconnected':
                 document.documentElement.classList.add("noVNC_disconnected");
                 break;
             case 'reconnecting':
-                transitionElem.textContent = _("Reconnecting...");
+                transitionElem.textContent = _("正在重新连接察元AI…");
                 document.documentElement.classList.add("noVNC_reconnecting");
                 break;
             default:
@@ -1212,6 +1222,8 @@ const UI = {
     openControlbar() {
         document.getElementById('noVNC_control_bar')
             .classList.add("noVNC_open");
+        document.getElementById('chatop_controlbar_mask')
+            .classList.add("noVNC_open");
         if (WebUtil.isInsideKasmVDI()) {
              parent.postMessage({ action: 'control_open', value: 'Control bar opened'}, '*' );
         }
@@ -1220,6 +1232,8 @@ const UI = {
     closeControlbar() {
         UI.closeAllPanels();
         document.getElementById('noVNC_control_bar')
+            .classList.remove("noVNC_open");
+        document.getElementById('chatop_controlbar_mask')
             .classList.remove("noVNC_open");
         if (UI.rfb) {
             UI.rfb.focus();
@@ -1584,7 +1598,7 @@ const UI = {
         UI.closeSettingsPanel();
         UI.closePowerPanel();
         UI.closeClipboardPanel();
-        UI.closeFilesPanel();
+        UI.closeDownloadPanel();
         UI.closeExtraKeys();
     },
 
@@ -1743,50 +1757,92 @@ const UI = {
  * FILES (chatop)
  * ------v------*/
 
-    openFilesPanel() {
-        UI.closeAllPanels();
-        UI.openControlbar();
-
-        // Lazy-load the filebrowser sidecar on first open. It is now served
-        // SAME-ORIGIN under /files/ (Caddy reverse-proxies it on the single
-        // external port), so it is no longer COEP-blocked and renders inline;
-        // the "open in new tab" link remains as a convenience fallback.
-        const iframe = document.getElementById('chatop_files_iframe');
-        const newtab = document.getElementById('chatop_files_newtab');
-        if (iframe && !iframe.getAttribute('src')) {
-            const url = '/files/';
-            iframe.setAttribute('src', url);
-            if (newtab) newtab.setAttribute('href', url);
-        }
-
-        document.getElementById('chatop_files_panel')
-            .classList.add("noVNC_open");
-        document.getElementById('chatop_upload_button')
-            .classList.add("noVNC_selected");
-        document.getElementById('chatop_download_button')
-            .classList.add("noVNC_selected");
-    },
-
-    closeFilesPanel() {
-        document.getElementById('chatop_files_panel')
-            .classList.remove("noVNC_open");
-        document.getElementById('chatop_upload_button')
-            .classList.remove("noVNC_selected");
-        document.getElementById('chatop_download_button')
-            .classList.remove("noVNC_selected");
-    },
-
-    toggleFilesPanel(e) {
-        if (!UI.isControlPanelItemClick(e)) {
+    triggerUpload(e) {
+        // 控制栏拖动等非点击事件不触发，避免误触发文件选择器。
+        if (e && UI.isControlPanelItemClick && !UI.isControlPanelItemClick(e)) {
             return false;
         }
+        const inp = document.getElementById('chatop_upload_input');
+        if (inp) { inp.value = ''; inp.click(); }
+    },
 
-        if (document.getElementById('chatop_files_panel')
-            .classList.contains("noVNC_open")) {
-            UI.closeFilesPanel();
-        } else {
-            UI.openFilesPanel();
+    async uploadFiles(fileList) {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+        let ok = 0, fail = 0;
+        UI.showStatus(_("正在上传…"), 'normal', 60000);
+        for (const f of files) {
+            try {
+                const r = await fetch('/apps/files/upload?name=' + encodeURIComponent(f.name),
+                                      { method: 'POST', body: f });
+                if (r.ok) ok++; else fail++;
+            } catch (_) { fail++; }
         }
+        UI.showStatus(`上传完成：成功 ${ok}${fail ? '，失败 ' + fail : ''}（已保存到桌面）`,
+                      fail ? 'warn' : 'normal');
+        // 若下载面板开着，刷新列表以显示刚上传的文件
+        const panel = document.getElementById('chatop_download_panel');
+        if (panel && panel.classList.contains('noVNC_open')) UI.loadFilesList();
+    },
+
+    toggleDownloadPanel(e) {
+        if (!UI.isControlPanelItemClick(e)) return false;
+        const panel = document.getElementById('chatop_download_panel');
+        if (panel.classList.contains('noVNC_open')) {
+            UI.closeDownloadPanel();
+        } else {
+            UI.openDownloadPanel();
+        }
+    },
+
+    openDownloadPanel() {
+        UI.closeAllPanels();
+        UI.openControlbar();
+        document.getElementById('chatop_download_panel').classList.add('noVNC_open');
+        document.getElementById('chatop_download_button').classList.add('noVNC_selected');
+        UI.loadFilesList();
+    },
+
+    closeDownloadPanel() {
+        const p = document.getElementById('chatop_download_panel');
+        if (p) p.classList.remove('noVNC_open');
+        const b = document.getElementById('chatop_download_button');
+        if (b) b.classList.remove('noVNC_selected');
+    },
+
+    async loadFilesList() {
+        const box = document.getElementById('chatop_files_list');
+        if (!box) return;
+        box.textContent = '加载中…';
+        try {
+            const r = await fetch('/apps/files/list');
+            if (!r.ok) { box.textContent = '下载已禁用或不可用'; return; }
+            const data = await r.json();
+            const files = data.files || [];
+            if (!files.length) { box.textContent = '桌面没有文件'; return; }
+            box.innerHTML = '';
+            for (const f of files) {
+                const row = document.createElement('a');
+                row.className = 'chatop_file_row';
+                row.href = '/apps/files/download?name=' + encodeURIComponent(f.name);
+                row.setAttribute('download', f.name);
+                const name = document.createElement('span');
+                name.className = 'chatop_file_name'; name.textContent = f.name;
+                const size = document.createElement('span');
+                size.className = 'chatop_file_size'; size.textContent = UI.humanSize(f.size);
+                row.appendChild(name); row.appendChild(size);
+                box.appendChild(row);
+            }
+        } catch (_) {
+            box.textContent = '加载失败';
+        }
+    },
+
+    humanSize(n) {
+        if (n < 1024) return n + ' B';
+        const u = ['KB', 'MB', 'GB', 'TB']; let i = -1;
+        do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+        return n.toFixed(1) + ' ' + u[i];
     },
 
     clipboardReceive(e) {
@@ -3728,7 +3784,7 @@ const ChatopApps = {
     this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
   },
   renderTabs() {
-    const tabs = [['','全部'],['ai-cli','AI CLI'],['ai-runtime','智能体'],['gui','GUI'],['vscode-ext','插件']];
+    const tabs = [['','全部'],['ai-cli','AI CLI'],['ai-runtime','智能体'],['gui','GUI'],['vscode-ext','插件'],['proot-gui','应用市场']];
     const box = document.getElementById('chatop_apps_tabs'); box.innerHTML='';
     tabs.forEach(([cat,label]) => {
       const b = document.createElement('button');
@@ -3746,7 +3802,8 @@ const ChatopApps = {
       .forEach(a => {
         const installed = !!this.status[a.id];
         const card = document.createElement('div'); card.className='chatop_app_card';
-        card.innerHTML = `<img src="app-icons/${a.icon}" onerror="this.style.visibility='hidden'">
+        const iconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
+        card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="this.style.visibility='hidden'">
           <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}`;
         card.querySelector('.chatop_app_name').textContent = a.name;
         card.onclick = () => this.detail(a);
@@ -3760,8 +3817,9 @@ const ChatopApps = {
     document.getElementById('chatop_apps_grid').style.display = 'none';
     const d = document.getElementById('chatop_apps_detail');
     d.style.display='flex';
+    const diconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
     d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
-      <img src="app-icons/${a.icon}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
+      <img src="${diconSrc}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
       <h3></h3><p class="chatop_app_desc"></p><p class="chatop_app_notes"></p>
       <button id="chatop_app_action" class="${installed?'remove':'install'}">${installed?'卸载':'安装'}</button>
       <pre id="chatop_app_log"></pre>`;
