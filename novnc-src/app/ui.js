@@ -4025,6 +4025,61 @@ const ChatopApps = {
     const ub=document.getElementById('chatop_app_uninstall');
     if(ub) ub.onclick=()=>this.uninstallInstalled(a);
   },
+  openGroup(gid){
+    this.openGroupId=gid;
+    const g=this.groups.items.find(i=>i.type==='group'&&i.id===gid); if(!g) return;
+    document.getElementById('chatop_group_overlay').style.display='flex';
+    const title=document.getElementById('chatop_group_title'); title.value=g.name;
+    title.onchange=()=>{ g.name=title.value.trim()||'新建分组'; this.saveGroups(); this.renderGrid(''); };
+    this.renderGroupGrid(g);
+    document.getElementById('chatop_group_close').onclick=()=>this.closeGroup();
+    document.getElementById('chatop_group_add').onclick=()=>this.addToGroupPicker(g);
+    const ov=document.getElementById('chatop_group_overlay');
+    ov.ondragover=e=>{ if(this._drag&&this._drag.kind==='app') e.preventDefault(); };
+    ov.ondrop=e=>{ if(e.target===ov && this._drag && this._drag.kind==='app'){
+      const key=this._drag.key; this._drag=null;
+      const grp=this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId);
+      if(grp){ grp.apps=grp.apps.filter(k=>k!==key);
+        if(grp.auto) (this.groups.pulled_out_system=this.groups.pulled_out_system||[]).push(key);
+        this.groups.items.push({type:'app',key});
+        this.dissolveIfEmpty(grp);
+        this.saveGroups();
+        if(this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId)) this.renderGroupGrid(grp);
+        else this.closeGroup();
+        this.renderGrid('');
+      }
+    }};
+  },
+  closeGroup(){ document.getElementById('chatop_group_overlay').style.display='none'; this.openGroupId=null; },
+  renderGroupGrid(g){
+    const grid=document.getElementById('chatop_group_grid'); grid.innerHTML='';
+    g.apps.forEach(k=>{ const a=this.appByKey(k); if(!a) return;
+      const card=this.appCard(a);
+      grid.appendChild(card);
+    });
+  },
+  dissolveIfEmpty(grp){
+    if (grp.apps.length<=1){
+      const leftover=grp.apps.slice();
+      this.groups.items=this.groups.items.filter(i=>i!==grp);
+      leftover.forEach(k=>this.groups.items.push({type:'app',key:k}));
+    }
+  },
+  ungroupedApps(){
+    const used=new Set();
+    this.groups.items.forEach(i=>{ if(i.type==='app')used.add(i.key); if(i.type==='group')i.apps.forEach(k=>used.add(k)); });
+    return this.installed.filter(a=>!used.has(a.key));
+  },
+  addToGroupPicker(g){
+    const list=this.ungroupedApps();
+    if(!list.length){ UI.showStatus('没有未归组的应用',' warn'); return; }
+    const grid=document.getElementById('chatop_group_grid');
+    grid.innerHTML='<div class="chatop_group_pick_hint">勾选要加入的应用，再次点击关闭</div>';
+    list.forEach(a=>{ const card=this.appCard(a); card.onclick=()=>{
+        g.apps.push(a.key); this.removeTopApp(a.key); this.saveGroups(); this.renderGroupGrid(g); this.renderGrid(''); };
+      grid.appendChild(card); });
+  },
+  removeTopApp(key){ this.groups.items=this.groups.items.filter(i=>!(i.type==='app'&&i.key===key)); },
   async act(a, action) {
     const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';
     try {
