@@ -197,9 +197,9 @@ RUN mkdir -p /tmp/pa && \
 ARG APP_USER=admin
 RUN if [ "$APP_USER" != "kasm-user" ]; then \
       usermod -l "$APP_USER" kasm-user && \
-      usermod -d "/home/$APP_USER" "$APP_USER" && \
+      usermod -d "/home/$APP_USER" -s /bin/bash "$APP_USER" && \
       ln -sfn /home/kasm-user "/home/$APP_USER" && \
-      useradd -o -u 1000 -g 1000 -M -s /bin/sh -d /home/kasm-user kasm-user ; \
+      useradd -o -u 1000 -g 1000 -M -s /bin/bash -d /home/kasm-user kasm-user ; \
     fi
 ENV HOME=/home/${APP_USER}
 
@@ -212,6 +212,10 @@ ENV HOME=/home/${APP_USER}
 # 显式把 XDG_DATA_HOME 覆盖回持久卷默认值，抵消上方第 46 行那条早期 ENV（ENV 是累积的，
 # 后面只设 XDG_CONFIG_HOME 不会取消前面的 XDG_DATA_HOME，故必须在此显式重设）。
 ENV XDG_CONFIG_HOME=/tmp/caddy XDG_DATA_HOME=/home/kasm-user/.local/share
+# 命令行工具(claude/openclaw/codex/opencode/hermes 等)PATH 进全局 ENV——彻底不依赖 shell 类型:
+# 桌面终端默认 shell 是 dash(/bin/sh,不读 bash.bashrc/profile.d),靠全局 ENV 任何进程都能找到命令。
+# NPM_CONFIG_PREFIX 同入全局,任意 shell `npm i -g` 都装到用户卷目录。(上面已把默认 shell 也改成 bash)
+ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global PATH=${HOME}/.npm-global/bin:${HOME}/.local/bin:${PATH}
 # 构建期 root 步骤可能以 /tmp/caddy 作 XDG_CONFIG 建出 root 属主目录，运行时 uid 1000 的
 # caddy/xfce 写不进。删掉它，运行时由首个 uid 1000 进程重建为可写。
 RUN rm -rf /tmp/caddy
