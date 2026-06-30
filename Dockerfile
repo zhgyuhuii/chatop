@@ -74,7 +74,9 @@ RUN set -eux; \
 RUN set -eux; \
     printf '\n# chatop app-manager user-level tooling\nexport NPM_CONFIG_PREFIX="$HOME/.npm-global"\nexport PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"\n' \
       > /etc/profile.d/chatop-apps.sh; \
-    chmod +x /etc/profile.d/chatop-apps.sh
+    chmod +x /etc/profile.d/chatop-apps.sh; \
+    printf '\n# chatop: 交互式(非登录)终端也加载用户级工具 PATH(桌面终端走这条;profile.d 只对登录 shell 生效)\n[ -f /etc/profile.d/chatop-apps.sh ] && . /etc/profile.d/chatop-apps.sh\n' \
+      >> /etc/bash.bashrc
 
 USER root
 # 登录名可配：把 vnc_startup.sh 里硬编码的 kasm_user(仅这两类:kasmvncpasswd -u 和 辅助服务 auth-token)
