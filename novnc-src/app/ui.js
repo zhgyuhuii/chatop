@@ -3900,6 +3900,18 @@ const ChatopApps = {
       <div class="chatop_app_name">${group.name}</div>
       <span class="chatop_group_count">${group.apps.length}</span>`;
   },
+  batchMove(){
+    if(!this.selected.size) return;
+    const keys=[...this.selected];
+    // 简单选择：现有分组名列表 + 新建
+    const names=this.groups.items.filter(i=>i.type==='group').map(g=>g.name);
+    const choice=prompt('移入分组（输入已有分组名，或留空=新建分组）：\n'+names.join(' / '),'');
+    if(choice===null) return;
+    let g=this.groups.items.find(i=>i.type==='group'&&i.name===choice.trim());
+    if(!g){ g={type:'group',id:'g'+Date.now(),name:(choice.trim()||'新建分组'),apps:[]}; this.groups.items.push(g); }
+    keys.forEach(k=>{ this.removeAppFromAnywhere(k); g.apps.push(k); });
+    this.selected.clear(); this.selectMode=false; this.saveGroups(); this.renderGrid('');
+  },
   toolbarRow(){
     const bar = document.createElement('div'); bar.className='chatop_apps_toolbar';
     const btn = document.createElement('button');
