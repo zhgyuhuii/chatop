@@ -51,14 +51,16 @@ RUN mkdir -p /dockerstartup && \
     chmod +x /dockerstartup/custom_startup.sh
 
 # ================== S7：定制桌面内置软件 ==================
-# === 桌面零应用 ===
-# core base 不含任何内置 GUI 应用；按需求本镜像也不预装 WPS/fcitx 输入法等任何 GUI 应用，
-# 桌面开机即干净空白，一切应用都走应用市场(proot-apps)按需安装。
-# 唯一保留的是 CJK 字体——它是中文「渲染」前提(不是应用)，否则桌面/文件名/察元AI 全是豆腐块。
+# === 桌面基本无内置应用 ===
+# core base 不含任何内置 GUI 应用；本镜像也不预装 WPS/fcitx 等。唯一刻意预装的 GUI 应用是
+# Google Chrome（openclaw/Hermes 等 Web 智能体的运行载体，见下）。其余一切走应用市场按需装。
+# CJK 字体是中文「渲染」前提(不是应用)，否则桌面/文件名/察元AI 全是豆腐块。
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
       fonts-noto-cjk fonts-noto-color-emoji \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+# 注：系统中文化(locale/语言包)与 Google Chrome 预装层刻意放在 python3.11 之后、app-manager
+# 之前（见下方），让 node/python3.11 等重型层保持缓存命中、不被这两个新层挤掉重建。
 
 # === 应用管理器基础：Node 22（npm 类 AI 工具前提）+ pipx ===
 RUN set -eux; \
@@ -79,7 +81,8 @@ USER root
 # 改为运行时变量 ${LOGIN_USER:-admin};绝不动 kasm_user_name / kasm_viewer / KASM_USER
 RUN sed -i 's/-u kasm_user -wo/-u "${LOGIN_USER:-admin}" -wo/' /dockerstartup/vnc_startup.sh && \
     sed -i 's/kasm_user:\$VNC_PW/${LOGIN_USER:-admin}:\$VNC_PW/g' /dockerstartup/vnc_startup.sh && \
-    echo "=== patched login-user lines ===" && grep -nE 'LOGIN_USER|kasm_user' /dockerstartup/vnc_startup.sh
+    sed -i '/^APP_NAME=/a if [ "${CLIPBOARD_OUT:-1}" = "0" ]; then export KASM_SVC_SEND_CUT_TEXT="-SendCutText=0"; else export KASM_SVC_SEND_CUT_TEXT="-SendCutText=1"; fi; if [ "${CLIPBOARD_IN:-1}" = "0" ]; then export KASM_SVC_ACCEPT_CUT_TEXT="-AcceptCutText=0"; else export KASM_SVC_ACCEPT_CUT_TEXT="-AcceptCutText=1"; fi' /dockerstartup/vnc_startup.sh && \
+    echo "=== patched login-user + clipboard lines ===" && grep -nE 'LOGIN_USER|kasm_user|CLIPBOARD|CUT_TEXT' /dockerstartup/vnc_startup.sh
 ENV LOGIN_USER=admin
 
 # ============ 轻量资源层（置于重型下载层之后，便于前端/资源快速迭代）============
@@ -93,6 +96,42 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
     add-apt-repository -y ppa:deadsnakes/ppa && apt-get update && \
     apt-get install -y --no-install-recommends python3.11 python3.11-venv python3.11-distutils && \
     python3.11 --version && rm -rf /var/lib/apt/lists/*
+
+# === 系统中文化：locale + 中文语言包 + LANG（XFCE 菜单/Thunar/右键/对话框显示中文）===
+# 参考 Ubuntu 官方：装 language-pack-zh-hans(+gnome 覆盖 GTK 应用翻译)，locale-gen 生成
+# zh_CN.UTF-8，update-locale 写 /etc/default/locale，再用 ENV LANG 让 KasmVNC 会话继承。
+# 放此处(python3.11 之后)是为保住上方 node/python 重型层缓存。
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      locales language-pack-zh-hans language-pack-gnome-zh-hans \
+    && locale-gen zh_CN.UTF-8 \
+    && update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh LC_ALL=zh_CN.UTF-8
+
+# === 预装最新版 Google Chrome（openclaw / Hermes 等 Web 智能体的运行载体）===
+# 用 Google 官方 _current_ 直链，始终拉最新 stable；apt 装本地 deb 自动解析依赖。
+# 容器内无 user-namespace 沙箱权限，故给 .desktop 启动加 --no-sandbox，否则 Chrome 起不来。
+RUN set -eux; \
+    apt-get update; \
+    curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
+    apt-get install -y --no-install-recommends /tmp/chrome.deb; \
+    rm -f /tmp/chrome.deb; \
+    sed -i 's#^Exec=/usr/bin/google-chrome-stable#Exec=/usr/bin/google-chrome-stable --no-sandbox --start-maximized#' \
+        /usr/share/applications/google-chrome.desktop; \
+    /usr/bin/google-chrome-stable --version; \
+    : '--- 任务栏浏览器图标走 XFCE helper(exo-open --launch WebBrowser)→ %B=PATH 里的裸 google-chrome，' ; \
+    : '    不带 --no-sandbox 会沙箱崩溃。故在 /usr/local/bin(PATH 优先于 /usr/bin)放 wrapper 强制加 flag，' ; \
+    : '    覆盖任务栏/xdg-open/任何 PATH 启动路径。---' ; \
+    printf '#!/bin/bash\nexec /opt/google/chrome/google-chrome --no-sandbox --start-maximized "$@"\n' \
+        > /usr/local/bin/google-chrome-stable; \
+    cp /usr/local/bin/google-chrome-stable /usr/local/bin/google-chrome; \
+    chmod +x /usr/local/bin/google-chrome-stable /usr/local/bin/google-chrome; \
+    : '--- 系统级默认浏览器：XFCE 首选应用(helpers.rc，fresh 开机读 /etc/xdg 回退) + xdg mime 默认 ---' ; \
+    sed -i 's/^WebBrowser=.*/WebBrowser=google-chrome/' /etc/xdg/xfce4/helpers.rc; \
+    printf '[Default Applications]\nx-scheme-handler/http=google-chrome.desktop\nx-scheme-handler/https=google-chrome.desktop\ntext/html=google-chrome.desktop\nx-scheme-handler/about=google-chrome.desktop\n' \
+        > /etc/xdg/mimeapps.list; \
+    apt-get clean; rm -rf /var/lib/apt/lists/*
+
 # === 应用管理器：后端 + catalog + 图标 + 启动脚本 ===
 RUN mkdir -p /usr/local/lib/chatop /etc/chatop
 COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
@@ -115,7 +154,7 @@ COPY assets/set-wallpaper.sh /usr/local/bin/set-wallpaper.sh
 RUN chmod +x /usr/local/bin/set-wallpaper.sh
 # 在末尾重新生成 custom_startup（追加 set-wallpaper 后台任务）。放末尾是为了不破坏
 # 上方 python3.11 等重型层的构建缓存（改 custom_startup 不再触发 python3.11 重装）。
-RUN printf '#!/bin/bash\nexport FILES_HASH="$(/usr/local/bin/caddy hash-password --plaintext "${FILES_PW:-${VNC_PW:-password}}" 2>/dev/null)"\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 # KasmVNC 剪贴板上/下行权限默认
 COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
@@ -162,5 +201,17 @@ RUN if [ "$APP_USER" != "kasm-user" ]; then \
     fi
 ENV HOME=/home/${APP_USER}
 
+# 只把 XDG_CONFIG_HOME 移到临时 /tmp/caddy（不读持久卷里的旧 xfce 配置，每次开机从 /etc/xdg
+# 默认重新生成：顶部菜单+底部任务栏、退出、通知区都正常；曾指向持久卷读到 kasm 单面板陈旧状态，
+# 引发面板消失/无法退出/通知区异常）。
+# 关键：XDG_DATA_HOME 必须保持默认(~/.local/share，即持久卷)，绝不能也指到 /tmp/caddy——否则
+# proot-apps 装到 ~/.local/share/icons 的应用图标、~/.local/share/applications 的菜单项都会被
+# 排除出搜索路径，桌面图标变光秃、菜单缺失；且 /tmp/caddy 曾被烤成 root 属主，pulse 写不进而崩溃。
+# 显式把 XDG_DATA_HOME 覆盖回持久卷默认值，抵消上方第 46 行那条早期 ENV（ENV 是累积的，
+# 后面只设 XDG_CONFIG_HOME 不会取消前面的 XDG_DATA_HOME，故必须在此显式重设）。
+ENV XDG_CONFIG_HOME=/tmp/caddy XDG_DATA_HOME=/home/kasm-user/.local/share
+# 构建期 root 步骤可能以 /tmp/caddy 作 XDG_CONFIG 建出 root 属主目录，运行时 uid 1000 的
+# caddy/xfce 写不进。删掉它，运行时由首个 uid 1000 进程重建为可写。
+RUN rm -rf /tmp/caddy
 # 恢复运行用户 uid 1000（base 运行期身份）
 USER 1000

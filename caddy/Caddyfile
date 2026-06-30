@@ -4,17 +4,37 @@
 }
 :7443 {
     tls /tmp/caddy/tls.crt /tmp/caddy/tls.key
+
+    # 自定义品牌登录页与校验端点（app-manager 提供），放行、不参与鉴权
+    @public path /login /login/* /auth /auth/*
+    handle @public {
+        reverse_proxy 127.0.0.1:8686
+    }
+
+    # 应用管理器接口：登录后(cookie 有效)才可访问
+    handle /apps* {
+        forward_auth 127.0.0.1:8686 {
+            uri /auth
+        }
+        reverse_proxy 127.0.0.1:8686
+    }
+
+    # 文件浏览器(filebrowser --noauth)：靠本网关 cookie 把关
     handle /files* {
-        basic_auth {
-            {$LOGIN_USER} {$FILES_HASH}
+        forward_auth 127.0.0.1:8686 {
+            uri /auth
         }
         reverse_proxy 127.0.0.1:8585
     }
-    handle /apps* {
-        reverse_proxy 127.0.0.1:8686
-    }
+
+    # KasmVNC 桌面本体(含 websocket)：cookie 校验通过后，由网关统一注入
+    # Basic 凭据给 KasmVNC，浏览器原生 basic-auth 弹窗永不出现。
     handle {
+        forward_auth 127.0.0.1:8686 {
+            uri /auth
+        }
         reverse_proxy https://127.0.0.1:6901 {
+            header_up Authorization "Basic {$KASM_BASIC}"
             transport http {
                 tls_insecure_skip_verify
             }

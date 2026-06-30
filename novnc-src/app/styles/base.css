@@ -1650,3 +1650,17 @@ body.chatop-theme-light .chatop_app_name{color:#1c1f23;}
 .chatop_apps_tab.active{background:#1976d2;color:#fff;border-color:#1976d2;}
 body.chatop-theme-light .chatop_apps_tab{background:#eef0f3;color:#555;border-color:#ddd;}
 body.chatop-theme-light .chatop_apps_tab.active{background:#1976d2;color:#fff;}
+/* light 主题补全:上面这些组件里写死深色、之前未被覆盖的元素（搜索框是黑框、详情描述/下载列表白字白底等） */
+body.chatop-theme-light .chatop_apps_head{border-bottom-color:rgba(0,0,0,.12);}
+body.chatop-theme-light .chatop_apps_head input{background:#f3f4f6;color:#1c1f23;border-color:#ccc;}
+body.chatop-theme-light .chatop_apps_head input::placeholder{color:#888;}
+body.chatop-theme-light .chatop_apps_head button{color:#555;}
+body.chatop-theme-light .chatop_app_card{color:#1c1f23;}
+body.chatop-theme-light .chatop_app_desc{color:#444;}
+body.chatop-theme-light .chatop_apps_empty{color:#666;}
+body.chatop-theme-light #chatop_apps_back{color:#1976d2;}
+body.chatop-theme-light #chatop_app_log{background:#f3f4f6;color:#333;}
+/* 下载面板（noVNC_panel 类，light 下变浅底）里的文件列表文字默认 #fff，需改深色 */
+body.chatop-theme-light .chatop_files_list,
+body.chatop-theme-light .chatop_file_row{color:#1c1f23;}
+body.chatop-theme-light .chatop_file_row:hover{background:rgb(0 0 0 / 0.06);}

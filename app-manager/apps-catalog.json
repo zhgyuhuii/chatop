@@ -1642,6 +1642,22 @@
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
       "launch": "proot-apps run zotero"
+    },
+    {
+      "id": "openhuman",
+      "name": "OpenHuman",
+      "category": "gui",
+      "kind": "appimage",
+      "icon": "openhuman.png",
+      "description": "开源 agentic 桌面 AI 助手，私有、简洁、可接入多模型；tinyhumansai 出品",
+      "install": "bash /usr/local/lib/chatop/gui-install.sh openhuman https://github.com/tinyhumansai/openhuman/releases/download/v0.58.0/OpenHuman_0.58.0_amd64.AppImage 'OpenHuman'",
+      "remove": "bash /usr/local/lib/chatop/gui-uninstall.sh openhuman",
+      "detect": "test -d $HOME/Applications/openhuman/squashfs-root",
+      "needs": [],
+      "homepage": "https://github.com/tinyhumansai/openhuman",
+      "notes": "Tauri 桌面应用(AppImage v0.58.0)，解包到 ~/Applications 持久化；装好后从桌面/开始菜单打开",
+      "phase": 2,
+      "launch": "$HOME/Applications/openhuman/squashfs-root/AppRun"
     }
   ]
 }

@@ -3760,7 +3760,7 @@ if (l10n.language === "en" || l10n.dictionary !== undefined) {
 
 // chatop: 应用管理器前端逻辑
 const ChatopApps = {
-  catalog: [], status: {}, category: '',
+  catalog: [], status: {}, installed: [], category: '',
   async open() {
     document.getElementById('chatop_apps_modal').style.display = 'flex';
     this.showList();
@@ -3774,12 +3774,13 @@ const ChatopApps = {
   close() { document.getElementById('chatop_apps_modal').style.display = 'none'; },
   async refresh() {
     try {
-      const [c, s] = await Promise.all([
+      const [c, s, ins] = await Promise.all([
         fetch('/apps/catalog').then(r=>r.json()),
-        fetch('/apps/status').then(r=>r.json())
+        fetch('/apps/status').then(r=>r.json()),
+        fetch('/apps/installed').then(r=>r.json()).catch(()=>({installed:[]}))
       ]);
-      this.catalog = c.apps || []; this.status = s || {};
-    } catch(e) { this.catalog = []; this.status = {}; }
+      this.catalog = c.apps || []; this.status = s || {}; this.installed = ins.installed || [];
+    } catch(e) { this.catalog = []; this.status = {}; this.installed = []; }
     this.renderTabs();
     this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
   },
@@ -3797,14 +3798,27 @@ const ChatopApps = {
   },
   renderGrid(filter='') {
     const g = document.getElementById('chatop_apps_grid'); g.innerHTML='';
-    const onlyInstalled = this.category === '__installed__';
-    const list = this.catalog.filter(a =>
-        (onlyInstalled ? !!this.status[a.id] : (!this.category || a.category===this.category)) &&
-        (a.name+a.description+a.id).toLowerCase().includes(filter));
-    if (onlyInstalled && !list.length) {
-      g.innerHTML = '<div class="chatop_apps_empty">本机暂无通过应用管理器安装的应用</div>';
+    // 本机已安装：遍历容器内真实 .desktop（含 proot/AppImage/系统应用），带各自真实图标
+    if (this.category === '__installed__') {
+      const items = this.installed.filter(a => (a.name+a.key).toLowerCase().includes(filter));
+      if (!items.length) {
+        g.innerHTML = '<div class="chatop_apps_empty">本机暂无已安装的图形应用</div>'; return;
+      }
+      items.forEach(a => {
+        const card = document.createElement('div'); card.className='chatop_app_card';
+        card.innerHTML = `<img src="${a.icon||''}" loading="lazy" onerror="this.style.visibility='hidden'">
+          <div class="chatop_app_name"></div><span class="chatop_app_badge">已安装</span>
+          <button class="chatop_app_open">打开</button>`;
+        card.querySelector('.chatop_app_name').textContent = a.name;
+        card.querySelector('.chatop_app_open').onclick = (e)=>{ e.stopPropagation(); this.runInstalled(a); };
+        card.onclick = () => this.detailInstalled(a);
+        g.appendChild(card);
+      });
       return;
     }
+    const list = this.catalog.filter(a =>
+        (!this.category || a.category===this.category) &&
+        (a.name+a.description+a.id).toLowerCase().includes(filter));
     list.forEach(a => {
         const installed = !!this.status[a.id];
         const canOpen = installed && a.launchable;
@@ -3855,6 +3869,32 @@ const ChatopApps = {
         UI.showStatus('打开失败：该应用不可启动', 'warn');
       }
     } catch(e) { UI.showStatus('打开失败：'+e, 'error'); }
+  },
+  // 已安装应用（来自 .desktop 扫描）：按 key 启动
+  async runInstalled(a) {
+    try {
+      const r = await fetch('/apps/run', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({key:a.key})});
+      if (r.ok) { UI.showStatus('正在桌面打开 '+a.name+' …', 'normal'); this.close(); }
+      else UI.showStatus('打开失败：该应用无法启动', 'warn');
+    } catch(e) { UI.showStatus('打开失败：'+e, 'error'); }
+  },
+  // 已安装应用详情：能对应到 catalog 的走完整详情（可卸载/重装）；系统应用只展示+打开
+  detailInstalled(a) {
+    if (a.catalog_id) {
+      const c = this.catalog.find(x => x.id === a.catalog_id);
+      if (c) return this.detail(c);
+    }
+    document.getElementById('chatop_apps_tabs').style.display='none';
+    document.getElementById('chatop_apps_grid').style.display='none';
+    const d = document.getElementById('chatop_apps_detail'); d.style.display='flex';
+    d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
+      <img src="${a.icon||''}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
+      <h3></h3><p class="chatop_app_desc">本机已安装的系统应用（应用管理器不托管其卸载）。</p>
+      <div class="chatop_app_actions"><button id="chatop_app_open_btn" class="open">在桌面打开</button></div>`;
+    d.querySelector('h3').textContent = a.name;
+    document.getElementById('chatop_apps_back').onclick=()=>this.showList();
+    document.getElementById('chatop_app_open_btn').onclick=()=>this.runInstalled(a);
   },
   async act(a, action) {
     const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';

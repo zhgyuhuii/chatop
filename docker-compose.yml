@@ -16,6 +16,12 @@ services:
       # 文件传输权限（app-manager /apps/files/*）：1 开放 / 0 关闭
       - FILES_UPLOAD=${FILES_UPLOAD:-1}
       - FILES_DOWNLOAD=${FILES_DOWNLOAD:-1}
+      # 剪贴板复制权限（与 FILES_* 同 1/0 风格，动态配置 KasmVNC SendCutText/AcceptCutText）：
+      #   CLIPBOARD_OUT=1 允许「内向外复制」(容器内复制 → 本地可粘贴)
+      #   CLIPBOARD_IN =1 允许「外向内复制」(本地复制 → 容器内可粘贴)
+      #   两者都设 0 = 禁止跨界复制，只能容器内部复制
+      - CLIPBOARD_OUT=${CLIPBOARD_OUT:-1}
+      - CLIPBOARD_IN=${CLIPBOARD_IN:-1}
       # 上传目标 / 下载来源目录（默认用户桌面）
       - FILES_DIR=${FILES_DIR:-/home/kasm-user/Desktop}
     ports:

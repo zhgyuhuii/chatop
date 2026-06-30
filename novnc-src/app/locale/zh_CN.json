@@ -1,4 +1,13 @@
 {
+    "Upload": "上传",
+    "Upload file": "上传文件",
+    "Upload file to Desktop": "上传文件到桌面",
+    "Download": "下载",
+    "Download file": "下载文件",
+    "Download Desktop file": "下载桌面文件",
+    "Desktop Files": "桌面文件",
+    "Apps": "应用管理",
+    "Application Manager": "应用管理",
     "Connecting...": "连接中...",
     "Disconnecting...": "正在断开连接...",
     "Reconnecting...": "重新连接中...",
