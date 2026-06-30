@@ -3776,11 +3776,12 @@ const ChatopApps = {
     await this.refresh();
   },
   showList() {
+    this.closeGroup();
     document.getElementById('chatop_apps_tabs').style.display = '';
     document.getElementById('chatop_apps_grid').style.display = '';
     document.getElementById('chatop_apps_detail').style.display = 'none';
   },
-  close() { document.getElementById('chatop_apps_modal').style.display = 'none'; },
+  close() { this.closeGroup(); document.getElementById('chatop_apps_modal').style.display = 'none'; },
   async refresh() {
     try {
       const [c, s, ins, grp] = await Promise.all([
@@ -3968,8 +3969,9 @@ const ChatopApps = {
   newGroupCard(){
     const card = document.createElement('div'); card.className='chatop_app_card chatop_newgroup_card';
     card.innerHTML = '<div class="chatop_newgroup_plus">＋</div><div class="chatop_app_name">新建分组</div>';
-    card.onclick = () => { this.groups.items.push({type:'group', id:'g'+Date.now(), name:'新建分组', apps:[]});
-      this.saveGroups(); this.renderGrid(''); };
+    card.onclick = () => { const id='g'+Date.now();
+      this.groups.items.push({type:'group', id, name:'新建分组', apps:[]});
+      this.saveGroups(); this.renderGrid(''); this.openGroup(id); };
     return card;
   },
   dropOnApp(targetKey){
@@ -4016,6 +4018,7 @@ const ChatopApps = {
   },
   // 已安装应用详情：能对应到 catalog 的走完整详情（可卸载/重装）；系统应用只展示+打开
   detailInstalled(a) {
+    if (this.openGroupId) this.closeGroup();
     if (a.catalog_id) {
       const c = this.catalog.find(x => x.id === a.catalog_id);
       if (c) return this.detail(c);
@@ -4084,7 +4087,7 @@ const ChatopApps = {
   },
   addToGroupPicker(g){
     const list=this.ungroupedApps();
-    if(!list.length){ UI.showStatus('没有未归组的应用',' warn'); return; }
+    if(!list.length){ UI.showStatus('没有未归组的应用','warn'); return; }
     const grid=document.getElementById('chatop_group_grid');
     grid.innerHTML='<div class="chatop_group_pick_hint">勾选要加入的应用，再次点击关闭</div>';
     list.forEach(a=>{ const card=this.appCard(a); card.onclick=()=>{
