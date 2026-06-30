@@ -315,6 +315,7 @@ class AppManager:
             self._tasks.task_done()
 
 MGR = None
+GROUPS = GroupStore()
 class Handler(BaseHTTPRequestHandler):
     def _json(self, code, obj):
         b=json.dumps(obj).encode(); self.send_response(code)
@@ -338,6 +339,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog())
         if self.path.startswith("/apps/status"):  return self._json(200, MGR.status())
         if self.path.startswith("/apps/installed"): return self._json(200, {"installed": MGR.installed_apps()})
+        if self.path.startswith("/apps/groups"):
+            layout = GROUPS.reconcile(GROUPS.load(), MGR.installed_apps())
+            GROUPS.save(layout)
+            return self._json(200, layout)
         if self.path.startswith("/apps/icon"):
             p = parse_qs(urlparse(self.path).query).get("p", [""])[0]
             return self._send_icon(p)
@@ -394,6 +399,17 @@ class Handler(BaseHTTPRequestHandler):
                     "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400" % (AUTH_COOKIE, AUTH_TOKEN))
                 self.end_headers(); return
             self.send_response(302); self.send_header("Location","/login?e=1"); self.end_headers(); return
+        if self.path.rstrip("/") == "/apps/groups":
+            n = int(self.headers.get("Content-Length", 0))
+            try:
+                body = json.loads(self.rfile.read(n) or b"{}")
+            except ValueError:
+                return self._json(400, {"error": "bad json"})
+            if not isinstance(body, dict) or not isinstance(body.get("items"), list):
+                return self._json(400, {"error": "bad layout"})
+            body.setdefault("version", 1); body.setdefault("pulled_out_system", [])
+            GROUPS.save(body)
+            return self._json(200, {"ok": True})
         if self.path.rstrip("/") in ("/apps/install","/apps/remove"):
             n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
             action="install" if self.path.rstrip("/").endswith("install") else "remove"
