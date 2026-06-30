@@ -3761,6 +3761,8 @@ if (l10n.language === "en" || l10n.dictionary !== undefined) {
 // chatop: 应用管理器前端逻辑
 const ChatopApps = {
   catalog: [], status: {}, installed: [], category: '',
+  groups: {items:[], pulled_out_system:[]}, openGroupId: null,
+  selectMode: false, selected: new Set(), _saveTimer: null,
   async open() {
     document.getElementById('chatop_apps_modal').style.display = 'flex';
     this.showList();
@@ -3774,12 +3776,14 @@ const ChatopApps = {
   close() { document.getElementById('chatop_apps_modal').style.display = 'none'; },
   async refresh() {
     try {
-      const [c, s, ins] = await Promise.all([
+      const [c, s, ins, grp] = await Promise.all([
         fetch('/apps/catalog').then(r=>r.json()),
         fetch('/apps/status').then(r=>r.json()),
-        fetch('/apps/installed').then(r=>r.json()).catch(()=>({installed:[]}))
+        fetch('/apps/installed').then(r=>r.json()).catch(()=>({installed:[]})),
+        fetch('/apps/groups').then(r=>r.json()).catch(()=>({items:[],pulled_out_system:[]}))
       ]);
       this.catalog = c.apps || []; this.status = s || {}; this.installed = ins.installed || [];
+      this.groups = grp && grp.items ? grp : {items:[],pulled_out_system:[]};
     } catch(e) { this.catalog = []; this.status = {}; this.installed = []; }
     this.renderTabs();
     this.renderGrid(document.getElementById('chatop_apps_search').value.toLowerCase());
@@ -3800,20 +3804,22 @@ const ChatopApps = {
     const g = document.getElementById('chatop_apps_grid'); g.innerHTML='';
     // 本机已安装：遍历容器内真实 .desktop（含 proot/AppImage/系统应用），带各自真实图标
     if (this.category === '__installed__') {
-      const items = this.installed.filter(a => (a.name+a.key).toLowerCase().includes(filter));
-      if (!items.length) {
-        g.innerHTML = '<div class="chatop_apps_empty">本机暂无已安装的图形应用</div>'; return;
+      // 搜索时忽略分组，跨组平铺（设计 2.7）
+      if (filter) {
+        const items = this.installed.filter(a => (a.name+a.key).toLowerCase().includes(filter));
+        if (!items.length){ g.innerHTML='<div class="chatop_apps_empty">无匹配应用</div>'; return; }
+        items.forEach(a => g.appendChild(this.appCard(a)));
+        return;
       }
-      items.forEach(a => {
-        const card = document.createElement('div'); card.className='chatop_app_card';
-        card.innerHTML = `<img src="${a.icon||''}" loading="lazy" onerror="this.style.visibility='hidden'">
-          <div class="chatop_app_name"></div><span class="chatop_app_badge">已安装</span>
-          <button class="chatop_app_open">打开</button>`;
-        card.querySelector('.chatop_app_name').textContent = a.name;
-        card.querySelector('.chatop_app_open').onclick = (e)=>{ e.stopPropagation(); this.runInstalled(a); };
-        card.onclick = () => this.detailInstalled(a);
-        g.appendChild(card);
+      g.appendChild(this.toolbarRow());
+      const referenced = new Set();
+      (this.groups.items||[]).forEach(it => {
+        if (it.type === 'group') { it.apps.forEach(k=>referenced.add(k)); g.appendChild(this.groupCard(it)); }
+        else if (it.type === 'app') { referenced.add(it.key); const a=this.appByKey(it.key); if(a) g.appendChild(this.appCard(a)); }
       });
+      // 兜底：未在布局里的已安装应用（布局尚未对账时）平铺到末尾
+      this.installed.forEach(a => { if(!referenced.has(a.key)) g.appendChild(this.appCard(a)); });
+      g.appendChild(this.newGroupCard());
       return;
     }
     const list = this.catalog.filter(a =>
@@ -3870,6 +3876,80 @@ const ChatopApps = {
       }
     } catch(e) { UI.showStatus('打开失败：'+e, 'error'); }
   },
+  appByKey(key){ return this.installed.find(a => a.key === key); },
+  saveGroups(){
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      fetch('/apps/groups', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(this.groups)}).catch(()=>{});
+    }, 400);
+  },
+  groupCoverHTML(group){
+    const icons = group.apps.slice(0,4).map(k => {
+      const a = this.appByKey(k);
+      return `<img src="${a&&a.icon||''}" onerror="this.style.visibility='hidden'">`;
+    }).join('');
+    return `<div class="chatop_group_cover n${Math.min(group.apps.length,4)}">${icons}</div>
+      <div class="chatop_app_name">${group.name}</div>
+      <span class="chatop_group_count">${group.apps.length}</span>`;
+  },
+  toolbarRow(){
+    const bar = document.createElement('div'); bar.className='chatop_apps_toolbar';
+    const btn = document.createElement('button');
+    btn.textContent = this.selectMode ? '完成' : '多选';
+    btn.onclick = () => { this.selectMode=!this.selectMode; this.selected.clear();
+      this.renderGrid(''); };
+    bar.appendChild(btn);
+    if (this.selectMode) {
+      const mv = document.createElement('button'); mv.textContent='移入分组…';
+      mv.disabled = this.selected.size===0;
+      mv.onclick = () => this.batchMove();
+      bar.appendChild(mv);
+    }
+    return bar;
+  },
+  appCard(a){
+    const card = document.createElement('div'); card.className='chatop_app_card';
+    card.draggable = !this.selectMode; card.dataset.key = a.key;
+    card.innerHTML = `<img src="${a.icon||''}" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="chatop_app_name"></div><button class="chatop_app_open">详情</button>`;
+    card.querySelector('.chatop_app_name').textContent = a.name;
+    card.querySelector('.chatop_app_open').onclick = (e)=>{ e.stopPropagation(); this.detailInstalled(a); };
+    if (this.selectMode) {
+      const chk = document.createElement('span'); chk.className='chatop_app_check'+(this.selected.has(a.key)?' on':'');
+      card.appendChild(chk);
+      card.onclick = () => { this.selected.has(a.key)?this.selected.delete(a.key):this.selected.add(a.key);
+        this.renderGrid(''); };
+    } else {
+      card.onclick = () => this.runInstalled(a);   // 点卡片本体=启动（设计 2.2）
+    }
+    return card;
+  },
+  groupCard(group){
+    const card = document.createElement('div'); card.className='chatop_app_card chatop_group_card';
+    card.draggable = !this.selectMode; card.dataset.gid = group.id;
+    card.innerHTML = this.groupCoverHTML(group);
+    if (!this.selectMode) card.onclick = () => this.openGroup(group.id);
+    return card;
+  },
+  newGroupCard(){
+    const card = document.createElement('div'); card.className='chatop_app_card chatop_newgroup_card';
+    card.innerHTML = '<div class="chatop_newgroup_plus">＋</div><div class="chatop_app_name">新建分组</div>';
+    card.onclick = () => { this.groups.items.push({type:'group', id:'g'+Date.now(), name:'新建分组', apps:[]});
+      this.saveGroups(); this.renderGrid(''); };
+    return card;
+  },
+  async uninstallInstalled(a){
+    const log=document.getElementById('chatop_app_log'); if(log) log.textContent='卸载中…';
+    try{ await fetch('/apps/uninstall',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key:a.key})}); }catch(e){ if(log) log.textContent='请求失败：'+e; return; }
+    const poll=setInterval(async()=>{ try{
+      const r=await fetch('/apps/logs?id='+encodeURIComponent(a.key)).then(r=>r.json());
+      if(log) log.textContent=r.log||'';
+      if(r.state==='success'||r.state==='failed'){ clearInterval(poll); await this.refresh();
+        this.showList(); this.renderGrid(''); }
+    }catch(e){} },1500);
+  },
   // 已安装应用（来自 .desktop 扫描）：按 key 启动
   async runInstalled(a) {
     try {
@@ -3891,10 +3971,16 @@ const ChatopApps = {
     d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
       <img src="${a.icon||''}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
       <h3></h3><p class="chatop_app_desc">本机已安装的系统应用（应用管理器不托管其卸载）。</p>
-      <div class="chatop_app_actions"><button id="chatop_app_open_btn" class="open">在桌面打开</button></div>`;
+      <div class="chatop_app_actions">
+        <button id="chatop_app_open_btn" class="open">在桌面打开</button>
+        ${a.removable ? '<button id="chatop_app_uninstall" class="remove">卸载</button>' : ''}
+      </div>
+      <pre id="chatop_app_log"></pre>`;
     d.querySelector('h3').textContent = a.name;
     document.getElementById('chatop_apps_back').onclick=()=>this.showList();
     document.getElementById('chatop_app_open_btn').onclick=()=>this.runInstalled(a);
+    const ub=document.getElementById('chatop_app_uninstall');
+    if(ub) ub.onclick=()=>this.uninstallInstalled(a);
   },
   async act(a, action) {
     const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';
