@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """chatop-ai 应用管理器后端：catalog/status/install/remove/logs。
 仅监听 127.0.0.1，命令只来自 catalog（白名单），绝不执行前端传入字符串。"""
-import json, os, shutil, subprocess, threading, queue
+import json, os, re, glob, shutil, subprocess, threading, queue
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
 
 CATALOG_PATH = os.environ.get("APPS_CATALOG", "/etc/chatop/apps-catalog.json")
 LOG_DIR = "/tmp/app-mgr"; PORT = int(os.environ.get("APPS_PORT", "8686"))
+GROUPS_PATH = os.environ.get(
+    "APPS_GROUPS", os.path.expanduser("~/.local/share/chatop/groups.json"))
+_EMPTY_LAYOUT = {"version": 1, "items": [], "pulled_out_system": []}
 PUBLIC_FIELDS = ("id","name","category","kind","icon","description","needs","homepage","notes","available")
 
 # === 文件传输（上传到桌面 / 仅下载桌面文件）配置 ===
@@ -16,6 +19,72 @@ FILES_DIR = os.path.abspath(os.path.expanduser(os.environ.get("FILES_DIR", "~/De
 FILES_UPLOAD = _envflag("FILES_UPLOAD")
 FILES_DOWNLOAD = _envflag("FILES_DOWNLOAD")
 MAX_UPLOAD = int(os.environ.get("FILES_MAX_UPLOAD_MB", "1024")) * 1024 * 1024  # 单文件上限，默认 1GB
+
+# === 登录鉴权：自定义品牌登录页 + 签名 Cookie，取代 KasmVNC 原生 basic-auth 浏览器弹窗 ===
+# Caddy 用 forward_auth 调 /auth 把关；通过后由 Caddy 注入 Basic 头给 KasmVNC，原生弹窗永不出现。
+import hmac, hashlib, base64
+AUTH_USER = os.environ.get("LOGIN_USER", "admin")
+AUTH_PW = os.environ.get("FILES_PW") or os.environ.get("VNC_PW") or ""
+AUTH_TOKEN = hmac.new(hashlib.sha256(("chatop-auth|" + AUTH_PW).encode()).digest(),
+                      b"v1", hashlib.sha256).hexdigest()
+AUTH_COOKIE = "chatop_auth"
+
+def _logo_data_uri():
+    try:
+        with open("/usr/share/kasmvnc/www/app-icons/chatop-logo.png", "rb") as f:
+            return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    except OSError:
+        return ""
+
+_LOGIN_TMPL = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>察元AI · 登录</title><style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+ background:radial-gradient(1200px 600px at 50% -10%,#1b3a6b 0%,#0b1220 55%,#070b14 100%);
+ display:flex;align-items:center;justify-content:center;color:#eaf0fa}
+.card{width:360px;max-width:92vw;background:rgba(255,255,255,.04);
+ border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:36px 32px;
+ box-shadow:0 20px 60px rgba(0,0,0,.45);backdrop-filter:blur(6px);text-align:center}
+.logo{width:72px;height:72px;object-fit:contain;margin-bottom:14px}
+.title{font-size:22px;font-weight:700;letter-spacing:1px}
+.sub{font-size:13px;color:#8aa0c0;margin:6px 0 24px}
+form{display:flex;flex-direction:column;gap:14px;text-align:left}
+label{font-size:12px;color:#9fb3d1;margin-bottom:-6px}
+input{width:100%;padding:11px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.14);
+ background:rgba(255,255,255,.06);color:#fff;font-size:14px;outline:none}
+input:focus{border-color:#3b82f6;background:rgba(59,130,246,.10)}
+button{margin-top:8px;padding:12px;border:0;border-radius:9px;cursor:pointer;
+ background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:15px;font-weight:600}
+button:hover{filter:brightness(1.08)}
+.err{background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);color:#fca5a5;
+ font-size:13px;padding:8px 10px;border-radius:8px;margin-bottom:6px}
+.foot{margin-top:20px;font-size:11px;color:#5f7399}
+</style></head><body><div class="card">
+__LOGOIMG__
+<div class="title">察元AI</div><div class="sub">AI 云桌面 · 安全登录</div>
+__ERR__
+<form method="POST" action="/login" autocomplete="off">
+<label>用户名</label><input name="username" value="__USER__" autofocus autocomplete="username">
+<label>密码</label><input name="password" type="password" autocomplete="current-password">
+<button type="submit">登 录</button></form>
+<div class="foot">Powered by 察元AI</div>
+</div></body></html>"""
+
+def _login_html(error=False):
+    logo = _logo_data_uri()
+    img = ('<img class="logo" src="%s" alt="察元AI">' % logo) if logo else ''
+    return (_LOGIN_TMPL
+            .replace("__LOGOIMG__", img)
+            .replace("__ERR__", '<div class="err">用户名或密码错误</div>' if error else '')
+            .replace("__USER__", AUTH_USER))
+
+def _cookie_ok(cookie_header):
+    for part in (cookie_header or "").split(";"):
+        k, _, v = part.strip().partition("=")
+        if k == AUTH_COOKIE and v and hmac.compare_digest(v, AUTH_TOKEN):
+            return True
+    return False
 
 def _safe_path(name):
     """把前端传来的文件名收敛到 FILES_DIR 内的单个文件，杜绝 ../ 越权。"""
@@ -38,6 +107,95 @@ def files_list():
             out.append({"name": n, "size": st.st_size, "mtime": int(st.st_mtime)})
     return out
 
+# === 遍历容器内真实已安装应用（.desktop）+ 图标解析 ===
+# 不再只看 catalog detect：扫描标准 freedesktop 应用入口，proot-apps/AppImage 安装时都会在
+# 这些目录生成 .desktop，于是“本机已安装”能列出容器里所有 GUI 应用（带各自真实图标）。
+APP_DIRS = [
+    os.path.expanduser("~/.local/share/applications"),  # 用户级（proot-apps/AppImage）优先
+    "/usr/share/applications",                            # 系统级（XFCE 等）
+]
+_ICON_PIXMAP_DIRS = ["/usr/share/pixmaps", os.path.expanduser("~/.local/share/icons")]
+_ICON_EXTS = (".png", ".svg", ".xpm")
+# /apps/icon 只允许喂这些根下的文件，杜绝任意路径读取
+ICON_ROOTS = tuple(os.path.realpath(d) for d in (
+    ["/usr/share/icons", "/usr/share/pixmaps"] + APP_DIRS +
+    [os.path.expanduser("~/.local/share/icons"), os.path.expanduser("~/proot-apps"), "/opt"]
+))
+_ICON_MIME = {".png": "image/png", ".svg": "image/svg+xml", ".xpm": "image/x-xpixmap",
+              ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".ico": "image/x-icon"}
+
+def _parse_desktop(path):
+    """读 .desktop 的 [Desktop Entry]；跳过 NoDisplay/Hidden/非 Application/无 Exec。"""
+    data = {}
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            in_entry = False
+            for line in f:
+                line = line.rstrip("\n")
+                s = line.strip()
+                if s.startswith("[") and s.endswith("]"):
+                    in_entry = (s == "[Desktop Entry]"); continue
+                if not in_entry or "=" not in s or s.startswith("#"): continue
+                k, v = s.split("=", 1); data[k] = v
+    except OSError:
+        return None
+    if data.get("Type", "Application") != "Application": return None
+    if data.get("NoDisplay", "").lower() == "true": return None
+    if data.get("Hidden", "").lower() == "true": return None
+    if not data.get("Exec"): return None
+    name = (data.get("Name[zh_CN]") or data.get("Name[zh]") or data.get("Name")
+            or os.path.splitext(os.path.basename(path))[0])
+    return {"name": name, "icon": data.get("Icon", ""), "exec": data.get("Exec", ""),
+            "categories": data.get("Categories", "")}
+
+def _resolve_icon(icon):
+    """Icon 字段（名字或绝对路径）→ 真实图标文件路径；找不到返回 None。"""
+    if not icon: return None
+    if icon.startswith("/"):
+        return icon if os.path.isfile(icon) else None
+    for d in _ICON_PIXMAP_DIRS:
+        for e in _ICON_EXTS:
+            p = os.path.join(d, icon + e)
+            if os.path.isfile(p): return p
+    # 图标主题，挑大尺寸 / 矢量
+    for theme in ("hicolor", "Adwaita", "elementary-xfce", "elementary-xfce-dark"):
+        base = "/usr/share/icons/" + theme
+        for size in ("scalable", "256x256", "128x128", "96x96", "64x64", "48x48", "32x32"):
+            for e in _ICON_EXTS:
+                p = os.path.join(base, size, "apps", icon + e)
+                if os.path.isfile(p): return p
+    hits = glob.glob("/usr/share/icons/hicolor/*/apps/" + glob.escape(icon) + ".*")
+    return sorted(hits)[-1] if hits else None
+
+def _exec_clean(ex):
+    """去掉 .desktop Exec 里的字段码（%u %f 等），用于启动。"""
+    return re.sub(r"%[a-zA-Z]", "", ex).strip()
+
+class GroupStore:
+    """读写 groups.json：原子保存 + 容错读取。布局校验/对账在 reconcile。"""
+    def __init__(self, path=GROUPS_PATH):
+        self.path = path
+
+    def load(self):
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                d = json.load(f)
+            if not isinstance(d, dict) or "items" not in d:
+                return {"version": 1, "items": [], "pulled_out_system": []}
+            d.setdefault("version", 1)
+            d.setdefault("items", [])
+            d.setdefault("pulled_out_system", [])
+            return d
+        except (OSError, ValueError):
+            return {"version": 1, "items": [], "pulled_out_system": []}
+
+    def save(self, data):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, self.path)
+
 class AppManager:
     def __init__(self, catalog_path=CATALOG_PATH):
         self.catalog_path = catalog_path
@@ -57,6 +215,39 @@ class AppManager:
         return cat
     def launch_cmd(self, app_id):
         return self._app(app_id).get("launch")
+    def installed_apps(self):
+        """遍历容器内所有已安装 GUI 应用（.desktop），带真实图标，匹配 catalog 富化。"""
+        cat = self._load()["apps"]; by_id = {a["id"]: a for a in cat}
+        seen = {}
+        for d in APP_DIRS:
+            for path in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+                info = _parse_desktop(path)
+                if not info: continue
+                key = os.path.splitext(os.path.basename(path))[0]
+                if key in seen: continue  # APP_DIRS 顺序：用户级覆盖系统级同名
+                ex = info["exec"]; c = None
+                if "proot-apps run " in ex:  # proot-apps 装的 → 取 id 匹配 catalog
+                    pid = ex.split("proot-apps run ", 1)[1].split()[0]; c = by_id.get(pid)
+                c = c or by_id.get(key)
+                ic = _resolve_icon(info["icon"])
+                seen[key] = {
+                    "key": key, "name": info["name"],
+                    "icon": ("/apps/icon?p=" + quote(os.path.realpath(ic))) if ic else "",
+                    "catalog_id": c["id"] if c else None,
+                    "removable": bool(c and c.get("remove")),
+                    "source": "user" if os.path.realpath(d).startswith(
+                        os.path.realpath(os.path.expanduser("~"))) else "system",
+                }
+        return sorted(seen.values(), key=lambda x: (x["source"] != "user", x["name"].lower()))
+    def desktop_exec(self, key):
+        """按 key 取已扫描 .desktop 的清理后 Exec（受信任的系统文件，非前端字符串）。"""
+        if not key or "/" in key or ".." in key: return None
+        for d in APP_DIRS:
+            p = os.path.join(d, key + ".desktop")
+            if os.path.isfile(p):
+                info = _parse_desktop(p)
+                if info: return _exec_clean(info["exec"])
+        return None
     def _app(self, app_id):
         for a in self._load()["apps"]:
             if a["id"] == app_id: return a
@@ -95,9 +286,27 @@ class Handler(BaseHTTPRequestHandler):
         b=json.dumps(obj).encode(); self.send_response(code)
         self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(b)))
         self.end_headers(); self.wfile.write(b)
+    def _send_html(self, code, html_text):
+        b = html_text.encode("utf-8"); self.send_response(code)
+        self.send_header("Content-Type","text/html; charset=utf-8")
+        self.send_header("Content-Length",str(len(b)))
+        self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        # 登录页（品牌化，取代 KasmVNC 原生 basic-auth 弹窗）
+        if self.path.split("?",1)[0].rstrip("/") == "/login":
+            err = "e=1" in (urlparse(self.path).query or "")
+            return self._send_html(200, _login_html(err))
+        # Caddy forward_auth 校验端点：cookie 有效 → 200；否则 302 回登录页
+        if self.path.split("?",1)[0].rstrip("/") == "/auth":
+            if _cookie_ok(self.headers.get("Cookie","")):
+                return self._json(200, {"ok":True})
+            self.send_response(302); self.send_header("Location","/login"); self.end_headers(); return
         if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog())
         if self.path.startswith("/apps/status"):  return self._json(200, MGR.status())
+        if self.path.startswith("/apps/installed"): return self._json(200, {"installed": MGR.installed_apps()})
+        if self.path.startswith("/apps/icon"):
+            p = parse_qs(urlparse(self.path).query).get("p", [""])[0]
+            return self._send_icon(p)
         if self.path.startswith("/apps/logs"):
             qid = parse_qs(urlparse(self.path).query).get("id",[""])[0]
             p=os.path.join(LOG_DIR,f"{qid}.log"); txt=open(p).read() if os.path.exists(p) else ""
@@ -115,6 +324,19 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_file(p, os.path.basename(p))
         return self._json(404, {"error":"not found"})
 
+    def _send_icon(self, path):
+        rp = os.path.realpath(path or "")
+        if not any(rp == r or rp.startswith(r + os.sep) for r in ICON_ROOTS) or not os.path.isfile(rp):
+            return self._json(404, {"error": "not found"})
+        ext = os.path.splitext(rp)[1].lower()
+        if ext not in _ICON_MIME: return self._json(404, {"error": "not an icon"})
+        try:
+            with open(rp, "rb") as f: data = f.read()
+        except OSError:
+            return self._json(404, {"error": "not found"})
+        self.send_response(200); self.send_header("Content-Type", _ICON_MIME[ext])
+        self.send_header("Content-Length", str(len(data))); self.send_header("Cache-Control", "max-age=86400")
+        self.end_headers(); self.wfile.write(data)
     def _send_file(self, path, filename):
         size = os.path.getsize(path)
         self.send_response(200)
@@ -127,6 +349,17 @@ class Handler(BaseHTTPRequestHandler):
         with open(path, "rb") as f:
             shutil.copyfileobj(f, self.wfile)
     def do_POST(self):
+        # 登录提交：校验用户名/密码 → 下发签名 cookie；失败回登录页带错误
+        if self.path.split("?",1)[0].rstrip("/") == "/login":
+            n=int(self.headers.get("Content-Length",0))
+            form=parse_qs(self.rfile.read(n).decode("utf-8","ignore"))
+            u=form.get("username",[""])[0]; p=form.get("password",[""])[0]
+            if u==AUTH_USER and AUTH_PW and hmac.compare_digest(p, AUTH_PW):
+                self.send_response(302); self.send_header("Location","/")
+                self.send_header("Set-Cookie",
+                    "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400" % (AUTH_COOKIE, AUTH_TOKEN))
+                self.end_headers(); return
+            self.send_response(302); self.send_header("Location","/login?e=1"); self.end_headers(); return
         if self.path.rstrip("/") in ("/apps/install","/apps/remove"):
             n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
             action="install" if self.path.rstrip("/").endswith("install") else "remove"
@@ -146,6 +379,14 @@ class Handler(BaseHTTPRequestHandler):
             subprocess.Popen(["bash","-lc",cmd], env=env, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             return self._json(202, {"id":body["id"],"state":"launched"})
+        if self.path.rstrip("/") == "/apps/run":
+            n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
+            ex = MGR.desktop_exec(body.get("key",""))
+            if not ex: return self._json(400, {"error":"unknown app"})
+            env = dict(os.environ); env["DISPLAY"] = env.get("DISPLAY", ":1") or ":1"
+            subprocess.Popen(["bash","-lc",ex], env=env, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return self._json(202, {"key":body.get("key"),"state":"launched"})
         if self.path.startswith("/apps/files/upload"):
             if not FILES_UPLOAD: return self._json(403, {"error":"upload disabled"})
             name = parse_qs(urlparse(self.path).query).get("name",[""])[0]

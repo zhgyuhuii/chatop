@@ -34,3 +34,22 @@ def test_status_uses_detect():
         m = _mgr(t)
         m._run_detect = lambda cmd: cmd == "command -v aider"
         assert m.status() == {"aider": True}
+
+def test_groupstore_load_missing_returns_empty():
+    with tempfile.TemporaryDirectory() as t:
+        gs = am.GroupStore(os.path.join(t, "nope", "groups.json"))
+        assert gs.load() == {"version": 1, "items": [], "pulled_out_system": []}
+
+def test_groupstore_save_then_load_roundtrip():
+    with tempfile.TemporaryDirectory() as t:
+        gs = am.GroupStore(os.path.join(t, "sub", "groups.json"))
+        data = {"version": 1,
+                "items": [{"type": "group", "id": "g1", "name": "办公", "apps": ["wps"]}],
+                "pulled_out_system": []}
+        gs.save(data)
+        assert gs.load() == data
+
+def test_groupstore_load_corrupt_returns_empty():
+    with tempfile.TemporaryDirectory() as t:
+        p = os.path.join(t, "groups.json"); open(p, "w").write("{not json")
+        assert am.GroupStore(p).load() == {"version": 1, "items": [], "pulled_out_system": []}
