@@ -13,3 +13,4 @@ __pycache__/
 
 # local dev venv (chacmd P0)
 .venv/
+*.egg-info/
