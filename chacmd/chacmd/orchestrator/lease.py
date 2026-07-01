@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -16,14 +16,14 @@ class LeaseMonitor:
         self._ttl = ttl_seconds
 
     async def dead_nicknames(self) -> list[str]:
-        cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._ttl)
+        cutoff = datetime.now(UTC) - timedelta(seconds=self._ttl)
         async with self._containers._db.session() as s:  # noqa: SLF001 (repo shares db)
             rows = await s.execute(select(ContainerReg))
             dead = []
             for row in rows.scalars():
                 hb = row.last_heartbeat
                 if hb.tzinfo is None:
-                    hb = hb.replace(tzinfo=timezone.utc)
+                    hb = hb.replace(tzinfo=UTC)
                 if hb < cutoff:
                     dead.append(row.nickname)
             return dead

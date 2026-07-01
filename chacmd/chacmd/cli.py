@@ -5,9 +5,9 @@ import asyncio
 
 import uvicorn
 
+from chacmd.api.app import create_app
 from chacmd.config import Settings
 from chacmd.container import build_container
-from chacmd.api.app import create_app
 from chacmd.gateway.bridge_gateway import BridgeGateway
 
 

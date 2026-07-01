@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncIterator, Protocol
+from collections.abc import AsyncIterator
+from typing import Protocol
 
 
 class EventBus(Protocol):

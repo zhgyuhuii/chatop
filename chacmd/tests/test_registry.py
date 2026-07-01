@@ -1,6 +1,11 @@
 import pytest
+
 from chacmd.interfaces.registry import (
-    ServiceRegistry, ConfigSource, InProcessServiceRegistry, InProcessConfigSource, ServiceInstance,
+    ConfigSource,
+    InProcessConfigSource,
+    InProcessServiceRegistry,
+    ServiceInstance,
+    ServiceRegistry,
 )
 
 

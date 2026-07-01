@@ -1,7 +1,8 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from chacmd.interfaces.db import Database
+from httpx import ASGITransport, AsyncClient
+
 from chacmd.api.app import create_app
+from chacmd.interfaces.db import Database
 
 
 @pytest.fixture

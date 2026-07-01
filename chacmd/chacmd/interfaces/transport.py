@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import ipaddress
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Protocol
+from typing import Protocol
 
 
 def _looks_like_ip(value: str) -> bool:
@@ -21,21 +22,21 @@ class LogicalAddress:
     value: str
 
     @staticmethod
-    def nickname(name: str) -> "LogicalAddress":
+    def nickname(name: str) -> LogicalAddress:
         if _looks_like_ip(name):
             raise ValueError(f"nickname must not be an IP: {name}")
         return LogicalAddress("nickname", name)
 
     @staticmethod
-    def subject(subj: str) -> "LogicalAddress":
+    def subject(subj: str) -> LogicalAddress:
         return LogicalAddress("subject", subj)
 
     @staticmethod
-    def volume(job_id: str) -> "LogicalAddress":
+    def volume(job_id: str) -> LogicalAddress:
         return LogicalAddress("volume", f"/workspace/{job_id}")
 
     @staticmethod
-    def endpoint(service_name: str) -> "LogicalAddress":
+    def endpoint(service_name: str) -> LogicalAddress:
         if _looks_like_ip(service_name):
             raise ValueError(f"endpoint must be a service name, not an IP: {service_name}")
         return LogicalAddress("endpoint", service_name)

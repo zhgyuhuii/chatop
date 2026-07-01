@@ -1,4 +1,5 @@
 import pytest
+
 from chacmd.interfaces.auth import AuthProvider, FakeAuthProvider
 
 

@@ -1,5 +1,6 @@
 import pytest
-from chacmd.interfaces.sandbox import Sandbox, FakeSandbox, SandboxSpec
+
+from chacmd.interfaces.sandbox import FakeSandbox, Sandbox, SandboxSpec
 
 
 @pytest.mark.asyncio

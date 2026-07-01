@@ -3,10 +3,10 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import select
 
-from chacmd.interfaces.db import Database
+from chacmd.api.schemas import ContainerOut, CreateRunRequest, RunCreated, RunStatus
 from chacmd.domain.models import ContainerReg
 from chacmd.domain.repository import JobRepository
-from chacmd.api.schemas import CreateRunRequest, RunCreated, RunStatus, ContainerOut
+from chacmd.interfaces.db import Database
 
 
 def create_app(db: Database) -> FastAPI:

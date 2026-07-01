@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chacmd.domain.repository import JobRepository, ContainerRepository
+from chacmd.domain.repository import ContainerRepository, JobRepository
 from chacmd.domain.state import JobState
 from chacmd.interfaces.agent_adapter import AgentAdapter, DispatchSpec
 from chacmd.interfaces.chayuan_client import ChayuanClient
@@ -35,6 +35,8 @@ class Dispatcher:
 
         job = await self._jobs.get(job_id)
         await self._jobs.set_state(job_id, JobState.DISPATCHING)
-        spec = DispatchSpec(job_id=job_id, task_id=job_id, nickname=nickname, goal=job.goal, system_prompt=system_prompt)
+        spec = DispatchSpec(
+            job_id=job_id, task_id=job_id, nickname=nickname, goal=job.goal, system_prompt=system_prompt
+        )
         async for event in self._adapter.dispatch(spec):
             await self._ingest.handle(event)

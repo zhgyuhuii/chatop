@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
-from chacmd.interfaces.db import Database
-from chacmd.domain.models import Job, ContainerReg, AuditEvent
-from chacmd.domain.state import JobState, transition
 from chacmd.domain.events import Event
+from chacmd.domain.models import AuditEvent, ContainerReg, Job
+from chacmd.domain.state import JobState, transition
+from chacmd.interfaces.db import Database
 
 
 class JobRepository:
@@ -45,7 +45,7 @@ class ContainerRepository:
             else:
                 row.session = session
                 row.dept = dept
-                row.last_heartbeat = datetime.now(timezone.utc)
+                row.last_heartbeat = datetime.now(UTC)
             await s.commit()
 
     async def resolve(self, nickname: str) -> ContainerReg | None:
@@ -56,7 +56,7 @@ class ContainerRepository:
         async with self._db.session() as s:
             row = await s.get(ContainerReg, nickname)
             if row:
-                row.last_heartbeat = datetime.now(timezone.utc)
+                row.last_heartbeat = datetime.now(UTC)
                 await s.commit()
 
 

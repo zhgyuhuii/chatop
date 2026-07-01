@@ -1,10 +1,12 @@
 import asyncio
 import json
+
 import pytest
 import websockets
-from chacmd.interfaces.db import Database
+
 from chacmd.domain.repository import ContainerRepository
 from chacmd.gateway.bridge_gateway import BridgeGateway
+from chacmd.interfaces.db import Database
 
 
 @pytest.fixture

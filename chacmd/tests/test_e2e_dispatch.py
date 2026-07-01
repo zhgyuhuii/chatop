@@ -1,6 +1,7 @@
 import asyncio
+
 import pytest
-from pathlib import Path
+
 from chacmd.config import Settings
 from chacmd.container import build_container
 from chacmd.domain.state import JobState
@@ -26,7 +27,8 @@ async def test_full_loop_dispatch_stream_persist_volume(tmp_path):
     seen = []
     async def watch():
         async for m in c.bus.subscribe(f"job.{job.id}.succeeded"):
-            seen.append(m); return
+            seen.append(m)
+            return
     watcher = asyncio.create_task(watch())
     await asyncio.sleep(0)
 

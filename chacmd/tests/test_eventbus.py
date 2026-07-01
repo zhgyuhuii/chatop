@@ -1,5 +1,7 @@
 import asyncio
+
 import pytest
+
 from chacmd.interfaces.eventbus import EventBus, InMemoryEventBus
 
 

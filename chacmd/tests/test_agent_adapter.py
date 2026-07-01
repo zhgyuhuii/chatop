@@ -1,6 +1,7 @@
 import pytest
+
 from chacmd.domain.events import Event
-from chacmd.interfaces.agent_adapter import AgentAdapter, FakeAgentAdapter, DispatchSpec
+from chacmd.interfaces.agent_adapter import AgentAdapter, DispatchSpec, FakeAgentAdapter
 
 
 @pytest.mark.asyncio

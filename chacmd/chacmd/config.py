@@ -16,7 +16,7 @@ class Settings:
     workspace_root: str = "/workspace"
 
     @staticmethod
-    def from_env() -> "Settings":
+    def from_env() -> Settings:
         return Settings(
             db_url=os.environ.get("CHACMD_DB_URL", "postgresql+asyncpg://chacmd:chacmd@127.0.0.1:5432/chacmd"),
             chayuan_base_url=os.environ.get("CHAYUAN_BASE_URL", "http://127.0.0.1:8000"),

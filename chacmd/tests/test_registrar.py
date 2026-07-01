@@ -1,7 +1,8 @@
 import pytest
-from chacmd.interfaces.db import Database
+
 from chacmd.domain.repository import ContainerRepository
 from chacmd.gateway.protocol import Envelope
+from chacmd.interfaces.db import Database
 from chacmd.orchestrator.registrar import Registrar
 
 

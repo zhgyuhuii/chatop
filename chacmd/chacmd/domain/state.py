@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class JobState(str, Enum):
+class JobState(StrEnum):
     QUEUED = "queued"
     DISPATCHING = "dispatching"
     RUNNING = "running"

@@ -1,4 +1,5 @@
 import pytest
+
 from chacmd.interfaces.chayuan_client import ChayuanClient, FakeChayuanClient
 
 

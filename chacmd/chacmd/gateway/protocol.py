@@ -22,5 +22,5 @@ class Envelope:
         return {"type": self.type, "nickname": self.nickname, "dept": self.dept, "data": self.data}
 
     @staticmethod
-    def from_json(d: dict) -> "Envelope":
+    def from_json(d: dict) -> Envelope:
         return Envelope(type=d["type"], nickname=d["nickname"], dept=d["dept"], data=d.get("data", {}))

@@ -1,8 +1,10 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timezone, timedelta
-from chacmd.interfaces.db import Database
+
 from chacmd.domain.models import ContainerReg
 from chacmd.domain.repository import ContainerRepository
+from chacmd.interfaces.db import Database
 from chacmd.orchestrator.lease import LeaseMonitor
 
 
@@ -21,7 +23,7 @@ async def test_dead_containers_detected_by_stale_lease(db):
     # Force stale heartbeat.
     async with db.session() as s:
         row = await s.get(ContainerReg, "dev")
-        row.last_heartbeat = datetime.now(timezone.utc) - timedelta(seconds=60)
+        row.last_heartbeat = datetime.now(UTC) - timedelta(seconds=60)
         await s.commit()
     monitor = LeaseMonitor(creg, ttl_seconds=30)
     dead = await monitor.dead_nicknames()

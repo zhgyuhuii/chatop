@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import text
+
 from chacmd.interfaces.db import Database
 
 

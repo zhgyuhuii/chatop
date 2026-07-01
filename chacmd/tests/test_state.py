@@ -1,4 +1,5 @@
 import pytest
+
 from chacmd.domain.state import JobState, can_transition, transition
 
 

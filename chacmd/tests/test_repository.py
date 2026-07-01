@@ -1,7 +1,8 @@
 import pytest
-from chacmd.interfaces.db import Database
+
+from chacmd.domain.repository import ContainerRepository, JobRepository
 from chacmd.domain.state import JobState
-from chacmd.domain.repository import JobRepository, ContainerRepository
+from chacmd.interfaces.db import Database
 
 
 @pytest.fixture

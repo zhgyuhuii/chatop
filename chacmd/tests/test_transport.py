@@ -1,5 +1,6 @@
 import pytest
-from chacmd.interfaces.transport import LogicalAddress, InProcessTransport
+
+from chacmd.interfaces.transport import InProcessTransport, LogicalAddress
 
 
 def test_logical_address_rejects_ip_like_targets():
