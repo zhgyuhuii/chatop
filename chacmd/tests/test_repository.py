@@ -32,6 +32,13 @@ async def test_set_state_persists(db):
 
 
 @pytest.mark.asyncio
+async def test_set_state_unknown_job_raises(db):
+    repo = JobRepository(db)
+    with pytest.raises(KeyError):
+        await repo.set_state("does-not-exist", JobState.DISPATCHING)
+
+
+@pytest.mark.asyncio
 async def test_container_register_resolve_by_nickname(db):
     creg = ContainerRepository(db)
     await creg.upsert(nickname="dev", session="s1", dept="d1")

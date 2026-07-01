@@ -62,3 +62,16 @@ async def test_dispatch_unknown_nickname_raises(db):
     )
     with pytest.raises(KeyError):
         await disp.dispatch(job_id=job.id, nickname="ghost", subject="u1", system_prompt="p")
+
+
+@pytest.mark.asyncio
+async def test_dispatch_unknown_job_raises(db):
+    jobs = JobRepository(db)
+    containers = ContainerRepository(db)
+    await containers.upsert(nickname="dev", session="s1", dept="d1")
+    disp = Dispatcher(
+        jobs, containers, FakeChayuanClient(), FakeAgentAdapter(steps=["a"]),
+        EventIngest(InMemoryEventBus(), jobs, AuditRepository(db)),
+    )
+    with pytest.raises(KeyError):
+        await disp.dispatch(job_id="does-not-exist", nickname="dev", subject="u1", system_prompt="p")

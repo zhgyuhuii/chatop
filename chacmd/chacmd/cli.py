@@ -16,10 +16,14 @@ async def _serve(settings: Settings) -> None:
     gateway = BridgeGateway(container.containers, host=settings.gateway_host, port=settings.gateway_port)
     gateway.on_event(lambda env: container.ingest.handle(_env_to_event(env)))
     await gateway.start()
-    app = create_app(container.db)
-    config = uvicorn.Config(app, host=settings.api_host, port=settings.api_port, log_level="info")
-    await uvicorn.Server(config).serve()
-    await gateway.stop()
+    try:
+        app = create_app(container.db)
+        config = uvicorn.Config(app, host=settings.api_host, port=settings.api_port, log_level="info")
+        await uvicorn.Server(config).serve()
+    finally:
+        await gateway.stop()
+        if hasattr(container.chayuan, "aclose"):
+            await container.chayuan.aclose()
 
 
 def _env_to_event(env):

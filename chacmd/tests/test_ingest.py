@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from chacmd.domain.events import Event
@@ -53,3 +55,15 @@ async def test_terminal_kinds_map_to_states(db):
     ingest = EventIngest(InMemoryEventBus(), jobs, AuditRepository(db))
     await ingest.handle(Event(job.id, "t1", "dev", "interrupted", 2, {}))
     assert (await jobs.get(job.id)).state == JobState.INTERRUPTED.value
+
+
+@pytest.mark.asyncio
+async def test_illegal_transition_is_logged_not_raised(db, caplog):
+    jobs = JobRepository(db)
+    job = await jobs.create(code="c", goal="g", dept="d1")
+    # job is left in QUEUED; "succeeded" targets a state QUEUED cannot legally transition to.
+    ingest = EventIngest(InMemoryEventBus(), jobs, AuditRepository(db))
+    caplog.set_level(logging.WARNING)
+    await ingest.handle(Event(job.id, "t1", "dev", "succeeded", 1, {}))
+    assert (await jobs.get(job.id)).state == JobState.QUEUED.value
+    assert "illegal transition" in caplog.text

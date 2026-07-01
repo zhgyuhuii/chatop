@@ -34,6 +34,8 @@ class Dispatcher:
             raise PermissionError(f"{subject} not allowed to dispatch to {nickname}")
 
         job = await self._jobs.get(job_id)
+        if job is None:
+            raise KeyError(f"unknown job: {job_id}")
         await self._jobs.set_state(job_id, JobState.DISPATCHING)
         spec = DispatchSpec(
             job_id=job_id, task_id=job_id, nickname=nickname, goal=job.goal, system_prompt=system_prompt

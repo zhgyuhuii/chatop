@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from chacmd.domain.events import Event
 from chacmd.domain.repository import AuditRepository, JobRepository
 from chacmd.domain.state import JobState
 from chacmd.interfaces.eventbus import EventBus
+
+logger = logging.getLogger(__name__)
 
 # Which event kinds drive a terminal/approval job-state transition.
 _KIND_TO_STATE = {
@@ -33,3 +37,8 @@ class EventIngest:
                 from chacmd.domain.state import can_transition
                 if can_transition(JobState(job.state), target):
                     await self._jobs.set_state(e.job_id, target)
+                else:
+                    logger.warning(
+                        "dropping illegal transition %s -> %s for job %s (event kind=%s)",
+                        job.state, target.value, e.job_id, e.kind,
+                    )

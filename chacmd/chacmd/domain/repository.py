@@ -29,6 +29,8 @@ class JobRepository:
     async def set_state(self, job_id: str, dst: JobState) -> None:
         async with self._db.session() as s:
             job = await s.get(Job, job_id)
+            if job is None:
+                raise KeyError(f"unknown job: {job_id}")
             job.state = transition(JobState(job.state), dst).value
             await s.commit()
 
