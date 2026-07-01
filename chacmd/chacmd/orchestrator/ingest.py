@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+from chacmd.domain.events import Event
+from chacmd.domain.repository import JobRepository, AuditRepository
+from chacmd.domain.state import JobState
+from chacmd.interfaces.eventbus import EventBus
+
+# Which event kinds drive a terminal/approval job-state transition.
+_KIND_TO_STATE = {
+    "started": JobState.RUNNING,
+    "pending_approval": JobState.PENDING_APPROVAL,
+    "succeeded": JobState.SUCCEEDED,
+    "failed": JobState.FAILED,
+    "interrupted": JobState.INTERRUPTED,
+}
+
+
+class EventIngest:
+    """Unified event sink: publish to bus + append audit + drive job state (§6.6/§C9)."""
+
+    def __init__(self, bus: EventBus, jobs: JobRepository, audit: AuditRepository) -> None:
+        self._bus = bus
+        self._jobs = jobs
+        self._audit = audit
+
+    async def handle(self, e: Event) -> None:
+        await self._bus.publish(e.subject(), {"kind": e.kind, "seq": e.seq, "payload": e.payload})
+        await self._audit.append(e)
+        target = _KIND_TO_STATE.get(e.kind)
+        if target is not None:
+            job = await self._jobs.get(e.job_id)
+            if job and JobState(job.state) != target:
+                from chacmd.domain.state import can_transition
+                if can_transition(JobState(job.state), target):
+                    await self._jobs.set_state(e.job_id, target)
