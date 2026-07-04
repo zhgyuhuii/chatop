@@ -1,12 +1,12 @@
 services:
-  chatop-ai:
+  chatop:
     build:
       context: .
       args:
         VERSION: ${VERSION:-1.0.0}
-    image: chatop-ai:${VERSION:-1.0.0}
+    image: chatop:${VERSION:-1.0.0}
     pull_policy: build
-    container_name: chatop-ai
+    container_name: chatop
     environment:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
       - LOGIN_USER=${LOGIN_USER:-admin}

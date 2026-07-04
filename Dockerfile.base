@@ -9,7 +9,7 @@ USER root
 # === filebrowser 二进制（KasmVNC 开源版无文件传输） ===
 ARG FB_ARCH=linux-amd64
 RUN set -eux; \
-    curl -fsSL -o /tmp/fb.tar.gz "https://github.com/filebrowser/filebrowser/releases/latest/download/${FB_ARCH}-filebrowser.tar.gz"; \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 -o /tmp/fb.tar.gz "https://github.com/filebrowser/filebrowser/releases/latest/download/${FB_ARCH}-filebrowser.tar.gz"; \
     tar -xzf /tmp/fb.tar.gz -C /usr/local/bin filebrowser; \
     rm -f /tmp/fb.tar.gz; \
     chmod +x /usr/local/bin/filebrowser; \
@@ -18,7 +18,7 @@ RUN set -eux; \
 # === Caddy 二进制（单端口反代 KasmVNC + filebrowser） ===
 ARG CADDY_VERSION=2.11.4
 RUN set -eux; \
-    curl -fsSL -o /tmp/caddy.tar.gz "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_linux_amd64.tar.gz"; \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 -o /tmp/caddy.tar.gz "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_linux_amd64.tar.gz"; \
     tar -xzf /tmp/caddy.tar.gz -C /usr/local/bin caddy; \
     rm -f /tmp/caddy.tar.gz; \
     chmod +x /usr/local/bin/caddy; \
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # === Node 22 + pipx（npm 类 AI 工具前提） ===
 RUN set -eux; \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 https://deb.nodesource.com/setup_22.x | bash -; \
     apt-get install -y --no-install-recommends nodejs; \
     node -v; npm -v; \
     apt-get install -y --no-install-recommends pipx; \
@@ -70,7 +70,7 @@ ENV LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh LC_ALL=zh_CN.UTF-8
 # === Google Chrome（Web 智能体载体；容器内加 --no-sandbox） ===
 RUN set -eux; \
     apt-get update; \
-    curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
     apt-get install -y --no-install-recommends /tmp/chrome.deb; \
     rm -f /tmp/chrome.deb; \
     sed -i 's#^Exec=/usr/bin/google-chrome-stable#Exec=/usr/bin/google-chrome-stable --no-sandbox --start-maximized#' \
@@ -91,8 +91,8 @@ RUN set -eux; \
 
 # === proot-apps（userspace PRoot GUI 应用安装器） ===
 RUN mkdir -p /tmp/pa && \
-    PAPPS=$(curl -sX GET "https://api.github.com/repos/linuxserver/proot-apps/releases/latest" | awk '/tag_name/{print $4;exit}' FS='[""]') && \
-    curl -L "https://github.com/linuxserver/proot-apps/releases/download/${PAPPS}/proot-apps-x86_64.tar.gz" | tar -xzf - -C /tmp/pa/ && \
+    PAPPS=$(curl -sSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 -X GET "https://api.github.com/repos/linuxserver/proot-apps/releases/latest" | awk '/tag_name/{print $4;exit}' FS='[""]') && \
+    curl -fL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 "https://github.com/linuxserver/proot-apps/releases/download/${PAPPS}/proot-apps-x86_64.tar.gz" | tar -xzf - -C /tmp/pa/ && \
     install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/ && \
     rm -rf /tmp/pa
 
