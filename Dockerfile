@@ -42,7 +42,7 @@ RUN sed -i 's/\r$//' \
     chmod +x /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-uninstall.sh \
         /usr/local/bin/start-app-manager.sh /usr/local/bin/chatop-run-cli \
         /usr/local/bin/chatop-seed-home.sh /usr/local/bin/start-caddy.sh \
-        /usr/local/bin/set-wallpaper.sh
+        /usr/local/bin/start-filebrowser.sh /usr/local/bin/set-wallpaper.sh
 
 # === filebrowser 启动脚本(幂等 authoritative 覆盖：noauth + db 放 /tmp) ===
 RUN printf '%s\n' \
