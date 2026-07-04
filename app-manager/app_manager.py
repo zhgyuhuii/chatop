@@ -15,7 +15,7 @@ PUBLIC_FIELDS = ("id","name","category","kind","icon","description","needs","hom
 # === 文件传输（上传到桌面 / 仅下载桌面文件）配置 ===
 def _envflag(name, default="1"):
     return os.environ.get(name, default).strip().lower() not in ("0", "false", "no", "off", "")
-FILES_DIR = os.path.abspath(os.path.expanduser(os.environ.get("FILES_DIR", "~/Desktop")))
+FILES_DIR = os.path.abspath(os.path.expanduser(os.environ.get("FILES_DIR") or "~/Desktop"))
 FILES_UPLOAD = _envflag("FILES_UPLOAD")
 FILES_DOWNLOAD = _envflag("FILES_DOWNLOAD")
 MAX_UPLOAD = int(os.environ.get("FILES_MAX_UPLOAD_MB", "1024")) * 1024 * 1024  # 单文件上限，默认 1GB
@@ -171,6 +171,32 @@ def _exec_clean(ex):
     """去掉 .desktop Exec 里的字段码（%u %f 等），用于启动。"""
     return re.sub(r"%[a-zA-Z]", "", ex).strip()
 
+LAYOUT_VERSION = 2
+# freedesktop Categories → 功能桶（按优先级；先命中先归）。设置类放最前，
+# 把一堆 XFCE 设置面板单独收纳，不与终端/文件管理器混在系统工具里。
+_CAT_BUCKETS = (
+    ("__cat_settings__", "系统设置",
+     ("Settings", "X-XFCE-SettingsDialog", "DesktopSettings", "X-XFCE-PersonalSettings",
+      "X-XFCE-HardwareSettings", "X-XFCE-SystemSettings", "X-GNOME-Settings-Panel")),
+    ("__cat_net__", "网络",
+     ("WebBrowser", "Network", "Email", "InstantMessaging", "Chat", "P2P", "Feed")),
+    ("__cat_office__", "办公", ("Office", "WordProcessor", "Spreadsheet", "Presentation")),
+    ("__cat_dev__", "开发", ("Development", "IDE", "Building", "Debugger")),
+    ("__cat_graphics__", "图形", ("Graphics", "Photography", "Viewer", "Scanning")),
+    ("__cat_av__", "影音", ("AudioVideo", "Audio", "Video", "Player", "Music", "Recorder")),
+    ("__cat_game__", "游戏", ("Game",)),
+    ("__cat_system__", "系统工具",
+     ("TerminalEmulator", "FileManager", "Filesystem", "System", "Monitor", "Security")),
+)
+_CAT_MISC = ("__cat_misc__", "附件")
+
+def _bucket_for(categories):
+    cats = {c.strip() for c in (categories or "").split(";") if c.strip()}
+    for gid, name, keys in _CAT_BUCKETS:
+        if cats & set(keys):
+            return gid, name
+    return _CAT_MISC
+
 class GroupStore:
     """读写 groups.json：原子保存 + 容错读取。布局校验/对账在 reconcile。"""
     def __init__(self, path=GROUPS_PATH):
@@ -196,12 +222,15 @@ class GroupStore:
             json.dump(data, f, ensure_ascii=False)
         os.replace(tmp, self.path)
 
-    SYS_GROUP_ID = "__system__"
-
     def reconcile(self, layout, installed):
-        valid = {a["key"] for a in installed}
-        sys_keys = {a["key"] for a in installed if a.get("source") == "system"}
+        """对账布局：保留用户已排布的项；新增应用按 freedesktop 功能分类自动归桶。
+        老布局(version<2，旧版"系统应用"单桶)整体丢弃、按分类重新播种一次。"""
+        by_key = {a["key"]: a for a in installed}
+        valid = set(by_key)
+        if layout.get("version") != LAYOUT_VERSION:
+            layout = {"version": LAYOUT_VERSION, "items": [], "pulled_out_system": []}
         pulled = [k for k in layout.get("pulled_out_system", []) if k in valid]
+        pulled_set = set(pulled)
         referenced = set()
         items = []
         for it in layout.get("items", []):
@@ -212,23 +241,28 @@ class GroupStore:
             elif it.get("type") == "group":
                 apps = [k for k in it.get("apps", []) if k in valid and k not in referenced]
                 referenced.update(apps)
-                if apps:
-                    items.append({"type": "group", "id": it.get("id") or ("g" + str(len(items))),
-                                  "name": it.get("name") or "新建分组", "apps": apps,
-                                  **({"auto": True} if it.get("auto") else {})})
-        new_keys = [a["key"] for a in installed if a["key"] not in referenced]
-        sys_new = [k for k in new_keys if k in sys_keys and k not in pulled]
-        usr_new = [k for k in new_keys if k not in sys_new]
-        if sys_new:
-            grp = next((g for g in items if g.get("type") == "group" and g.get("auto")), None)
-            if grp:
-                grp["apps"].extend(sys_new)
-            else:
-                items.append({"type": "group", "id": self.SYS_GROUP_ID,
-                              "name": "系统应用", "apps": sys_new, "auto": True})
-        for k in usr_new:
-            items.append({"type": "app", "key": k})
-        return {"version": 1, "items": items, "pulled_out_system": pulled}
+                # 手动空组保留（用户刚建、待加应用）；自动空组丢弃
+                if apps or not it.get("auto"):
+                    g = {"type": "group", "id": it.get("id") or ("g" + str(len(items))),
+                         "name": it.get("name") or "新建分组", "apps": apps}
+                    if it.get("auto"): g["auto"] = True
+                    items.append(g)
+        # 新增应用：未归组的逐个按分类落桶（已被拖出的进 pulled，留在顶层）
+        auto_index = {g["id"]: g for g in items
+                      if g.get("type") == "group" and g.get("auto")}
+        for a in installed:
+            k = a["key"]
+            if k in referenced:
+                continue
+            if k in pulled_set:
+                items.append({"type": "app", "key": k}); continue
+            gid, gname = _bucket_for(a.get("categories", ""))
+            grp = auto_index.get(gid)
+            if grp is None:
+                grp = {"type": "group", "id": gid, "name": gname, "apps": [], "auto": True}
+                auto_index[gid] = grp; items.append(grp)
+            grp["apps"].append(k)
+        return {"version": LAYOUT_VERSION, "items": items, "pulled_out_system": pulled}
 
 class AppManager:
     def __init__(self, catalog_path=CATALOG_PATH):
@@ -243,12 +277,32 @@ class AppManager:
         out = []
         for a in cat["apps"]:
             d = {k: a[k] for k in PUBLIC_FIELDS if k in a}
-            d["launchable"] = bool(a.get("launch"))  # 有 launch 命令 = 可在桌面打开
+            # 有 launch（GUI）或属 CLI 且能定位命令 = 可在桌面打开
+            d["launchable"] = bool(a.get("launch")) or bool(self._is_cli(a) and self._cli_run(a))
             out.append(d)
         cat["apps"] = out
         return cat
+    @staticmethod
+    def _is_cli(app):
+        return (app.get("category") in ("ai-cli", "ai-runtime")
+                or str(app.get("kind", "")).startswith("cli"))
+    @staticmethod
+    def _cli_run(app):
+        """CLI 工具在终端里要跑的命令：优先 catalog 的 run 字段，否则取 detect 的 `command -v X`。"""
+        if app.get("run"):
+            return app["run"]
+        m = re.search(r"command -v\s+([^\s;|&]+)", app.get("detect", ""))
+        return m.group(1) if m else None
     def launch_cmd(self, app_id):
-        return self._app(app_id).get("launch")
+        a = self._app(app_id)
+        if a.get("launch"):
+            return a["launch"]          # GUI 应用：直接启动
+        if self._is_cli(a):             # CLI 工具：在桌面终端里运行，结束后保留交互 shell
+            run = self._cli_run(a)
+            if run:
+                title = re.sub(r"[^\w一-鿿 .-]", "", a.get("name", "CLI")) or "CLI"
+                return "CHATOP_CLI_TITLE='%s' chatop-run-cli %s" % (title, run)
+        return None
     def installed_apps(self):
         """遍历容器内所有已安装 GUI 应用（.desktop），带真实图标，匹配 catalog 富化。"""
         cat = self._load()["apps"]; by_id = {a["id"]: a for a in cat}
@@ -269,6 +323,7 @@ class AppManager:
                     "icon": ("/apps/icon?p=" + quote(os.path.realpath(ic))) if ic else "",
                     "catalog_id": c["id"] if c else None,
                     "removable": False,  # 循环后统一回填
+                    "categories": info.get("categories", ""),
                     "source": "user" if os.path.realpath(d).startswith(
                         os.path.realpath(os.path.expanduser("~"))) else "system",
                 }

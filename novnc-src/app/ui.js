@@ -3840,10 +3840,15 @@ const ChatopApps = {
         const iconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
         card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="this.style.visibility='hidden'">
           <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}
-          ${canOpen?'<button class="chatop_app_open">打开</button>':''}`;
+          ${canOpen?'<button class="chatop_app_open">详情</button>':''}`;
         card.querySelector('.chatop_app_name').textContent = a.name;
-        if (canOpen) card.querySelector('.chatop_app_open').onclick = (e) => { e.stopPropagation(); this.launch(a); };
-        card.onclick = () => this.detail(a);
+        if (canOpen) {
+          // 已安装且可启动：点图标=在桌面打开（CLI 工具→开终端运行）；「详情」按钮做管理
+          card.querySelector('.chatop_app_open').onclick = (e) => { e.stopPropagation(); this.detail(a); };
+          card.onclick = () => this.launch(a);
+        } else {
+          card.onclick = () => this.detail(a);
+        }
         g.appendChild(card);
       });
   },
@@ -3954,6 +3959,18 @@ const ChatopApps = {
     card.addEventListener('dragleave', ()=>card.classList.remove('dz-before','dz-after','dz-group'));
     card.addEventListener('drop', e=>{ e.preventDefault(); const z=zoneOf(e);
       card.classList.remove('dz-before','dz-after','dz-group'); this.dropOnApp(a.key, z); });
+    card.addEventListener('contextmenu', e=>{
+      const entries=[
+        {label:'打开', on:()=>this.runInstalled(a)},
+        {label:'详情', on:()=>this.detailInstalled(a)},
+        this.openGroupId
+          ? {label:'移出分组', on:()=>this.moveAppOutOfGroup(a.key)}
+          : {label:'移入分组…', on:()=>this.moveAppToGroup(a.key)},
+      ];
+      if(a.removable) entries.push({label:'卸载', danger:true,
+        on:()=>{ if(confirm('确定卸载「'+a.name+'」？')) this.uninstallInstalled(a); }});
+      this.showCtxMenu(e, entries);
+    });
     return card;
   },
   groupCard(group){
@@ -3968,14 +3985,24 @@ const ChatopApps = {
     card.addEventListener('dragleave', ()=>card.classList.remove('dragover'));
     card.addEventListener('drop', e=>{ e.preventDefault(); card.classList.remove('dragover');
       this.dropOnGroup(group.id); });
+    card.addEventListener('contextmenu', e=>{
+      this.showCtxMenu(e, [
+        {label:'打开', on:()=>this.openGroup(group.id)},
+        {label:'重命名', on:()=>this.renameGroup(group.id)},
+        {label:'解散', danger:true, on:()=>this.dissolveGroup(group.id)},
+      ]);
+    });
     return card;
   },
   newGroupCard(){
     const card = document.createElement('div'); card.className='chatop_app_card chatop_newgroup_card';
     card.innerHTML = '<div class="chatop_newgroup_plus">＋</div><div class="chatop_app_name">新建分组</div>';
-    card.onclick = () => { const id='g'+Date.now();
-      this.groups.items.push({type:'group', id, name:'新建分组', apps:[]});
-      this.saveGroups(); this.renderGrid(''); this.openGroup(id); };
+    // 建一个空分组（输入名称即可），随后把应用拖到该分组卡片加入
+    card.onclick = () => {
+      const name=prompt('新建分组名称：','新建分组'); if(name===null) return;
+      this.groups.items.push({type:'group', id:'g'+Date.now(), name:name.trim()||'新建分组', apps:[]});
+      this.saveGroups(); this.renderGrid('');
+    };
     return card;
   },
   dropOnApp(targetKey, zone){   // zone: 'before' | 'after' | 'group'
@@ -4015,14 +4042,16 @@ const ChatopApps = {
     this.saveGroups(); this.renderGrid('');
   },
   async uninstallInstalled(a){
-    const log=document.getElementById('chatop_app_log'); if(log) log.textContent='卸载中…';
+    const log=document.getElementById('chatop_app_log');
+    if(log) log.textContent='卸载中…'; else UI.showStatus('正在卸载「'+a.name+'」…','normal');
     try{ await fetch('/apps/uninstall',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({key:a.key})}); }catch(e){ if(log) log.textContent='请求失败：'+e; return; }
     const poll=setInterval(async()=>{ try{
       const r=await fetch('/apps/logs?id='+encodeURIComponent(a.key)).then(r=>r.json());
       if(log) log.textContent=r.log||'';
-      if(r.state==='success'||r.state==='failed'){ clearInterval(poll); await this.refresh();
-        this.showList(); this.renderGrid(''); }
+      if(r.state==='success'||r.state==='failed'){ clearInterval(poll);
+        if(!log) UI.showStatus(r.state==='success'?('「'+a.name+'」已卸载'):'卸载失败','warn');
+        await this.refresh(); this.showList(); this.renderGrid(''); }
     }catch(e){} },1500);
   },
   // 已安装应用（来自 .desktop 扫描）：按 key 启动
@@ -4065,8 +4094,8 @@ const ChatopApps = {
     const title=document.getElementById('chatop_group_title'); title.value=g.name;
     title.onchange=()=>{ g.name=title.value.trim()||'新建分组'; this.saveGroups(); this.renderGrid(''); };
     this.renderGroupGrid(g);
-    document.getElementById('chatop_group_close').onclick=()=>this.closeGroup();
-    document.getElementById('chatop_group_add').onclick=()=>this.addToGroupPicker(g);
+    document.getElementById('chatop_group_close').onclick=()=>this.finishGroup();
+    document.getElementById('chatop_group_done').onclick=()=>this.finishGroup();
     const ov=document.getElementById('chatop_group_overlay');
     ov.ondragover=e=>{ if(this._drag&&this._drag.kind==='app') e.preventDefault(); };
     ov.ondrop=e=>{ if(e.target===ov && this._drag && this._drag.kind==='app'){
@@ -4084,6 +4113,17 @@ const ChatopApps = {
     }};
   },
   closeGroup(){ document.getElementById('chatop_group_overlay').style.display='none'; this.openGroupId=null; },
+  // 点「完成/确定」或「×」：提交分组名；空分组不保留；关闭浮层
+  finishGroup(){
+    const g=this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId);
+    if(g){
+      const t=document.getElementById('chatop_group_title');
+      if(t && t.value.trim()) g.name=t.value.trim();
+      if(!g.apps.length){ this.groups.items=this.groups.items.filter(i=>i!==g); }
+      this.saveGroups();
+    }
+    this.closeGroup(); this.renderGrid('');
+  },
   renderGroupGrid(g){
     const grid=document.getElementById('chatop_group_grid'); grid.innerHTML='';
     g.apps.forEach(k=>{ const a=this.appByKey(k); if(!a) return;
@@ -4098,21 +4138,82 @@ const ChatopApps = {
       leftover.forEach(k=>this.groups.items.push({type:'app',key:k}));
     }
   },
-  ungroupedApps(){
-    const used=new Set();
-    this.groups.items.forEach(i=>{ if(i.type==='app')used.add(i.key); if(i.type==='group')i.apps.forEach(k=>used.add(k)); });
-    return this.installed.filter(a=>!used.has(a.key));
+  // 自定义右键菜单（取代浏览器原生菜单）
+  showCtxMenu(e, entries){
+    e.preventDefault(); e.stopPropagation();
+    this.hideCtxMenu();
+    const m=document.getElementById('chatop_ctxmenu'); if(!m) return; m.innerHTML='';
+    entries.forEach(en=>{
+      const b=document.createElement('button');
+      b.className='chatop_ctxmenu_item'+(en.danger?' danger':'');
+      b.textContent=en.label;
+      b.onclick=ev=>{ ev.stopPropagation(); this.hideCtxMenu(); en.on(); };
+      m.appendChild(b);
+    });
+    m.style.display='block';
+    let x=e.clientX, y=e.clientY;
+    const mw=m.offsetWidth, mh=m.offsetHeight;
+    if(x+mw>window.innerWidth)  x=window.innerWidth-mw-4;
+    if(y+mh>window.innerHeight) y=window.innerHeight-mh-4;
+    m.style.left=Math.max(4,x)+'px'; m.style.top=Math.max(4,y)+'px';
+    const close=ev=>{
+      if(ev.type==='keydown'){ if(ev.key==='Escape') this.hideCtxMenu(); return; }
+      if(!m.contains(ev.target)) this.hideCtxMenu();
+    };
+    this._ctxClose=close;
+    setTimeout(()=>{
+      document.addEventListener('mousedown',close);
+      document.addEventListener('contextmenu',close);
+      document.addEventListener('keydown',close);
+    },0);
   },
-  addToGroupPicker(g){
-    const list=this.ungroupedApps();
-    if(!list.length){ UI.showStatus('没有未归组的应用','warn'); return; }
-    const grid=document.getElementById('chatop_group_grid');
-    grid.innerHTML='<div class="chatop_group_pick_hint">勾选要加入的应用，再次点击关闭</div>';
-    list.forEach(a=>{ const card=this.appCard(a); card.onclick=()=>{
-        g.apps.push(a.key); this.removeTopApp(a.key); this.saveGroups(); this.renderGroupGrid(g); this.renderGrid(''); };
-      grid.appendChild(card); });
+  hideCtxMenu(){
+    const m=document.getElementById('chatop_ctxmenu'); if(m) m.style.display='none';
+    if(this._ctxClose){
+      document.removeEventListener('mousedown',this._ctxClose);
+      document.removeEventListener('contextmenu',this._ctxClose);
+      document.removeEventListener('keydown',this._ctxClose);
+      this._ctxClose=null;
+    }
   },
-  removeTopApp(key){ this.groups.items=this.groups.items.filter(i=>!(i.type==='app'&&i.key===key)); },
+  renameGroup(gid){
+    const g=this.groups.items.find(i=>i.type==='group'&&i.id===gid); if(!g) return;
+    const name=prompt('分组名称：', g.name); if(name===null) return;
+    g.name=name.trim()||g.name; this.saveGroups(); this.renderGrid('');
+    if(this.openGroupId===gid){ const t=document.getElementById('chatop_group_title'); if(t) t.value=g.name; }
+  },
+  dissolveGroup(gid){
+    const idx=this.groups.items.findIndex(i=>i.type==='group'&&i.id===gid); if(idx<0) return;
+    const g=this.groups.items[idx];
+    if(!confirm('解散分组「'+g.name+'」？组内应用会回到列表。')) return;
+    const apps=g.apps.slice();
+    if(g.auto)(this.groups.pulled_out_system=this.groups.pulled_out_system||[]).push(...apps);
+    this.groups.items.splice(idx,1);
+    apps.forEach(k=>this.groups.items.push({type:'app',key:k}));
+    if(this.openGroupId===gid) this.closeGroup();
+    this.saveGroups(); this.renderGrid('');
+  },
+  moveAppToGroup(key){
+    const groups=this.groups.items.filter(i=>i.type==='group');
+    const names=groups.map(g=>g.name);
+    const choice=prompt('移入分组（输入已有分组名，或留空=新建分组）：\n'+names.join(' / '),'');
+    if(choice===null) return;
+    let g=groups.find(x=>x.name===choice.trim());
+    if(!g){ g={type:'group',id:'g'+Date.now(),name:(choice.trim()||'新建分组'),apps:[]}; this.groups.items.push(g); }
+    this.removeAppFromAnywhere(key); g.apps.push(key);
+    this.saveGroups(); this.renderGrid('');
+  },
+  moveAppOutOfGroup(key){
+    const grp=this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId); if(!grp) return;
+    grp.apps=grp.apps.filter(k=>k!==key);
+    if(grp.auto)(this.groups.pulled_out_system=this.groups.pulled_out_system||[]).push(key);
+    this.groups.items.push({type:'app',key});
+    this.dissolveIfEmpty(grp);
+    this.saveGroups();
+    if(this.groups.items.find(i=>i.type==='group'&&i.id===this.openGroupId)) this.renderGroupGrid(grp);
+    else this.closeGroup();
+    this.renderGrid('');
+  },
   async act(a, action) {
     const log = document.getElementById('chatop_app_log'); log.textContent='提交中…';
     try {

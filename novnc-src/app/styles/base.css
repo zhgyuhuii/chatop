@@ -1691,8 +1691,11 @@ body.chatop-theme-light .chatop_file_row:hover{background:rgb(0 0 0 / 0.06);}
 .chatop_group_head { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
 .chatop_group_title { flex:1; font-size:16px; padding:6px 10px; border-radius:8px;
   border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:#fff; }
-.chatop_group_add { margin-top:12px; padding:8px 14px; border-radius:8px; cursor:pointer; }
-.chatop_group_pick_hint { grid-column:1/-1; font-size:12px; opacity:.7; padding-bottom:6px; }
+.chatop_group_hint { margin-top:12px; font-size:12px; line-height:1.5; opacity:.65; }
+.chatop_group_foot { display:flex; justify-content:flex-end; margin-top:10px; }
+.chatop_group_done { padding:8px 24px; border-radius:8px; cursor:pointer; border:0;
+  background:#2563eb; color:#fff; font-weight:600; }
+.chatop_group_done:hover { background:#1d4ed8; }
 /* 浅色主题 */
 body.chatop-theme-light .chatop_group_panel { background:#fff; color:#1b2230; }
 body.chatop-theme-light .chatop_group_title { background:#f3f4f6; color:#111; border-color:#d1d5db; }
@@ -1702,3 +1705,18 @@ body.chatop-theme-light .chatop_newgroup_card { border-color:rgba(0,0,0,.25); }
 .chatop_app_card.dz-group { outline:2px solid #3b82f6; outline-offset:2px; }
 .chatop_app_card.dz-before { box-shadow:-3px 0 0 0 #3b82f6; }
 .chatop_app_card.dz-after { box-shadow:3px 0 0 0 #3b82f6; }
+
+/* 自定义右键菜单（分组/应用），取代浏览器原生菜单 */
+.chatop_ctxmenu { position:fixed; z-index:60; min-width:140px; padding:6px;
+  background:#222b3a; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+  box-shadow:0 12px 36px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:2px; }
+.chatop_ctxmenu_item { display:block; width:100%; text-align:left; padding:8px 12px;
+  font-size:13px; color:#e6e8ee; background:transparent; border:0; border-radius:6px; cursor:pointer; }
+.chatop_ctxmenu_item:hover { background:rgba(255,255,255,.10); }
+.chatop_ctxmenu_item.danger { color:#ff6b6b; }
+.chatop_ctxmenu_item.danger:hover { background:rgba(255,77,77,.16); }
+body.chatop-theme-light .chatop_ctxmenu { background:#fff; border-color:rgba(0,0,0,.12); }
+body.chatop-theme-light .chatop_ctxmenu_item { color:#1c1f23; }
+body.chatop-theme-light .chatop_ctxmenu_item:hover { background:rgba(0,0,0,.06); }
+body.chatop-theme-light .chatop_ctxmenu_item.danger { color:#d6342c; }
+body.chatop-theme-light .chatop_ctxmenu_item.danger:hover { background:rgba(214,52,44,.10); }

@@ -4,6 +4,19 @@ network:
     pem_key: ${HOME}/.vnc/self.pem
   udp:
     public_ip: 127.0.0.1
+# === 桌面编码默认（服务端兜底：非浏览器客户端 + 浏览器首次同步前生效）===
+# 「均衡」档：加宽自适应画质区间。默认是 min7/max8 区间太窄——运动时压得不够狠(不跟手)、
+# 静止时又没榨到最清晰。这里 min5/max9：运动(高变化)时降到 5 更流畅，静止时升到 9 更清晰。
+# quality 刻度 0-9，高=画质好；max_quality 用于画面静止、min_quality 用于高速变化时自动降质。
+# rectangle_compress_threads: 0 = 按 CPU 核数并行压缩（吃满多核 → 帧率更高）。
+# 注意：noVNC 前端(index.html Stream Quality 面板)连上后会用客户端设置覆盖本段，终端用户可实时改。
+encoding:
+  max_frame_rate: 60
+  rect_encoding_mode:
+    min_quality: 5
+    max_quality: 9
+    rectangle_compress_threads: 0
+
 runtime_configuration:
   allow_override_standard_vnc_server_settings: true
   allow_override_list:

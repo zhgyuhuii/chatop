@@ -22,15 +22,16 @@ services:
       #   两者都设 0 = 禁止跨界复制，只能容器内部复制
       - CLIPBOARD_OUT=${CLIPBOARD_OUT:-1}
       - CLIPBOARD_IN=${CLIPBOARD_IN:-1}
-      # 上传目标 / 下载来源目录（默认用户桌面）
-      - FILES_DIR=${FILES_DIR:-/home/kasm-user/Desktop}
+      # 上传目标 / 下载来源目录（不写死路径：留空则 app-manager 默认 ~/Desktop，自动跟随 HOME=/home/<用户名>）
+      - FILES_DIR=${FILES_DIR:-}
     ports:
       # 单一对外端口 → 容器内 Caddy(7443)；Caddy 再反代 KasmVNC(6901) 与 filebrowser(8585)。
       # KasmVNC 的 6901 与 filebrowser 的 8585 仅容器内可达，不再对外发布。
       - "${PORT:-6901}:7443"
     shm_size: "1gb"
     volumes:
-      - chatop-home:/home/kasm-user
+      # home 卷挂到 /home/<用户名>（与 APP_USER 一致，不再出现 kasm-user）
+      - chatop-home:/home/${LOGIN_USER:-admin}
     restart: unless-stopped
 
 volumes:

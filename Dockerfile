@@ -46,6 +46,7 @@ COPY caddy/start-caddy.sh /usr/local/bin/start-caddy.sh
 ENV XDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy
 
 RUN mkdir -p /dockerstartup && \
+    sed -i 's/\r$//' /usr/local/bin/start-filebrowser.sh /usr/local/bin/start-caddy.sh /etc/caddy/Caddyfile && \
     chmod +x /usr/local/bin/start-filebrowser.sh /usr/local/bin/start-caddy.sh && \
     printf '#!/bin/bash\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\n/usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
@@ -142,8 +143,19 @@ COPY app-manager/icons/ /usr/share/kasmvnc/www/app-icons/
 COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
 # 应用管理器二期：GUI（AppImage）安装/卸载脚本
 COPY app-manager/gui-install.sh app-manager/gui-uninstall.sh /usr/local/lib/chatop/
-RUN chmod +x /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-uninstall.sh
-RUN chmod +x /usr/local/bin/start-app-manager.sh
+# CLI 工具桌面终端启动器（claude/codex/openclaw 等点图标=开终端运行）
+COPY app-manager/chatop-run-cli.sh /usr/local/bin/chatop-run-cli
+# 核心工具预装：构建期安装脚本 + 首启播种脚本
+COPY app-manager/chatop-preinstall.sh /usr/local/lib/chatop/chatop-preinstall.sh
+COPY app-manager/chatop-seed-home.sh /usr/local/bin/chatop-seed-home.sh
+# 兜底：把 Windows 检出可能带入的 CRLF 去掉，否则 shebang 变 "#!/bin/bash\r"、
+# 内核找不到解释器，Caddy/app-manager 静默失败 → 桌面正常但进不去登录页。
+RUN sed -i 's/\r$//' /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-uninstall.sh \
+        /usr/local/bin/start-app-manager.sh /usr/local/bin/chatop-run-cli \
+        /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/bin/chatop-seed-home.sh && \
+    chmod +x /usr/local/lib/chatop/gui-install.sh /usr/local/lib/chatop/gui-uninstall.sh
+RUN chmod +x /usr/local/bin/start-app-manager.sh /usr/local/bin/chatop-run-cli \
+             /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/bin/chatop-seed-home.sh
 # 末尾再次 COPY Caddyfile（覆盖前面层的旧版），使 Caddyfile 改动只重建末尾层、不触发 WPS 重下
 COPY caddy/Caddyfile /etc/caddy/Caddyfile
 # 注：原"删除内置应用桌面快捷方式"段已删除——core base 桌面本就没有这些 .desktop。
@@ -153,10 +165,11 @@ COPY caddy/Caddyfile /etc/caddy/Caddyfile
 COPY assets/background.png /usr/share/backgrounds/chayuanai/wallpaper.png
 COPY assets/background.png /usr/share/backgrounds/bg_default.png
 COPY assets/set-wallpaper.sh /usr/local/bin/set-wallpaper.sh
-RUN chmod +x /usr/local/bin/set-wallpaper.sh
+RUN sed -i 's/\r$//' /usr/local/bin/set-wallpaper.sh /etc/caddy/Caddyfile && \
+    chmod +x /usr/local/bin/set-wallpaper.sh
 # 在末尾重新生成 custom_startup（追加 set-wallpaper 后台任务）。放末尾是为了不破坏
 # 上方 python3.11 等重型层的构建缓存（改 custom_startup 不再触发 python3.11 重装）。
-RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 # KasmVNC 剪贴板上/下行权限默认
 COPY kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
@@ -188,20 +201,37 @@ RUN mkdir -p /tmp/pa && \
     install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/ && \
     rm -rf /tmp/pa
 
-# === 自定义系统用户名（kasm-user → ${APP_USER}）===
-# 让 home 目录、右上角面板、文件管理器都显示自定义名。做法（零数据迁移）：
-#  - usermod -l 把 uid 1000 改名为 ${APP_USER}，whoami/$USER/右上角随之变；
-#  - 保留 kasm-user 作同 uid 别名，兜底 KasmVNC 脚本里残留的 kasm-user 硬编码（chown 等）；
-#  - home 实体仍是 volume 挂载点 /home/kasm-user，/home/${APP_USER} 软链过去；
-#  - ENV HOME 指向 /home/${APP_USER}，桌面/文件管理器据此显示新名。
+# === 自定义系统用户名（kasm-user → ${APP_USER}），home 实体彻底迁到 /home/${APP_USER} ===
+# 目标：/home 下不再出现 kasm-user，home 目录名与登录名一致，永久解决。做法：
+#  - usermod -l 改登录名；-d -m 把 /home/kasm-user 整体迁成实体目录 /home/${APP_USER}（非软链）；
+#  - groupmod -n 同步把 gid 1000 组名改成 ${APP_USER}；
+#  - 不再保留 kasm-user 账户，也不建软链——彻底消除 kasm-user；
+#  - 改写基础镜像里残留的 /home/kasm-user 字面量（profile-sync 仅 Kasm 服务器模式触发、
+#    standalone 不走，cups-pdf 是 PDF 打印输出目录，一并清理保持一致）；
+#  - WORKDIR 同步到 /home/${APP_USER}，覆盖基础镜像烤进 Config 的 WorkingDir=/home/kasm-user
+#    （否则该目录不存在会导致容器工作目录失效）。
 ARG APP_USER=admin
 RUN if [ "$APP_USER" != "kasm-user" ]; then \
-      usermod -l "$APP_USER" kasm-user && \
-      usermod -d "/home/$APP_USER" -s /bin/bash "$APP_USER" && \
-      ln -sfn /home/kasm-user "/home/$APP_USER" && \
-      useradd -o -u 1000 -g 1000 -M -s /bin/bash -d /home/kasm-user kasm-user ; \
+      usermod  -l "$APP_USER" -d "/home/$APP_USER" -m -s /bin/bash kasm-user && \
+      groupmod -n "$APP_USER" kasm-user && \
+      sed -i "s#/home/kasm-user#/home/$APP_USER#g" \
+          /dockerstartup/vnc_startup.sh \
+          /dockerstartup/kasm_pre_shutdown_user.sh \
+          /etc/cups/cups-pdf.conf && \
+      ! test -e /home/kasm-user ; \
     fi
+# 关键：base 镜像设了 WORKDIR /home/kasm-user，usermod -m 删除该目录后，后续每个 RUN 仍继承这个
+# 旧 WORKDIR，BuildKit 发现 CWD 不存在会自动重建空 /home/kasm-user。必须在任何后续 RUN 之前把
+# WORKDIR 切到 /home/${APP_USER}，否则 kasm-user 会以空目录死灰复燃。
+WORKDIR /home/${APP_USER}
 ENV HOME=/home/${APP_USER}
+# 把 KasmVNC 的默认 profile 骨架移出 /home（否则 `ls /home` 会出现 kasm-default-profile）：
+# 迁到 /opt/chatop/default-profile，并改写 ENTRYPOINT 首脚本里的 DEFAULT_PROFILE_HOME。
+# 该脚本以 $HOME 为目标拷贝骨架，迁移源目录不影响首启播种逻辑。
+RUN mkdir -p /opt/chatop && \
+    mv /home/kasm-default-profile /opt/chatop/default-profile && \
+    sed -i 's#/home/kasm-default-profile#/opt/chatop/default-profile#' /dockerstartup/kasm_default_profile.sh && \
+    ! test -e /home/kasm-default-profile && ! test -e /home/kasm-user
 
 # 只把 XDG_CONFIG_HOME 移到临时 /tmp/caddy（不读持久卷里的旧 xfce 配置，每次开机从 /etc/xdg
 # 默认重新生成：顶部菜单+底部任务栏、退出、通知区都正常；曾指向持久卷读到 kasm 单面板陈旧状态，
@@ -211,11 +241,19 @@ ENV HOME=/home/${APP_USER}
 # 排除出搜索路径，桌面图标变光秃、菜单缺失；且 /tmp/caddy 曾被烤成 root 属主，pulse 写不进而崩溃。
 # 显式把 XDG_DATA_HOME 覆盖回持久卷默认值，抵消上方第 46 行那条早期 ENV（ENV 是累积的，
 # 后面只设 XDG_CONFIG_HOME 不会取消前面的 XDG_DATA_HOME，故必须在此显式重设）。
-ENV XDG_CONFIG_HOME=/tmp/caddy XDG_DATA_HOME=/home/kasm-user/.local/share
+ENV XDG_CONFIG_HOME=/tmp/caddy XDG_DATA_HOME=${HOME}/.local/share
 # 命令行工具(claude/openclaw/codex/opencode/hermes 等)PATH 进全局 ENV——彻底不依赖 shell 类型:
 # 桌面终端默认 shell 是 dash(/bin/sh,不读 bash.bashrc/profile.d),靠全局 ENV 任何进程都能找到命令。
 # NPM_CONFIG_PREFIX 同入全局,任意 shell `npm i -g` 都装到用户卷目录。(上面已把默认 shell 也改成 bash)
 ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global PATH=${HOME}/.npm-global/bin:${HOME}/.local/bin:${PATH}
+# === 核心工具预装（以 admin 身份装进 /home/admin，再把整棵 home 迁到 /opt/chatop-seed-home）===
+# 以 admin 运行确保 npm/Hermes 等写入用户 home、属主正确、且 Hermes 走非 root(~/.hermes)布局。
+# 装完把 /home/admin 迁到 /opt/chatop-seed-home（运行时由 chatop-seed-home.sh 播种回卷），
+# 并重建空的 /home/admin（属主 admin），作为镜像内的 home 挂载点。
+RUN su admin -c 'bash /usr/local/lib/chatop/chatop-preinstall.sh' && \
+    mv /home/admin /opt/chatop-seed-home && \
+    mkdir -p /home/admin && chown admin:admin /home/admin && chmod 755 /home/admin && \
+    ! test -e /home/kasm-user
 # 构建期 root 步骤可能以 /tmp/caddy 作 XDG_CONFIG 建出 root 属主目录，运行时 uid 1000 的
 # caddy/xfce 写不进。删掉它，运行时由首个 uid 1000 进程重建为可写。
 RUN rm -rf /tmp/caddy

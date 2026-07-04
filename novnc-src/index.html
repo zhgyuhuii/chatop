@@ -655,9 +655,14 @@
               <button id="chatop_group_close" title="关闭">×</button>
             </div>
             <div id="chatop_group_grid" class="chatop_apps_grid"></div>
-            <button id="chatop_group_add" class="chatop_group_add">＋ 添加应用</button>
+            <div class="chatop_group_hint">拖拽应用图标到分组卡片即可加入；在此浮层内把图标拖到空白处即可移出。也可右键应用选择「移入/移出分组」。</div>
+            <div class="chatop_group_foot">
+              <button id="chatop_group_done" class="chatop_group_done">完成</button>
+            </div>
           </div>
         </div>
+        <!-- chatop: 自定义右键菜单（取代浏览器原生菜单） -->
+        <div id="chatop_ctxmenu" class="chatop_ctxmenu" style="display:none"></div>
       </div>
     </div>
 
