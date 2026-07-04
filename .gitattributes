@@ -16,6 +16,11 @@ Dockerfile      text eol=lf
 Caddyfile       text eol=lf
 .env.example    text eol=lf
 
+# Windows 批处理必须 CRLF：cmd.exe 对纯 LF 的 .bat 在部分结构下会异常。
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
 # 二进制文件不做换行转换
 *.png   binary
 *.jpg   binary
