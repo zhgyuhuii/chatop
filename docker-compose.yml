@@ -4,9 +4,8 @@ services:
       context: .
       args:
         VERSION: ${VERSION:-1.0.0}
-        # 自定义系统用户名（kasm-user 改名为此值；右上角/home 目录/文件管理器都显示它）
-        APP_USER: ${LOGIN_USER:-admin}
     image: chatop-ai:${VERSION:-1.0.0}
+    pull_policy: build
     container_name: chatop-ai
     environment:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
