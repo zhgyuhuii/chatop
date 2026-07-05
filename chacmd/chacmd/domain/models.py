@@ -25,6 +25,8 @@ class Job(Base):
     goal: Mapped[str] = mapped_column(String)
     dept: Mapped[str] = mapped_column(String(64), index=True)          # tenant = dept (RLS key, NFR-T1)
     state: Mapped[str] = mapped_column(String(32), default="queued")
+    token_budget: Mapped[int] = mapped_column(Integer, default=0)  # per-job 硬预算，0=不限(NFR-C1)
+    tokens_used: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

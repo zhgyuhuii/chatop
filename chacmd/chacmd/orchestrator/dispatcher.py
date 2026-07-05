@@ -17,12 +17,14 @@ class Dispatcher:
         chayuan: ChayuanClient,
         adapter: AgentAdapter,
         ingest: EventIngest,
+        budget: object | None = None,
     ) -> None:
         self._jobs = jobs
         self._containers = containers
         self._chayuan = chayuan
         self._adapter = adapter
         self._ingest = ingest
+        self._budget = budget
 
     async def dispatch(self, job_id: str, nickname: str, subject: str, system_prompt: str) -> None:
         container = await self._containers.resolve(nickname)
@@ -42,3 +44,10 @@ class Dispatcher:
         )
         async for event in self._adapter.dispatch(spec):
             await self._ingest.handle(event)
+            tokens = event.payload.get("tokens", 0) if event.payload else 0
+            if self._budget is not None and tokens:
+                if not await self._budget.charge(job_id, tokens):
+                    # 超 per-job 预算：kill adapter + 置 FAILED（NFR-C1）
+                    await self._adapter.cancel(job_id, job_id)
+                    await self._jobs.set_state(job_id, JobState.FAILED)
+                    break

@@ -14,9 +14,12 @@ class JobRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    async def create(self, code: str, goal: str, dept: str) -> Job:
+    async def create(self, code: str, goal: str, dept: str, token_budget: int = 0) -> Job:
         async with self._db.session() as s:
-            job = Job(code=code, goal=goal, dept=dept, state=JobState.QUEUED.value)
+            job = Job(
+                code=code, goal=goal, dept=dept,
+                state=JobState.QUEUED.value, token_budget=token_budget,
+            )
             s.add(job)
             await s.commit()
             await s.refresh(job)
@@ -42,6 +45,18 @@ class JobRepository:
                 raise KeyError(f"unknown job: {job_id}")
             job.state = state
             await s.commit()
+
+    async def add_tokens(self, job_id: str, n: int) -> int:
+        async with self._db.session() as s:
+            job = await s.get(Job, job_id)
+            job.tokens_used = (job.tokens_used or 0) + n
+            await s.commit()
+            return job.tokens_used
+
+    async def get_budget(self, job_id: str) -> int:
+        async with self._db.session() as s:
+            job = await s.get(Job, job_id)
+            return job.token_budget or 0
 
 
 class ContainerRepository:

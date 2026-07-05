@@ -64,7 +64,9 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
     else:
         bus = InMemoryEventBus()
     ingest = EventIngest(bus, jobs, audit)
-    dispatcher = Dispatcher(jobs, containers, chayuan, adapter, ingest)
+    from chacmd.orchestrator.budget import BudgetGuard
+
+    dispatcher = Dispatcher(jobs, containers, chayuan, adapter, ingest, budget=BudgetGuard(jobs))
 
     return Container(
         settings=settings, db=db, chayuan=chayuan, crypto=StdCrypto(secret=b"dev"),
