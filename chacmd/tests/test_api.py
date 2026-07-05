@@ -70,6 +70,34 @@ async def test_anthropic_shim_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_approve_moves_pending_to_running(client):
+    created = await client.post("/api/v1/tasks/c/runs", json={"goal": "g", "dept": "d1"})
+    job_id = created.json()["job_id"]
+    await client.post(f"/api/v1/runs/{job_id}/_force_state", json={"state": "pending_approval"})
+    r = await client.post(f"/api/v1/runs/{job_id}/approve")
+    assert r.status_code == 200
+    assert r.json()["state"] == "running"
+
+
+@pytest.mark.asyncio
+async def test_reject_moves_pending_to_cancelled(client):
+    created = await client.post("/api/v1/tasks/c/runs", json={"goal": "g", "dept": "d1"})
+    job_id = created.json()["job_id"]
+    await client.post(f"/api/v1/runs/{job_id}/_force_state", json={"state": "pending_approval"})
+    r = await client.post(f"/api/v1/runs/{job_id}/reject", json={"reason": "看着不对"})
+    assert r.status_code == 200
+    assert r.json()["state"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_approve_illegal_from_queued_returns_409(client):
+    created = await client.post("/api/v1/tasks/c/runs", json={"goal": "g", "dept": "d1"})
+    job_id = created.json()["job_id"]
+    r = await client.post(f"/api/v1/runs/{job_id}/approve")  # queued→running 非法
+    assert r.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_shim_absent_when_chayuan_not_injected(client):
     # 未注入 chayuan（默认 create_app(db)）时不挂 shim 路由，保持向后兼容
     r = await client.post("/v1/messages", json={"model": "m", "max_tokens": 1, "messages": []})

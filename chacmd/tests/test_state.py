@@ -22,3 +22,8 @@ def test_interrupted_from_running():
 def test_illegal_transition_raises():
     with pytest.raises(ValueError):
         transition(JobState.SUCCEEDED, JobState.RUNNING)  # terminal → nothing
+
+
+def test_cancelled_is_terminal():
+    # 打回后进 cancelled，不可再被批准（NFR-H1 审批不可撤销）
+    assert not can_transition(JobState.CANCELLED, JobState.RUNNING)

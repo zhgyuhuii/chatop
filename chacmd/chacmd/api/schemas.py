@@ -24,3 +24,11 @@ class RunStatus(BaseModel):
 class ContainerOut(BaseModel):
     nickname: str
     dept: str
+
+
+class RejectRequest(BaseModel):
+    reason: str = ""
+
+
+class ForceStateRequest(BaseModel):  # 仅测试/运维用
+    state: str

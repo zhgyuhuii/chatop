@@ -34,6 +34,15 @@ class JobRepository:
             job.state = transition(JobState(job.state), dst).value
             await s.commit()
 
+    async def force_state(self, job_id: str, state: str) -> None:
+        # 绕过状态机的强制写，仅供测试/运维 seed（生产路径必须走 set_state）。
+        async with self._db.session() as s:
+            job = await s.get(Job, job_id)
+            if job is None:
+                raise KeyError(f"unknown job: {job_id}")
+            job.state = state
+            await s.commit()
+
 
 class ContainerRepository:
     def __init__(self, db: Database) -> None:
