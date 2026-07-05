@@ -51,7 +51,12 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
         auth = FakeAuthProvider()
     else:
         chayuan = HttpChayuanClient(base_url=settings.chayuan_base_url, web_url=settings.chayuan_web_url)
-        adapter = FakeAgentAdapter(steps=["step-1"])  # M2: real OpenHandsAdapter wired in M3
+        if settings.agent_adapter == "openhands":
+            from chacmd.adapters.openhands_adapter import OpenHandsAdapter
+
+            adapter = OpenHandsAdapter()
+        else:
+            adapter = FakeAgentAdapter(steps=["step-1"])
         auth = ChayuanAuthProvider(chayuan)
 
     if settings.sandbox == "docker" and not use_fakes:
