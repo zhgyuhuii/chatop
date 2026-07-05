@@ -9,7 +9,7 @@ from chacmd.domain.repository import JobRepository
 from chacmd.interfaces.db import Database
 
 
-def create_app(db: Database) -> FastAPI:
+def create_app(db: Database, chayuan: object | None = None) -> FastAPI:
     app = FastAPI(title="ChaCMD Orchestrator", version="0.1.0")
     jobs = JobRepository(db)
 
@@ -31,5 +31,16 @@ def create_app(db: Database) -> FastAPI:
         async with db.session() as s:
             rows = await s.execute(select(ContainerReg))
             return [ContainerOut(nickname=r.nickname, dept=r.dept) for r in rows.scalars()]
+
+    if chayuan is not None:
+        from chacmd.shim.anthropic_shim import anthropic_to_openai, openai_to_anthropic
+
+        @app.post("/v1/messages")
+        async def anthropic_messages(req: dict) -> dict:
+            # #16 缺口：Claude Code 经此 shim 调察元 OpenAI 兼容网关(/v1/chat/completions)。
+            oai = anthropic_to_openai(req)
+            extra = {k: v for k, v in oai.items() if k not in ("model", "messages")}
+            resp = await chayuan.chat_completions(oai["model"], oai["messages"], **extra)
+            return openai_to_anthropic(resp, model=req["model"])
 
     return app

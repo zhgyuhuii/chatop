@@ -47,3 +47,30 @@ async def test_list_containers(client):
     resp = await client.get("/api/v1/containers")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_anthropic_shim_endpoint():
+    from chacmd.interfaces.chayuan_client import FakeChayuanClient
+
+    db = Database(url="sqlite+aiosqlite:///:memory:")
+    await db.create_all()
+    app = create_app(db, chayuan=FakeChayuanClient())
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await c.post("/v1/messages", json={
+            "model": "deepseek", "max_tokens": 50,
+            "messages": [{"role": "user", "content": "hi"}],
+        })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["content"][0]["type"] == "text"
+    assert body["role"] == "assistant"
+    await db.dispose()
+
+
+@pytest.mark.asyncio
+async def test_shim_absent_when_chayuan_not_injected(client):
+    # 未注入 chayuan（默认 create_app(db)）时不挂 shim 路由，保持向后兼容
+    r = await client.post("/v1/messages", json={"model": "m", "max_tokens": 1, "messages": []})
+    assert r.status_code == 404
