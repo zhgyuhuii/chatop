@@ -54,6 +54,13 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
         adapter = FakeAgentAdapter(steps=["step-1"])  # M2: real OpenHandsAdapter wired in M3
         auth = ChayuanAuthProvider(chayuan)
 
+    if settings.sandbox == "docker" and not use_fakes:
+        from chacmd.interfaces.docker_sandbox import DockerSandbox
+
+        sandbox: Any = DockerSandbox()
+    else:
+        sandbox = FakeSandbox()
+
     jobs = JobRepository(db)
     containers = ContainerRepository(db)
     audit = AuditRepository(db)
@@ -71,7 +78,7 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
     return Container(
         settings=settings, db=db, chayuan=chayuan, crypto=StdCrypto(secret=b"dev"),
         registry=InProcessServiceRegistry(), config=InProcessConfigSource({}),
-        bus=bus, transport=InProcessTransport(), adapter=adapter, sandbox=FakeSandbox(),
+        bus=bus, transport=InProcessTransport(), adapter=adapter, sandbox=sandbox,
         auth=auth, jobs=jobs, containers=containers, audit=audit, ingest=ingest,
         dispatcher=dispatcher, workspace=Workspace(root=Path(settings.workspace_root)),
     )
