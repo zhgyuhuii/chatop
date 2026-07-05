@@ -57,7 +57,12 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
     jobs = JobRepository(db)
     containers = ContainerRepository(db)
     audit = AuditRepository(db)
-    bus = InMemoryEventBus()
+    if settings.event_bus == "nats" and not use_fakes:
+        from chacmd.interfaces.nats_bus import NatsEventBus
+
+        bus: Any = NatsEventBus(url=settings.nats_url)
+    else:
+        bus = InMemoryEventBus()
     ingest = EventIngest(bus, jobs, audit)
     dispatcher = Dispatcher(jobs, containers, chayuan, adapter, ingest)
 
