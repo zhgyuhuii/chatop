@@ -90,11 +90,20 @@ RUN set -eux; \
     apt-get clean; rm -rf /var/lib/apt/lists/*
 
 # === proot-apps（userspace PRoot GUI 应用安装器） ===
-RUN mkdir -p /tmp/pa && \
-    PAPPS=$(curl -sSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 -X GET "https://api.github.com/repos/linuxserver/proot-apps/releases/latest" | awk '/tag_name/{print $4;exit}' FS='[""]') && \
-    curl -fL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 "https://github.com/linuxserver/proot-apps/releases/download/${PAPPS}/proot-apps-x86_64.tar.gz" | tar -xzf - -C /tmp/pa/ && \
-    install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/ && \
-    rm -rf /tmp/pa
+# releases/latest/download 直链（同 filebrowser 步骤），免 api.github.com 查 tag（匿名限流 60/h 会 403）。
+# 直连被阻断时依次回退 GitHub 加速镜像；置空 GH_MIRRORS 可禁用回退（走代理时传 --build-arg GH_MIRRORS=）。
+ARG GH_MIRRORS="https://ghfast.top/ https://gh-proxy.com/"
+RUN set -eux; mkdir -p /tmp/pa; \
+    url="https://github.com/linuxserver/proot-apps/releases/latest/download/proot-apps-x86_64.tar.gz"; \
+    ok=""; \
+    for prefix in "" $GH_MIRRORS; do \
+      if curl -fL --retry 2 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o /tmp/pa.tar.gz "${prefix}${url}"; then ok=1; break; fi; \
+      echo "[WARN] fetch via [${prefix:-direct}] failed, trying next source"; \
+    done; \
+    [ -n "$ok" ]; \
+    tar -xzf /tmp/pa.tar.gz -C /tmp/pa/; \
+    install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/; \
+    rm -rf /tmp/pa /tmp/pa.tar.gz
 
 # === 用户改名 kasm-user → ${APP_USER} + home 实体迁移 ===
 ARG APP_USER=admin

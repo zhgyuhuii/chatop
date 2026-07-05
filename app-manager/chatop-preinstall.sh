@@ -8,13 +8,26 @@ export NPM_CONFIG_PREFIX="$HOME/.npm-global"
 export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
 mkdir -p "$HOME/.npm-global" "$HOME/.local/bin" "$HOME/Applications" "$HOME/Desktop"
 
+# GitHub 下载：直连被墙时依次回退加速镜像（GH_MIRRORS 置空可禁用，走代理时无需镜像）。
+GH_MIRRORS="${GH_MIRRORS-https://ghfast.top/ https://gh-proxy.com/}"
+gh_fetch() { # gh_fetch <url> <output>
+  local url="$1" out="$2" prefix
+  for prefix in "" $GH_MIRRORS; do
+    if curl -fL --retry 2 --retry-delay 3 --retry-all-errors --connect-timeout 20 -sS -o "$out" "${prefix}${url}"; then
+      return 0
+    fi
+    echo "[WARN] gh_fetch via [${prefix:-direct}] failed: $url"
+  done
+  return 1
+}
+
 echo "==== [preinstall] npm CLI: openclaw / codex / claude-code / tokscale ===="
 npm i -g openclaw@latest @openai/codex @anthropic-ai/claude-code tokscale
 
 echo "==== [preinstall] RTK (静态 musl 二进制) ===="
-RTK_TAG="$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest | awk -F'"' '/tag_name/{print $4; exit}')"
-[ -n "$RTK_TAG" ] || { echo "RTK tag 解析失败"; exit 1; }
-curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/${RTK_TAG}/rtk-x86_64-unknown-linux-musl.tar.gz" -o /tmp/rtk.tgz
+# latest/download 直链：免 api.github.com 查 tag（匿名限流 60/h + 被墙双雷），已实测有效
+gh_fetch "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-unknown-linux-musl.tar.gz" /tmp/rtk.tgz \
+  || { echo "RTK 下载失败(直连+全部镜像)"; exit 1; }
 tar -xzf /tmp/rtk.tgz -C /tmp
 install -m755 "$(find /tmp -maxdepth 3 -name rtk -type f | head -1)" "$HOME/.local/bin/rtk"
 rm -rf /tmp/rtk.tgz
@@ -22,8 +35,8 @@ rm -rf /tmp/rtk.tgz
 
 echo "==== [preinstall] openclaw-agent-builder (单文件 HTML 配置器) ===="
 mkdir -p "$HOME/Applications/agent-builder"
-curl -fsSL -o "$HOME/Applications/agent-builder/index.html" \
-  https://raw.githubusercontent.com/nathancarlton/openclaw-agent-builder/main/index.html
+gh_fetch "https://raw.githubusercontent.com/nathancarlton/openclaw-agent-builder/main/index.html" \
+  "$HOME/Applications/agent-builder/index.html"
 test -s "$HOME/Applications/agent-builder/index.html"
 
 # 桌面图标：agent-builder(Chrome 打开本地 HTML) + tokscale(终端 TUI 监控)
