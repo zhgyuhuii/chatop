@@ -37,14 +37,16 @@ class HttpChayuanClient:
         return resp.json()
 
     async def authorize(self, subject: str, resource: str, action: str) -> bool:
-        resp = await self._client.post(
-            "/api/v1/authz/check", json={"subject": subject, "resource": resource, "action": action}
-        )
-        resp.raise_for_status()
-        return bool(resp.json().get("allowed", False))
+        # 察元没有资源级 authz-check 端点：其鉴权是 scope-based（require_scopes，
+        # openapi_routes.py），whoami 返回的是 App scope，不是用户/资源 RBAC。
+        # container-dispatch RBAC（谁能派活给哪个工位）是 ChaCMD 自己的域，
+        # 不得在防腐层伪造一个不存在的察元端点。P0 默认放行，P1 由 ChaCMD 的
+        # AuthProvider 按 dept 做真 RBAC（见 chacmd/interfaces/auth.py）。
+        return True
 
     async def whoami(self, token: str) -> dict:
-        resp = await self._client.get("/api/v1/whoami", headers={"Authorization": f"Bearer {token}"})
+        # 察元真实端点：openapi_router prefix /openapi/v1 + /whoami（需 admin:read scope）。
+        resp = await self._client.get("/openapi/v1/whoami", headers={"Authorization": f"Bearer {token}"})
         resp.raise_for_status()
         return resp.json()
 
