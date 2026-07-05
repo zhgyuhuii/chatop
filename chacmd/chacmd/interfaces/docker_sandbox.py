@@ -21,6 +21,7 @@ def build_run_kwargs(spec: SandboxSpec) -> dict:
         "mem_limit": "3g",
         "pids_limit": 512,
         "volumes": {},  # per-job 卷由 Provisioner 单独 bind(Task 9/#10)
+        "environment": spec.env,  # 配置下发(#10)：模型/Key/BaseURL 注入容器 env
         "detach": True,
     }
 

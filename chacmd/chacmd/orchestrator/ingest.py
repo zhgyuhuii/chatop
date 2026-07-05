@@ -28,7 +28,12 @@ class EventIngest:
         self._audit = audit
 
     async def handle(self, e: Event) -> None:
-        await self._bus.publish(e.subject(), {"kind": e.kind, "seq": e.seq, "payload": e.payload})
+        from chacmd.observability.otel import inject_traceparent
+
+        msg = inject_traceparent(
+            {"kind": e.kind, "seq": e.seq, "payload": e.payload}, job_id=e.job_id
+        )
+        await self._bus.publish(e.subject(), msg)
         await self._audit.append(e)
         target = _KIND_TO_STATE.get(e.kind)
         if target is not None:

@@ -10,6 +10,7 @@ class SandboxSpec:
     nickname: str
     image: str
     mounts: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)  # 配置下发(#10)：模型/Key/BaseURL
 
     def __post_init__(self) -> None:
         for m in self.mounts:

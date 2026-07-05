@@ -17,6 +17,7 @@ from chacmd.interfaces.sandbox import FakeSandbox
 from chacmd.interfaces.transport import InProcessTransport
 from chacmd.orchestrator.dispatcher import Dispatcher
 from chacmd.orchestrator.ingest import EventIngest
+from chacmd.orchestrator.provisioner import Provisioner
 from chacmd.workspace import Workspace
 
 
@@ -38,10 +39,14 @@ class Container:
     audit: AuditRepository
     ingest: EventIngest
     dispatcher: Dispatcher
+    provisioner: Provisioner
     workspace: Workspace
 
 
 async def build_container(settings: Settings, use_fakes: bool = False) -> Container:
+    from chacmd.observability.otel import init_tracing
+
+    init_tracing()
     db = Database(url=settings.db_url)
     await db.create_all()
 
@@ -79,11 +84,13 @@ async def build_container(settings: Settings, use_fakes: bool = False) -> Contai
     from chacmd.orchestrator.budget import BudgetGuard
 
     dispatcher = Dispatcher(jobs, containers, chayuan, adapter, ingest, budget=BudgetGuard(jobs))
+    provisioner = Provisioner(sandbox, containers, image=settings.sandbox_image)
 
     return Container(
         settings=settings, db=db, chayuan=chayuan, crypto=StdCrypto(secret=b"dev"),
         registry=InProcessServiceRegistry(), config=InProcessConfigSource({}),
         bus=bus, transport=InProcessTransport(), adapter=adapter, sandbox=sandbox,
         auth=auth, jobs=jobs, containers=containers, audit=audit, ingest=ingest,
-        dispatcher=dispatcher, workspace=Workspace(root=Path(settings.workspace_root)),
+        dispatcher=dispatcher, provisioner=provisioner,
+        workspace=Workspace(root=Path(settings.workspace_root)),
     )
