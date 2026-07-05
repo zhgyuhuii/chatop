@@ -10,3 +10,7 @@ novnc-src/dist/
 # Python 缓存
 __pycache__/
 *.pyc
+
+# local dev venv (chacmd P0)
+.venv/
+*.egg-info/
