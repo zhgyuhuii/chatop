@@ -14,3 +14,5 @@ __pycache__/
 # local dev venv (chacmd P0)
 .venv/
 *.egg-info/
+dashboard-web/node_modules/
+dashboard-web/dist/
