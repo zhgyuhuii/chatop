@@ -146,3 +146,12 @@ chatop 仓新增 `dashboard-web/`（独立 Vite + React，复用镜像内 Node22
 - R7/NFR-SEC5：key 明文不出 probe 层、不落日志。
 - NFR-SEC7：外部永不直连 station（只听 127.0.0.1，一律经 Caddy 过登录门）。
 - 三仓边界：本设计全部落 `/work/chatop`；不引入对 chayuan-desktop 的构建依赖；与 ChaCMD 的耦合只有「事件 schema/状态机形状对齐」这一纸面契约。
+
+---
+
+## 10. v1 实施增补（2026-07-06，用户追加需求）
+
+1. **镜像预装智能体**：openclaw/codex/claude-code（原有 npm 预装，新增 registry.npmmirror.com 直连失败回退）+ **Hermes**（官方 install.sh，3 次重试）+ **OpenHuman**（AppImage，GH_MIRRORS 加速镜像回退）。`PREINSTALL_HEAVY=0` 构建参数可跳过重量级两项（磁盘/网络受限时走应用市场安装）。station 的 fastapi/uvicorn/psutil venv 建在 Dockerfile.base（阿里 PyPI 源优先），产品层保持离线。⚠ 需 `--rebuild-base`。
+2. **大屏可打开/安装智能体**：A 区智能体墙**未安装的也上屏**并带「安装」按钮（station 回环转发 app-manager `POST /apps/install`，进度在应用管理查看）；已安装的带「打开」（会话式/常驻 CLI → chatop-run-cli 桌面终端；OpenHuman → app-manager `/apps/launch`）。
+3. **大屏可打开配置界面**：「配置」按钮——openclaw → agent-builder 可视化配置器（Chrome --app）；hermes → 终端跑 `hermes setup`；claude-code/codex → 各自 CLI 登录/配置流；OpenHuman → 打开应用本身。动作表在 `station/actions.py`，新 agent 加一行即可。
+4. 相应新增端点：`POST /dashboard/api/agents/{id}/open|configure|install`（鉴权同 §5：外部经 Caddy 登录门）。
