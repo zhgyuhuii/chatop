@@ -5,7 +5,7 @@
 # 版本哨兵保证同一版本只播一次（用户卸载某工具后不会被反复重新播种）。
 set -u
 SEED_SRC=/opt/chatop-seed-home
-WANT=1   # 升级镜像、要补播新增工具时把这个数字 +1
+WANT=2   # 升级镜像、要补播新增工具时把这个数字 +1（v2: 大屏 autostart + Hermes/OpenHuman 预装）
 HOME="${HOME:-/home/$(id -un)}"
 SENT="$HOME/.local/share/chatop/seed-version"
 

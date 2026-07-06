@@ -5,6 +5,12 @@ WORKDIR /src
 COPY novnc-src/ ./
 RUN --mount=type=cache,target=/root/.npm npm install && npm run build
 
+# 工位大屏前端（改 dashboard-web 只重跑此 stage）
+FROM node:20-alpine AS dashweb
+WORKDIR /src
+COPY dashboard-web/ ./
+RUN --mount=type=cache,target=/root/.npm npm install && npm run build
+
 # 产品镜像 = 固定 chatop-base + 快变内容（改这些才重打，且不联网）
 FROM chatop-base:latest
 ARG VERSION=1.1.0
@@ -20,6 +26,19 @@ COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
 COPY app-manager/gui-install.sh app-manager/gui-uninstall.sh /usr/local/lib/chatop/
 COPY app-manager/chatop-run-cli.sh /usr/local/bin/chatop-run-cli
 COPY app-manager/chatop-seed-home.sh /usr/local/bin/chatop-seed-home.sh
+
+# === station：工位本地大屏常驻服务（venv 已在 base；此层离线只 COPY） ===
+COPY station/station/ /opt/station/station/
+COPY station/start-station.sh /usr/local/bin/start-station.sh
+COPY --from=dashweb /src/dist/ /opt/station/station/web/
+RUN sed -i 's/\r$//' /usr/local/bin/start-station.sh && chmod +x /usr/local/bin/start-station.sh && \
+    mkdir -p /opt/chatop-seed-home/.config/autostart && \
+    printf '[Desktop Entry]\nType=Application\nName=Chatop Dashboard\nComment=工位监控大屏\nExec=/usr/local/bin/start-dashboard-window.sh\nIcon=utilities-system-monitor\nX-GNOME-Autostart-enabled=true\n' \
+      > /opt/chatop-seed-home/.config/autostart/chatop-dashboard.desktop && \
+    printf '#!/bin/bash\nfor i in $(seq 1 60); do curl -fsS http://127.0.0.1:8787/dashboard/api/system >/dev/null 2>&1 && break; sleep 1; done\nexec /usr/bin/google-chrome-stable --app=http://127.0.0.1:8787/dashboard --start-fullscreen --no-first-run\n' \
+      > /usr/local/bin/start-dashboard-window.sh && \
+    chmod +x /usr/local/bin/start-dashboard-window.sh && \
+    chown -R 1000:1000 /opt/chatop-seed-home/.config
 
 # === Caddy 反代配置 + 启动脚本；filebrowser 启动脚本 ===
 COPY caddy/Caddyfile /etc/caddy/Caddyfile
@@ -54,7 +73,7 @@ RUN printf '%s\n' \
   > /usr/local/bin/start-filebrowser.sh && chmod +x /usr/local/bin/start-filebrowser.sh
 
 # === custom_startup（常驻，末尾 wait；否则被 KASM_PROCS 判死无限重启拖垮 VNC） ===
-RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/start-station.sh >/tmp/station.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 
 # === 注入定制前端 dist（放最后：前端迭代只重跑这层）+ 品牌图标/splash 覆盖 ===

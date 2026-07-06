@@ -59,6 +59,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
     apt-get install -y --no-install-recommends python3.11 python3.11-venv python3.11-distutils && \
     python3.11 --version && rm -rf /var/lib/apt/lists/*
 
+# === station 运行环境（工位大屏常驻服务 venv；产品层只 COPY 源码保持离线）。国内优先阿里源，失败回退官方 ===
+RUN python3.11 -m venv /opt/station-venv && \
+    ( /opt/station-venv/bin/pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ \
+        'fastapi>=0.110,<1' 'uvicorn>=0.30,<1' 'psutil>=5.9' || \
+      /opt/station-venv/bin/pip install --no-cache-dir \
+        'fastapi>=0.110,<1' 'uvicorn>=0.30,<1' 'psutil>=5.9' ) && \
+    /opt/station-venv/bin/python -c "import fastapi, uvicorn, psutil"
+
 # === 系统中文化：locale + 语言包 ===
 RUN apt-get update && apt-get install -y --no-install-recommends \
       locales language-pack-zh-hans language-pack-gnome-zh-hans \
@@ -130,7 +138,8 @@ RUN mkdir -p /usr/local/lib/chatop /etc/chatop
 COPY app-manager/chatop-preinstall.sh /usr/local/lib/chatop/chatop-preinstall.sh
 RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh && \
     chmod +x /usr/local/lib/chatop/chatop-preinstall.sh
-RUN su admin -c 'bash /usr/local/lib/chatop/chatop-preinstall.sh' && \
+ARG PREINSTALL_HEAVY=1
+RUN su admin -c "PREINSTALL_HEAVY=${PREINSTALL_HEAVY} bash /usr/local/lib/chatop/chatop-preinstall.sh" && \
     mv /home/admin /opt/chatop-seed-home && \
     mkdir -p /home/admin && chown admin:admin /home/admin && chmod 755 /home/admin && \
     ! test -e /home/kasm-user

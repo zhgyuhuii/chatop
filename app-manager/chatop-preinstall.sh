@@ -22,7 +22,10 @@ gh_fetch() { # gh_fetch <url> <output>
 }
 
 echo "==== [preinstall] npm CLI: openclaw / codex / claude-code / tokscale ===="
-npm i -g openclaw@latest @openai/codex @anthropic-ai/claude-code tokscale
+# 国内直连 registry.npmjs.org 常超时：直连失败自动回退 npmmirror
+npm i -g openclaw@latest @openai/codex @anthropic-ai/claude-code tokscale || \
+  npm i -g --registry=https://registry.npmmirror.com \
+    openclaw@latest @openai/codex @anthropic-ai/claude-code tokscale
 
 echo "==== [preinstall] RTK (静态 musl 二进制) ===="
 # latest/download 直链：免 api.github.com 查 tag（匿名限流 60/h + 被墙双雷），已实测有效
@@ -64,11 +67,38 @@ EOF
 cp -f "$HOME/.local/share/applications/chatop-agent-builder.desktop" \
       "$HOME/.local/share/applications/chatop-tokscale.desktop" "$HOME/Desktop/" 2>/dev/null || true
 
-# 注：Hermes(uv+py3.11+自带 Node，重量级) 与 OpenHuman(AppImage) 暂不预装进镜像——
-# 宿主磁盘紧张(其它项目卷占满 /var/lib/docker)，烤进去需数 GB 瞬时空间。两者已在应用市场
-# 作一键安装(catalog 的 hermes / openhuman，安装命令均已核实可用)。待磁盘释放后可加回本脚本。
+# === 重量级智能体预装（Hermes / OpenHuman），PREINSTALL_HEAVY=0 可跳过（磁盘/网络受限时） ===
+if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
+  echo "==== [preinstall] Hermes Agent (uv+py3.11 安装器, --skip-setup) ===="
+  ok=""
+  for i in 1 2 3; do
+    if curl -fsSL --connect-timeout 20 https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup; then
+      ok=1; break
+    fi
+    echo "[WARN] hermes install attempt $i failed"; sleep 3
+  done
+  [ -n "$ok" ] || { echo "Hermes 预装失败(3 次)。网络受限可 PREINSTALL_HEAVY=0 跳过后走应用市场安装"; exit 1; }
+  command -v hermes >/dev/null || export PATH="$HOME/.local/bin:$PATH"
+
+  echo "==== [preinstall] OpenHuman (AppImage 解包到 ~/Applications) ===="
+  OH_URL="https://github.com/tinyhumansai/openhuman/releases/download/v0.58.0/OpenHuman_0.58.0_amd64.AppImage"
+  oh_ok=""
+  for prefix in "" $GH_MIRRORS; do
+    if bash /usr/local/lib/chatop/gui-install.sh openhuman "${prefix}${OH_URL}" 'OpenHuman'; then
+      oh_ok=1; break
+    fi
+    echo "[WARN] openhuman install via [${prefix:-direct}] failed"
+  done
+  [ -n "$oh_ok" ] || { echo "OpenHuman 预装失败(直连+镜像)。可 PREINSTALL_HEAVY=0 跳过后走应用市场安装"; exit 1; }
+else
+  echo "==== [preinstall] PREINSTALL_HEAVY=0：跳过 Hermes/OpenHuman（可从应用市场一键安装） ===="
+fi
 
 echo "==== [preinstall] 已装命令自检 ===="
 ls -l "$HOME/.npm-global/bin/" | grep -E 'openclaw|codex|claude|tokscale' || true
 ls -l "$HOME/.local/bin/rtk" 2>/dev/null || echo "rtk MISSING"
+if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
+  command -v hermes >/dev/null && echo "hermes OK" || echo "hermes MISSING"
+  test -d "$HOME/Applications/openhuman/squashfs-root" && echo "openhuman OK" || echo "openhuman MISSING"
+fi
 echo "==== [preinstall] 完成 ===="

@@ -27,6 +27,16 @@
         reverse_proxy 127.0.0.1:8585
     }
 
+    # 工位本地大屏(station)：登录后可访问；SSE 长连接关闭缓冲直通
+    handle /dashboard* {
+        forward_auth 127.0.0.1:8686 {
+            uri /auth
+        }
+        reverse_proxy 127.0.0.1:8787 {
+            flush_interval -1
+        }
+    }
+
     # KasmVNC 桌面本体(含 websocket)：cookie 校验通过后，由网关统一注入
     # Basic 凭据给 KasmVNC，浏览器原生 basic-auth 弹窗永不出现。
     handle {
