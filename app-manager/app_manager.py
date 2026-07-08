@@ -65,7 +65,7 @@ __LOGOIMG__
 <div class="title">察元AI工舱</div><div class="sub">AI 云桌面 · 安全登录</div>
 __ERR__
 <form method="POST" action="/login" autocomplete="off">
-<label>用户名</label><input name="username" value="__USER__" autofocus autocomplete="username">
+<label>用户名</label><input name="username" value="" autofocus autocomplete="username">
 <label>密码</label><input name="password" type="password" autocomplete="current-password">
 <button type="submit">登 录</button></form>
 <div class="foot">Powered by 察元AI工舱</div>
@@ -76,8 +76,7 @@ def _login_html(error=False):
     img = ('<img class="logo" src="%s" alt="察元AI工舱">' % logo) if logo else ''
     return (_LOGIN_TMPL
             .replace("__LOGOIMG__", img)
-            .replace("__ERR__", '<div class="err">用户名或密码错误</div>' if error else '')
-            .replace("__USER__", AUTH_USER))
+            .replace("__ERR__", '<div class="err">用户名或密码错误</div>' if error else ''))
 
 def _cookie_ok(cookie_header):
     for part in (cookie_header or "").split(";"):
