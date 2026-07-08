@@ -79,6 +79,30 @@ def _captcha_svg(text):
     out.append('</svg>')
     return "".join(out)
 
+# === 登录 IP 软限流：进程内计数，达阈值后每次强制延时（不永久锁死，避免误伤） ===
+_LOGIN_FAILS = {}   # ip -> [fail_count, first_ts]
+RL_MAX = 5
+RL_WINDOW = 600     # 10 分钟窗口
+RL_DELAY = 2        # 达阈值后每次登录前 sleep 秒数
+
+def _ratelimit_delay(ip, now=None):
+    now = int(now if now is not None else time.time())
+    c = _LOGIN_FAILS.get(ip)
+    if not c or now - c[1] > RL_WINDOW:
+        return 0
+    return RL_DELAY if c[0] >= RL_MAX else 0
+
+def _ratelimit_record_fail(ip, now=None):
+    now = int(now if now is not None else time.time())
+    c = _LOGIN_FAILS.get(ip)
+    if not c or now - c[1] > RL_WINDOW:
+        _LOGIN_FAILS[ip] = [1, now]
+    else:
+        c[0] += 1
+
+def _ratelimit_reset(ip):
+    _LOGIN_FAILS.pop(ip, None)
+
 def _logo_data_uri():
     try:
         with open("/usr/share/kasmvnc/www/app-icons/chatop-logo.png", "rb") as f:

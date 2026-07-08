@@ -161,3 +161,21 @@ def test_captcha_svg_well_formed():
     ans, _ = am._captcha_new()
     svg = am._captcha_svg(ans)
     assert svg.startswith("<svg") and svg.rstrip().endswith("</svg>")
+
+def test_ratelimit_delays_after_threshold():
+    am._LOGIN_FAILS.clear()
+    ip = "1.2.3.4"
+    for _ in range(am.RL_MAX):
+        assert am._ratelimit_delay(ip, now=1000) == 0
+        am._ratelimit_record_fail(ip, now=1000)
+    assert am._ratelimit_delay(ip, now=1000) == am.RL_DELAY   # 达阈值 → 延时
+    am._ratelimit_reset(ip)
+    assert am._ratelimit_delay(ip, now=1000) == 0             # 成功登录清零
+
+def test_ratelimit_window_expires():
+    am._LOGIN_FAILS.clear()
+    ip = "5.6.7.8"
+    for _ in range(am.RL_MAX):
+        am._ratelimit_record_fail(ip, now=1000)
+    assert am._ratelimit_delay(ip, now=1000) == am.RL_DELAY
+    assert am._ratelimit_delay(ip, now=1000 + am.RL_WINDOW + 1) == 0  # 窗口过期不再延时
