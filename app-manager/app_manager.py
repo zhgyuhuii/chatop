@@ -159,6 +159,27 @@ def _cookie_ok(cookie_header):
             return True
     return False
 
+def _get_cookie(cookie_header, name):
+    for part in (cookie_header or "").split(";"):
+        k, _, v = part.strip().partition("=")
+        if k == name:
+            return v
+    return ""
+
+def _follow_qr_data_uri():
+    try:
+        with open("/usr/share/kasmvnc/www/app-icons/follow-qr.jpg", "rb") as f:
+            return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
+    except OSError:
+        return ""
+
+def _brand_footer_html(qr_uri):
+    qr = ('<img class="qr" src="%s" alt="关注我们二维码">' % qr_uri) if qr_uri else ''
+    return ('<div class="brandfoot">%s'
+            '<div class="bf_txt"><div class="bf_follow">关注我们</div>'
+            '<a class="bf_link" href="https://aidooo.com" target="_blank" rel="noopener">aidooo.com</a>'
+            '<div class="bf_cr">版权所有 © 北京智灵鸟科技中心</div></div></div>') % qr
+
 def _safe_path(name):
     """把前端传来的文件名收敛到 FILES_DIR 内的单个文件，杜绝 ../ 越权。"""
     name = os.path.basename((name or "").strip())
