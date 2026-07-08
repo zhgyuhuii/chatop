@@ -155,7 +155,6 @@ __ERR__
 <img class="capimg" src="/captcha" alt="验证码" title="点击刷新" onclick="this.src='/captcha?'+Date.now()"></div>
 <button type="submit">登 录</button></form>
 __FOOT__
-<div class="foot">Powered by 察元AI工舱</div>
 </div></body></html>"""
 
 def _login_html(err_code=""):
