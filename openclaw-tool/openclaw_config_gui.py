@@ -1424,12 +1424,152 @@ _ZH_FIELD = {
 }
 
 
+# 逐词中文（覆盖 schema 全部 1565 字段键：拆 camelCase 后仅 ~444 高频词根）。
+# 二级/深层表单据此拼出中文，未命中的词保留英文原样，尽量多译。
+_ZH_WORD = {
+    "allow": "允许", "allowed": "允许的", "allowlist": "白名单", "deny": "拒绝", "enabled": "启用",
+    "enable": "启用", "disable": "禁用", "disabled": "禁用", "override": "覆盖", "overrides": "覆盖",
+    "max": "最大", "min": "最小", "limit": "上限", "limits": "上限", "cap": "上限", "threshold": "阈值",
+    "ms": "毫秒", "mb": "MB", "bytes": "字节", "seconds": "秒", "minutes": "分钟", "hours": "小时",
+    "hour": "小时", "days": "天", "age": "时长", "ttl": "存活期", "delay": "延迟", "interval": "间隔",
+    "timeout": "超时", "timeouts": "超时", "cooldown": "冷却", "debounce": "防抖", "backoff": "退避",
+    "jitter": "抖动", "grace": "宽限", "retry": "重试", "retries": "重试", "attempts": "尝试",
+    "model": "模型", "models": "模型", "prompt": "提示词", "mode": "模式", "id": "ID", "ids": "ID",
+    "agent": "智能体", "agents": "智能体", "subagent": "子智能体", "chars": "字符", "policy": "策略",
+    "group": "群组", "groups": "群组", "config": "配置", "name": "名称", "names": "名称", "from": "来源",
+    "access": "访问", "hooks": "钩子", "injection": "注入", "llm": "LLM", "conversation": "会话",
+    "url": "地址", "default": "默认", "defaults": "默认", "history": "历史", "tool": "工具", "tools": "工具",
+    "dm": "私信", "dms": "私信", "path": "路径", "paths": "路径", "mention": "提及", "mentions": "提及",
+    "also": "同时", "chunk": "分块", "text": "文本", "key": "密钥", "streaming": "流式", "context": "上下文",
+    "require": "要求", "requires": "要求", "required": "必填", "prefix": "前缀", "session": "会话",
+    "sessions": "会话", "block": "拦截", "webhook": "Webhook", "system": "系统", "idle": "空闲",
+    "provider": "提供商", "providers": "提供商", "to": "至", "auto": "自动", "file": "文件", "files": "文件",
+    "command": "命令", "commands": "命令", "account": "账号", "accounts": "账号", "channel": "通道",
+    "channels": "通道", "token": "令牌", "tokens": "令牌", "skills": "技能", "reaction": "表情回应",
+    "reactions": "表情回应", "base": "基础", "media": "媒体", "dangerously": "危险地", "by": "按",
+    "api": "API", "reply": "回复", "replies": "回复", "bot": "机器人", "bots": "机器人", "window": "窗口",
+    "spawn": "派生", "sender": "发送者", "response": "响应", "profile": "配置档", "profiles": "配置档",
+    "coalesce": "合并", "show": "显示", "voice": "语音", "markdown": "Markdown", "search": "搜索",
+    "per": "每", "error": "错误", "memory": "记忆", "network": "网络", "host": "主机", "hosts": "主机",
+    "type": "类型", "progress": "进度", "tables": "表格", "auth": "认证", "visibility": "可见性",
+    "input": "输入", "headers": "请求头", "port": "端口", "user": "用户", "users": "用户", "native": "原生",
+    "capabilities": "能力", "filter": "过滤", "image": "图片", "scope": "范围", "actions": "动作",
+    "action": "动作", "proxy": "代理", "message": "消息", "messages": "消息", "secret": "密钥",
+    "writes": "写入", "write": "写入", "output": "输出", "direct": "直接", "chat": "聊天", "send": "发送",
+    "include": "包含", "heartbeat": "心跳", "target": "目标", "targets": "目标", "indicator": "指示器",
+    "health": "健康", "format": "格式", "formats": "格式", "ack": "确认", "use": "使用", "service": "服务",
+    "on": "开启", "node": "节点", "workspace": "工作区", "label": "标签", "labels": "标签", "events": "事件",
+    "password": "密码", "run": "运行", "cache": "缓存", "loop": "循环", "language": "语言", "topic": "话题",
+    "topics": "话题", "matching": "匹配", "match": "匹配", "monitor": "监控", "env": "环境变量",
+    "patterns": "模式", "pattern": "模式", "start": "启动", "private": "私有", "exec": "执行",
+    "execution": "执行", "read": "读取", "info": "信息", "only": "仅", "args": "参数", "arg": "参数",
+    "params": "参数", "tls": "TLS", "cert": "证书", "certificate": "证书", "root": "根", "roots": "根",
+    "lines": "行", "line": "行", "protection": "保护", "notifications": "通知", "notify": "通知",
+    "ok": "确定", "alerts": "告警", "local": "本地", "no": "否", "skip": "跳过", "thinking": "思考",
+    "web": "网页", "poll": "轮询", "audio": "音频", "app": "应用", "client": "客户端", "cdp": "CDP",
+    "remote": "远程", "server": "服务器", "fallback": "回退", "typing": "输入中", "attachments": "附件",
+    "attachment": "附件", "render": "渲染", "at": "@", "level": "级别", "request": "请求", "ca": "CA",
+    "insecure": "不安全", "verify": "验证", "verification": "验证", "reasoning": "推理", "source": "来源",
+    "sources": "来源", "size": "大小", "approvals": "审批", "approval": "审批", "approvers": "审批人",
+    "ignore": "忽略", "http": "HTTP", "ingest": "摄入", "style": "样式", "dir": "目录", "dirs": "目录",
+    "extra": "额外", "supports": "支持", "after": "之后", "bootstrap": "引导", "compaction": "压缩",
+    "raw": "原始", "break": "中断", "identity": "身份", "ping": "Ping", "pong": "Pong", "bindings": "绑定",
+    "binds": "绑定", "bind": "绑定", "preview": "预览", "last": "最近", "recent": "最近", "cli": "CLI",
+    "update": "更新", "concurrency": "并发", "concurrent": "并发", "acp": "ACP", "passphrase": "口令",
+    "post": "发布", "preference": "偏好", "prefs": "偏好", "preferred": "首选", "prefer": "首选",
+    "container": "容器", "trusted": "受信任", "deepgram": "Deepgram", "gateway": "网关",
+    "transport": "传输", "workflow": "工作流", "data": "数据", "batch": "批量", "region": "区域",
+    "strict": "严格", "startup": "启动", "transcript": "转写", "turns": "轮次", "turn": "轮次",
+    "description": "描述", "tts": "TTS", "summary": "摘要", "emoji": "表情", "safe": "安全",
+    "options": "选项", "detect": "检测", "punctuate": "标点", "smart": "智能", "rules": "规则",
+    "guild": "服务器", "commentary": "评注", "content": "内容", "owner": "所有者", "browser": "浏览器",
+    "ready": "就绪", "sandbox": "沙箱", "range": "范围", "display": "显示", "result": "结果",
+    "results": "结果", "timezone": "时区", "query": "查询", "watch": "监视", "entries": "条目",
+    "join": "加入", "known": "已知", "vnc": "VNC", "persona": "人设", "personas": "人设", "accent": "口音",
+    "length": "长度", "echo": "回显", "stall": "停滞", "reset": "重置", "initial": "初始", "roles": "角色",
+    "presence": "在线状态", "other": "其它", "speaker": "说话人", "follow": "跟随", "activity": "活动",
+    "edit": "编辑", "receipts": "回执", "callback": "回调", "upload": "上传", "uploads": "上传",
+    "preflight": "预检", "version": "版本", "flags": "标志", "endpoint": "端点", "sample": "采样",
+    "flush": "刷新", "logging": "日志", "color": "颜色", "cleanup": "清理", "assistant": "助手",
+    "backend": "后端", "store": "存储", "total": "总计", "experimental": "实验性", "sync": "同步",
+    "keep": "保留", "soft": "软", "instructions": "指令", "settings": "设置", "suppress": "抑制",
+    "external": "外部", "inbound": "入站", "code": "代码", "security": "安全", "inline": "内联",
+    "exit": "退出", "links": "链接", "template": "模板", "queue": "队列", "status": "状态", "wake": "唤醒",
+    "reconnect": "重连", "connect": "连接", "connection": "连接", "pins": "固定", "member": "成员",
+    "consult": "咨询", "public": "公开", "discovery": "发现", "check": "检查", "headless": "无头",
+    "mcp": "MCP", "ui": "界面", "install": "安装", "open": "开放", "visible": "可见", "detail": "详情",
+    "generation": "生成", "pdf": "PDF", "silent": "静默", "get": "获取", "when": "当", "ratio": "比例",
+    "qmd": "QMD", "vector": "向量", "delta": "增量", "weight": "权重", "hard": "硬", "custom": "自定义",
+    "preserve": "保留", "index": "索引", "active": "激活", "end": "结束", "archive": "归档", "dns": "DNS",
+    "control": "控制", "prune": "清理", "scene": "场景", "pacing": "节奏", "constraints": "约束",
+    "normalization": "归一化", "seed": "种子", "bin": "二进制", "positional": "位置", "circuit": "熔断",
+    "breaker": "断路", "cross": "跨", "redirects": "重定向", "citations": "引用", "body": "正文",
+    "resolved": "已解析", "resolve": "解析", "clawhub": "ClawHub", "clawpack": "ClawPack",
+    "sticker": "贴纸", "permissions": "权限", "threads": "话题", "thread": "话题", "inherit": "继承",
+    "parent": "父级", "components": "组件", "slash": "斜杠", "ephemeral": "临时", "barge": "打断",
+    "audience": "受众", "participant": "参与者", "lookback": "回溯", "register": "注册", "device": "设备",
+    "upgrade": "升级", "unfurl": "展开", "sid": "SID", "signature": "签名", "create": "创建",
+    "forum": "论坛", "ship": "发送", "accept": "接受", "invites": "邀请", "embed": "嵌入", "in": "入",
+    "ssh": "SSH", "sessionize": "会话化", "count": "数量",
+    # 补充：清理常见未命中词
+    "runtime": "运行时", "failure": "失败", "failures": "失败", "meta": "元数据", "vars": "变量",
+    "wizard": "向导", "diagnostics": "诊断", "diagnostic": "诊断", "otel": "OpenTelemetry",
+    "protocol": "协议", "traces": "追踪", "trace": "追踪", "metrics": "指标", "metric": "指标",
+    "logs": "日志", "log": "日志", "exporter": "导出器", "export": "导出", "redact": "脱敏",
+    "sensitive": "敏感", "chunked": "分块", "chunks": "分块", "telemetry": "遥测", "span": "跨度",
+    "sampling": "采样", "propagation": "传播", "stdout": "标准输出", "stderr": "标准错误",
+    "enable": "启用", "disabled": "禁用", "encoding": "编码", "decode": "解码", "encode": "编码",
+    "retryable": "可重试", "backfill": "回填", "throttle": "限流", "rate": "速率", "burst": "突发",
+    "concurrency": "并发", "parallelism": "并行度", "worker": "工作线程", "workers": "工作线程",
+    "shard": "分片", "partition": "分区", "offset": "偏移", "cursor": "游标", "page": "页",
+    "pagesize": "页大小", "chunking": "分块", "dedup": "去重", "normalize": "归一化",
+    "application": "应用", "encryption": "加密", "encrypt": "加密", "decrypt": "解密",
+    "stickers": "贴纸", "polls": "投票", "poll": "轮询", "moderation": "审核", "realtime": "实时",
+    "intents": "意图", "intent": "意图", "presence": "在线状态", "webhooks": "Webhook",
+    "reply": "回复", "forward": "转发", "forwards": "转发", "pinned": "置顶", "pin": "固定",
+    "quote": "引用", "quotes": "引用", "caption": "标题", "captions": "标题", "album": "相册",
+    "location": "位置", "contact": "联系人", "contacts": "联系人", "poll": "投票", "dice": "骰子",
+    "animation": "动画", "video": "视频", "photo": "图片", "document": "文档", "audio": "音频",
+    "voicenote": "语音", "silent": "静默", "notification": "通知", "verbose": "详细",
+}
+
+
+def _split_words(key):
+    """把 camelCase / snake_case / 数字 拆成词块，供逐词翻译。"""
+    out, cur = [], ""
+    for ch in key:
+        if ch in "_-. ":
+            if cur:
+                out.append(cur); cur = ""
+            continue
+        if ch.isupper() and cur and not cur[-1].isupper():
+            out.append(cur); cur = ch
+        elif ch.isdigit() != (cur[-1:].isdigit() if cur else ch.isdigit()) and cur:
+            out.append(cur); cur = ch
+        else:
+            cur += ch
+    if cur:
+        out.append(cur)
+    return out
+
+
 def _zh_label(key, sub):
-    """双语标签「中文 (englishKey)」：中文优先取 _ZH_FIELD，回退 schema title，再回退 key。"""
-    zh = _ZH_FIELD.get(key)
-    if not zh and isinstance(sub, dict):
-        zh = sub.get("title")
-    return "%s (%s)" % (zh or key, key)
+    """双语标签「中文 (englishKey)」：整键命中 _ZH_FIELD 优先；否则逐词翻译拼中文；
+    全部未命中才回退 schema title / key。未译的词保留英文原样，尽量多译。"""
+    exact = _ZH_FIELD.get(key)
+    if exact:
+        return "%s (%s)" % (exact, key)
+    parts, hit = [], False
+    for t in _split_words(key):
+        w = _ZH_WORD.get(t.lower())
+        if w:
+            parts.append(w); hit = True
+        else:
+            parts.append(t)
+    if hit:
+        return "%s (%s)" % ("".join(parts), key)
+    title = sub.get("title") if isinstance(sub, dict) else None
+    return "%s (%s)" % (title or key, key)
 
 
 def render_schema_fields(parent, node, prefix, config, vars_store, skip=None, depth=0):
