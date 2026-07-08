@@ -630,6 +630,11 @@ const UI = {
                 .finally(() => { window.location.href = '/login'; });
         });
 
+        // chatop: 关于我们 → 新窗口打开 aidooo.com
+        UI.addClickHandle('chatop_about_button', () => {
+            window.open('https://aidooo.com', '_blank', 'noopener');
+        });
+
         // 权限：按后端 config 显隐上传/下载按钮。
         UI.refreshFilesPermission();
     },

@@ -1034,6 +1034,30 @@ body.chatop-theme-light .chatop_brand_name {
   font-size: 1.3em;
   margin-top: 28px;
 }
+.chatop_transition_footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 44px;
+  opacity: 0.9;
+}
+.chatop_transition_footer .cf_qr {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+}
+.chatop_transition_footer .cf_txt {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+.chatop_transition_footer .cf_follow { font-size: 0.95em; font-weight: 600; color: #cdd9ea; }
+.chatop_transition_footer .cf_link { font-size: 0.9em; color: #0084C2; text-decoration: none; }
+.chatop_transition_footer .cf_cr { font-size: 0.78em; color: #5f7399; }
 
 /* Main container */
 #noVNC_container {
