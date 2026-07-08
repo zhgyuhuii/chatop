@@ -145,7 +145,7 @@ button:hover{filter:brightness(1.08)}
 .brandfoot .bf_cr{font-size:11px;color:#5f7399}
 </style></head><body><div class="card">
 __LOGOIMG__
-<div class="title">察元AI工舱</div><div class="sub">AI 云桌面 · 安全登录</div>
+<div class="title">察元AI工舱</div><div class="sub">智能体驱动的 AI 云桌面</div>
 __ERR__
 <form method="POST" action="/login" autocomplete="off">
 <label>用户名</label><input name="username" value="" autofocus autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
