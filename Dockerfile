@@ -273,6 +273,7 @@ RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FI
 # === 注入定制前端 dist（放最后：前端迭代只重跑这层）+ 品牌图标/splash 覆盖 ===
 COPY --from=web --chown=root:root /src/dist/ /usr/share/kasmvnc/www/
 COPY assets/logo-sm.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
+COPY assets/follow-qr.jpg /usr/share/kasmvnc/www/app-icons/follow-qr.jpg
 COPY app-manager/apps-icon.svg /usr/share/kasmvnc/www/app-icons/apps.svg
 COPY assets/background-splash.jpg /usr/share/kasmvnc/www/app/images/splash.jpg
 
