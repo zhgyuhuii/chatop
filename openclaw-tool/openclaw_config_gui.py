@@ -628,15 +628,18 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
 # 通道扩展插件（openclaw 2026.6.10：telegram/discord/slack/whatsapp 为内置，其余作扩展提供，
 # 包名 @openclaw/<key>，均已在 npm 验证存在）。telegram 无独立包(核心内置)故不列。
 CHANNEL_PLUGINS = [
-    ("@openclaw/feishu", "飞书 Feishu"),
-    ("@openclaw/mattermost", "Mattermost"),
-    ("@openclaw/msteams", "Microsoft Teams"),
-    ("@openclaw/discord", "Discord"),
+    # —— 国内通道置顶 ——（微信 openclaw-weixin 与腾讯元宝 yuanbao 为内置 stock 扩展、无需 npm 安装，
+    #   见「更多」通道展开与 openclaw channels add；飞书/QQ 走插件安装）
+    ("@openclaw/feishu", "飞书 Feishu（国内）"),
+    ("@openclaw/qqbot", "QQ 机器人（国内）"),
+    # —— 国际 ——
     ("@openclaw/slack", "Slack"),
+    ("@openclaw/discord", "Discord"),
     ("@openclaw/whatsapp", "WhatsApp"),
+    ("@openclaw/msteams", "Microsoft Teams"),
+    ("@openclaw/mattermost", "Mattermost"),
     ("@openclaw/line", "LINE"),
     ("@openclaw/matrix", "Matrix"),
-    ("@openclaw/qqbot", "QQ 机器人"),
     ("@openclaw/signal", "Signal"),
     ("@openclaw/zalo", "Zalo"),
     ("@openclaw/nostr", "Nostr"),
@@ -649,6 +652,9 @@ CHANNEL_PLUGINS = [
     ("@openclaw/tlon", "Tlon"),
     ("@openclaw/irc", "IRC"),
 ]
+
+# 国内通道（在「更多」通道展开时排到最前）
+CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot")
 
 # 安装前打开的官网（按官网要求：如需登录可先在此登录）
 OPENCLAW_DOCS_URL = "https://docs.openclaw.ai"
@@ -829,6 +835,24 @@ MODEL_PROVIDERS = [
     ("venice", "Venice AI（隐私优先）", "api_key", "VENICE_API_KEY", "venice/model-name", "https://docs.openclaw.ai/providers/venice"),
     ("opencode", "OpenCode（Zen + Go）", "oauth", None, "opencode/claude-opus-4-6", "https://openclaw.ai"),
     ("github-copilot", "GitHub Copilot", "oauth", None, "github-copilot/model", "https://github.com/settings/copilot"),
+    # === 补充：openclaw 2026.6.10 官方支持、原列表缺失（env 变量取自包内 provider 扩展）===
+    # 国内 / 区域
+    ("deepseek", "DeepSeek 深度求索", "api_key", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat", "https://platform.deepseek.com/api_keys"),
+    ("volcengine", "火山引擎 / 豆包 Doubao", "api_key", "VOLCANO_ENGINE_API_KEY", "volcengine/doubao-seed-1-8-251228", "https://console.volcengine.com/ark"),
+    ("alibaba", "阿里云百炼 / 通义千问（DashScope）", "api_key", "DASHSCOPE_API_KEY", "alibaba/qwen-max", "https://bailian.console.aliyun.com/"),
+    ("tencent-tokenhub", "腾讯云 / 混元 Hunyuan", "api_key", "TOKENHUB_API_KEY", "tencent-tokenhub/hunyuan-turbo", "https://console.cloud.tencent.com/hunyuan"),
+    ("byteplus", "BytePlus ModelArk", "api_key", "BYTEPLUS_API_KEY", "byteplus/seed-1-8-251228", "https://console.byteplus.com/"),
+    # 国际主流
+    ("xai", "xAI Grok", "api_key", "XAI_API_KEY", "xai/grok-4", "https://console.x.ai/"),
+    ("cohere", "Cohere", "api_key", "COHERE_API_KEY", "cohere/command-a-03-2025", "https://dashboard.cohere.com/api-keys"),
+    ("fireworks", "Fireworks AI", "api_key", "FIREWORKS_API_KEY", "fireworks/accounts/fireworks/models/kimi-k2-instruct", "https://fireworks.ai/account/api-keys"),
+    ("novita", "Novita AI", "api_key", "NOVITA_API_KEY", "novita/deepseek/deepseek-v3-0324", "https://novita.ai/settings/key-management"),
+    ("synthetic", "Synthetic", "api_key", "SYNTHETIC_API_KEY", "synthetic/model-name", "https://synthetic.new/"),
+    ("cerebras", "Cerebras（超快推理）", "api_key", "CEREBRAS_API_KEY", "cerebras/llama-3.3-70b", "https://cloud.cerebras.ai/"),
+    ("microsoft-foundry", "Microsoft Azure AI Foundry", "api_key", "AZURE_OPENAI_API_KEY", "microsoft-foundry/gpt-4o", "https://ai.azure.com/"),
+    # 本地
+    ("lmstudio", "LM Studio（本地）", "none", None, "lmstudio/model-name", "https://lmstudio.ai/"),
+    ("sglang", "SGLang（本地推理）", "none", None, "sglang/model-name", "https://docs.openclaw.ai/providers/sglang"),
     # === 自定义厂商（Cherry Studio 风格：支持用户添加任意厂商）===
     ("_custom", "➕ 自定义厂商（Custom Provider）", "custom", None, "custom/model-name", None),
 ]
@@ -1379,6 +1403,7 @@ CHANNEL_APPLY_URLS = {
     "discord": ("Discord 开发者门户建应用取 Token", "https://discord.com/developers/applications"),
     "slack": ("Slack 应用管理(取 Bot/App Token)", "https://api.slack.com/apps"),
     "feishu": ("飞书开放平台建应用取 App ID/Secret", "https://open.feishu.cn/app"),
+    "openclaw-weixin": ("微信：openclaw 内置通道，按向导扫码/配置(个人微信)", "https://docs.openclaw.ai/channels/wechat"),
     "line": ("LINE Developers Console(Channel Token/Secret)", "https://developers.line.biz/console/"),
     "matrix": ("Matrix：注册账号取 Access Token", "https://matrix.org/"),
     "mattermost": ("Mattermost 系统控制台建 Bot 取 Token", "https://developers.mattermost.com/integrate/reference/bot-accounts/"),
@@ -1581,7 +1606,12 @@ def render_schema_fields(parent, node, prefix, config, vars_store, skip=None, de
     if not isinstance(props, dict):
         return 0
     count = 0
-    for key, sub in props.items():
+    items = list(props.items())
+    if prefix == "channels":  # 国内通道(飞书/微信/QQ)排到最前
+        cn = [kv for kv in items if kv[0] in CHINA_CHANNELS]
+        cn.sort(key=lambda kv: CHINA_CHANNELS.index(kv[0]))
+        items = cn + [kv for kv in items if kv[0] not in CHINA_CHANNELS]
+    for key, sub in items:
         if key.startswith("$") or not isinstance(sub, dict):
             continue
         path = f"{prefix}.{key}" if prefix else key
