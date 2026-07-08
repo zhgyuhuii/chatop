@@ -625,10 +625,29 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
 
 
 # 需通过插件安装的通道（npm 包名）
+# 通道扩展插件（openclaw 2026.6.10：telegram/discord/slack/whatsapp 为内置，其余作扩展提供，
+# 包名 @openclaw/<key>，均已在 npm 验证存在）。telegram 无独立包(核心内置)故不列。
 CHANNEL_PLUGINS = [
     ("@openclaw/feishu", "飞书 Feishu"),
     ("@openclaw/mattermost", "Mattermost"),
     ("@openclaw/msteams", "Microsoft Teams"),
+    ("@openclaw/discord", "Discord"),
+    ("@openclaw/slack", "Slack"),
+    ("@openclaw/whatsapp", "WhatsApp"),
+    ("@openclaw/line", "LINE"),
+    ("@openclaw/matrix", "Matrix"),
+    ("@openclaw/qqbot", "QQ 机器人"),
+    ("@openclaw/signal", "Signal"),
+    ("@openclaw/zalo", "Zalo"),
+    ("@openclaw/nostr", "Nostr"),
+    ("@openclaw/twitch", "Twitch"),
+    ("@openclaw/sms", "短信 SMS"),
+    ("@openclaw/googlechat", "Google Chat"),
+    ("@openclaw/nextcloud-talk", "Nextcloud Talk"),
+    ("@openclaw/synology-chat", "Synology Chat"),
+    ("@openclaw/clickclack", "ClickClack"),
+    ("@openclaw/tlon", "Tlon"),
+    ("@openclaw/irc", "IRC"),
 ]
 
 # 安装前打开的官网（按官网要求：如需登录可先在此登录）
@@ -1379,6 +1398,40 @@ CHANNEL_APPLY_URLS = {
 }
 
 
+# 常见配置键的中文名（「更多」双语标签用；未命中回退 schema title/key）
+_ZH_FIELD = {
+    "enabled": "启用", "disabled": "禁用", "mode": "模式", "type": "类型", "name": "名称",
+    "port": "端口", "host": "主机", "bind": "绑定", "path": "路径", "url": "地址", "profile": "配置档",
+    "token": "令牌", "botToken": "机器人令牌", "userToken": "用户令牌", "appToken": "应用令牌",
+    "tokenFile": "令牌文件", "apiKey": "API 密钥", "apiPassword": "API 密码", "apiPasswordFile": "API 密码文件",
+    "appId": "应用 ID", "appSecret": "应用密钥", "appPassword": "应用密码", "clientSecret": "客户端密钥",
+    "clientSecretFile": "客户端密钥文件", "secret": "密钥", "password": "密码", "passwordFile": "密码文件",
+    "signingSecret": "签名密钥", "encryptKey": "加密密钥", "verificationToken": "验证令牌",
+    "accessToken": "访问令牌", "channelAccessToken": "频道访问令牌", "channelSecret": "频道密钥",
+    "secretFile": "密钥文件", "privateKey": "私钥", "botSecret": "机器人密钥", "botSecretFile": "机器人密钥文件",
+    "authToken": "认证令牌", "managedIdentityClientId": "托管标识客户端 ID",
+    "webhook": "Webhook", "webhookUrl": "Webhook 地址", "webhookPath": "Webhook 路径",
+    "webhookHost": "Webhook 主机", "webhookPort": "Webhook 端口", "webhookSecret": "Webhook 密钥",
+    "webhookCertPath": "Webhook 证书路径", "webhookPublicUrl": "Webhook 公网地址", "publicWebhookUrl": "公网 Webhook 地址",
+    "dmPolicy": "私信策略", "groupPolicy": "群组策略", "allowFrom": "允许来源", "allowlist": "白名单",
+    "model": "模型", "primary": "主模型", "fast": "快速模型", "provider": "提供商", "workspace": "工作区",
+    "timeout": "超时", "timeoutMs": "超时(毫秒)", "auth": "认证", "reload": "热重载", "tailscale": "Tailscale",
+    "tls": "TLS", "http": "HTTP", "controlUi": "控制界面", "trustedProxies": "受信任代理",
+    "customBindHost": "自定义绑定主机", "nodes": "节点", "remote": "远程", "push": "推送",
+    "search": "搜索", "web": "网页", "defaults": "默认值", "pairing": "配对", "channels": "通道",
+    "gateway": "网关", "agents": "智能体", "tools": "工具", "session": "会话", "commands": "命令",
+    "restart": "重启", "config": "配置", "text": "文本", "native": "原生", "logging": "日志",
+}
+
+
+def _zh_label(key, sub):
+    """双语标签「中文 (englishKey)」：中文优先取 _ZH_FIELD，回退 schema title，再回退 key。"""
+    zh = _ZH_FIELD.get(key)
+    if not zh and isinstance(sub, dict):
+        zh = sub.get("title")
+    return "%s (%s)" % (zh or key, key)
+
+
 def render_schema_fields(parent, node, prefix, config, vars_store, skip=None, depth=0):
     """递归渲染 node.properties 下全部字段。bool→复选框, enum→下拉, number→输入框,
     object→子框递归, array→JSON 输入框。变量注册到 vars_store[path]=(var, kind)。
@@ -1395,20 +1448,38 @@ def render_schema_fields(parent, node, prefix, config, vars_store, skip=None, de
         if path in skip or path in vars_store:
             continue
         st = _schema_type(sub)
-        title = sub.get("title") or key
-        label = "%s (%s)" % (title, key)
+        label = _zh_label(key, sub)
         cur = _cfg_get_path(config, path)
         if st == "object" and isinstance(sub.get("properties"), dict):
-            box = ttk.LabelFrame(parent, text=label)
-            box.pack(fill=tk.X, padx=(depth * 8, 0), pady=2, anchor="w")
-            # 通道申请地址：渲染 channels.<名> 时置顶「申请/文档 →」可点链接
+            # 懒展开折叠块：点击标题才渲染子级。关键——避免一次性绘制上千控件触发
+            # X Server BadAlloc(X_CreatePixmap) 导致进程崩溃、窗口消失。
+            container = _gui_frame(parent)
+            container.pack(fill=tk.X, anchor="w", pady=1, padx=(depth * 8, 0))
+            head = _gui_frame(container)
+            head.pack(fill=tk.X, anchor="w")
+            body = _gui_frame(container)  # 子级容器：父为 container，pack 后恒在 head 之后
+            tbtn = _gui_button(head, "▸ " + label)
+            tbtn.pack(side=tk.LEFT)
             if prefix == "channels" and key in CHANNEL_APPLY_URLS:
                 desc, url = CHANNEL_APPLY_URLS[key]
-                lk = _gui_frame(box)
-                lk.pack(fill=tk.X, anchor="w", pady=(0, 2))
-                _gui_label(lk, text="申请地址：" + desc + "  ").pack(side=tk.LEFT)
-                _gui_link(lk, "打开 →", (lambda u=url: open_url(u))).pack(side=tk.LEFT)
-            count += render_schema_fields(box, sub, path, config, vars_store, skip, depth + 1)
+                _gui_label(head, text="  申请：" + desc + " ").pack(side=tk.LEFT)
+                _gui_link(head, "打开 →", (lambda u=url: open_url(u))).pack(side=tk.LEFT)
+            st_o = {"open": False, "done": False}
+
+            def _toggle(nd=sub, p=path, bd=body, s=st_o, bt=tbtn, lb2=label):
+                if not s["done"]:
+                    render_schema_fields(bd, nd, p, config, vars_store, skip, depth + 1)
+                    s["done"] = True
+                s["open"] = not s["open"]
+                if s["open"]:
+                    bd.pack(fill=tk.X, anchor="w")
+                    bt.configure(text="▾ " + lb2)
+                else:
+                    bd.pack_forget()
+                    bt.configure(text="▸ " + lb2)
+
+            tbtn.configure(command=_toggle)
+            count += 1
             continue
         row = _gui_frame(parent)
         row.pack(fill=tk.X, anchor="w", pady=1)
@@ -1790,7 +1861,6 @@ class OpenClawConfigApp:
             ok, msg = run_in_system_terminal(cmd)
             if not ok:
                 messagebox.showerror(name, msg)
-        _gui_button(cmd_row, text="启动 Cursor 智能助手", command=lambda: _run_cmd_in_terminal("cursor-agent", "Cursor 智能助手")).pack(side=tk.LEFT, padx=(0, 6))
         _gui_button(cmd_row, text="查看日志", command=lambda: _run_cmd_in_terminal("openclaw logs --follow", "查看日志")).pack(side=tk.LEFT, padx=(0, 6))
         _gui_button(cmd_row, text="自动诊断 (doctor --fix)", command=lambda: _run_cmd_in_terminal("openclaw doctor --fix", "OpenClaw 自动诊断")).pack(side=tk.LEFT, padx=(0, 6))
         _gui_button(cmd_row, text="诊断并修复 (doctor --repair)", command=lambda: _run_cmd_in_terminal("openclaw doctor --repair", "OpenClaw 诊断并修复")).pack(side=tk.LEFT, padx=4)
@@ -2148,8 +2218,9 @@ class OpenClawConfigApp:
         dlg.title("添加自定义厂商")
         dlg.transient(self.root)
         dlg.grab_set()
-        dlg.geometry("420x220")
-        dlg.resizable(True, False)
+        dlg.geometry("460x320")   # 原 420x220 过矮，底部「添加/取消」按钮被裁看不见
+        dlg.minsize(420, 300)
+        dlg.resizable(True, True)
         frame = ttk.Frame(dlg, padding=12)
         frame.pack(fill=tk.BOTH, expand=True)
         ttk.Label(frame, text="厂商 Key（如 myprovider、litellm，用于 provider/model 格式）:").pack(anchor=tk.W)
