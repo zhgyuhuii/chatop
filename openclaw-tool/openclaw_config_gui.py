@@ -2727,18 +2727,20 @@ class OpenClawConfigApp:
         self._channel_plugin_vars = []
         self._channel_plugin_widgets = []  # (pkg, name, var, cb_or_label)
         installed_keys = self._channel_plugin_installed_keys()
-        for pkg, name in CHANNEL_PLUGINS:
+        PLUGIN_COLS = 4  # 横向排列，每行 4 个，满即换行，省纵向空间
+        for i, (pkg, name) in enumerate(CHANNEL_PLUGINS):
             key = pkg.split("/")[-1]
             is_installed = key in installed_keys
             var = tk.BooleanVar(value=False)
             self._channel_plugin_vars.append(var)
+            gp = dict(row=i // PLUGIN_COLS, column=i % PLUGIN_COLS, sticky=tk.W, padx=6, pady=1)
             if is_installed:
                 lb = _gui_label(plugin_frame, text=f"{name} (已安装)")
-                lb.pack(anchor=tk.W)
+                lb.grid(**gp)
                 self._channel_plugin_widgets.append((pkg, name, var, lb))
             else:
                 cb = _gui_checkbox(plugin_frame, text=name, variable=var)
-                cb.pack(anchor=tk.W)
+                cb.grid(**gp)
                 self._channel_plugin_widgets.append((pkg, name, var, cb))
         btn_plugin = _gui_frame(f)
         btn_plugin.grid(row=r, column=0, columnspan=4, sticky=tk.W, pady=6); r += 1
@@ -2762,18 +2764,20 @@ class OpenClawConfigApp:
         self._channel_plugin_vars = []
         self._channel_plugin_widgets = []
         installed_keys = self._channel_plugin_installed_keys()
-        for pkg, name in CHANNEL_PLUGINS:
+        PLUGIN_COLS = 4  # 横向排列，每行 4 个，满即换行
+        for i, (pkg, name) in enumerate(CHANNEL_PLUGINS):
             key = pkg.split("/")[-1]
             is_installed = key in installed_keys
             var = tk.BooleanVar(value=False)
             self._channel_plugin_vars.append(var)
+            gp = dict(row=i // PLUGIN_COLS, column=i % PLUGIN_COLS, sticky=tk.W, padx=6, pady=1)
             if is_installed:
                 lb = _gui_label(self._channel_plugin_frame, text=f"{name} (已安装)")
-                lb.pack(anchor=tk.W)
+                lb.grid(**gp)
                 self._channel_plugin_widgets.append((pkg, name, var, lb))
             else:
                 cb = _gui_checkbox(self._channel_plugin_frame, text=name, variable=var)
-                cb.pack(anchor=tk.W)
+                cb.grid(**gp)
                 self._channel_plugin_widgets.append((pkg, name, var, cb))
 
     def _add_tab_channels_rest(self, f, ch, defaults, r):
