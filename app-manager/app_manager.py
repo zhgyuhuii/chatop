@@ -22,12 +22,62 @@ MAX_UPLOAD = int(os.environ.get("FILES_MAX_UPLOAD_MB", "1024")) * 1024 * 1024  #
 
 # === 登录鉴权：自定义品牌登录页 + 签名 Cookie，取代 KasmVNC 原生 basic-auth 浏览器弹窗 ===
 # Caddy 用 forward_auth 调 /auth 把关；通过后由 Caddy 注入 Basic 头给 KasmVNC，原生弹窗永不出现。
-import hmac, hashlib, base64
+import hmac, hashlib, base64, time, secrets, random
 AUTH_USER = os.environ.get("LOGIN_USER", "admin")
 AUTH_PW = os.environ.get("FILES_PW") or os.environ.get("VNC_PW") or ""
 AUTH_TOKEN = hmac.new(hashlib.sha256(("chatop-auth|" + AUTH_PW).encode()).digest(),
                       b"v1", hashlib.sha256).hexdigest()
 AUTH_COOKIE = "chatop_auth"
+
+# === 登录图形验证码：纯 SVG + 无状态签名 cookie（复用 AUTH_TOKEN 做 HMAC，无需 PIL） ===
+CAPTCHA_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"  # 去掉易混的 0/O/1/I/L
+CAPTCHA_TTL = 120
+CAPTCHA_COOKIE = "chatop_cap"
+
+def _captcha_new(n=4):
+    """生成 (答案, 签名cookie值)。答案小写入签名，校验时大小写不敏感。"""
+    ans = "".join(secrets.choice(CAPTCHA_CHARS) for _ in range(n))
+    payload = "%s|%d" % (ans.lower(), int(time.time()) + CAPTCHA_TTL)
+    sig = hmac.new(AUTH_TOKEN.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    cookie = base64.urlsafe_b64encode(payload.encode()).decode() + "." + sig
+    return ans, cookie
+
+def _captcha_check(cookie_value, user_input):
+    """验签 + 未过期 + 大小写不敏感比对。任一不过返回 False。"""
+    if not cookie_value or "." not in cookie_value:
+        return False
+    b64, _, sig = cookie_value.partition(".")
+    try:
+        payload = base64.urlsafe_b64decode(b64.encode()).decode()
+    except Exception:
+        return False
+    expect = hmac.new(AUTH_TOKEN.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expect):
+        return False
+    ans, _, exp = payload.partition("|")
+    try:
+        if int(exp) < int(time.time()):
+            return False
+    except ValueError:
+        return False
+    return hmac.compare_digest(ans, (user_input or "").strip().lower())
+
+def _captcha_svg(text):
+    """把验证码渲染成扭曲 SVG 字符串（干扰线 + 每字随机旋转/位移/颜色）。"""
+    W, H = 130, 44
+    colors = ["#2563eb", "#7c3aed", "#0891b2", "#be123c", "#15803d"]
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">' % (W, H, W, H),
+           '<rect width="100%%" height="100%%" fill="#0b1220"/>']
+    for _ in range(2):
+        out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="1" opacity="0.5"/>' % (
+            random.randint(0, W), random.randint(0, H), random.randint(0, W), random.randint(0, H), random.choice(colors)))
+    step = W // (len(text) + 1)
+    for i, ch in enumerate(text):
+        x = step * (i + 1); y = 30 + random.randint(-4, 4); rot = random.randint(-28, 28)
+        out.append('<text x="%d" y="%d" fill="%s" font-size="26" font-family="monospace" font-weight="bold" transform="rotate(%d %d %d)">%s</text>' % (
+            x, y, random.choice(colors), rot, x, y, ch))
+    out.append('</svg>')
+    return "".join(out)
 
 def _logo_data_uri():
     try:

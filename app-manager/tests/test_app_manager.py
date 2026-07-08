@@ -139,3 +139,25 @@ def test_uninstall_cmd_unknown_returns_none(monkeypatch):
     with tempfile.TemporaryDirectory() as t:
         monkeypatch.setattr(am, "APP_DIRS", [t])
         assert _mgr(t).uninstall_cmd("nope") is None
+
+import base64 as _b64
+
+def test_captcha_check_roundtrip():
+    ans, cookie = am._captcha_new()
+    assert am._captcha_check(cookie, ans)              # 原样正确
+    assert am._captcha_check(cookie, ans.lower())      # 大小写不敏感
+    assert am._captcha_check(cookie, " " + ans + " ")  # 去空格
+    assert not am._captcha_check(cookie, "ZZZZ")        # 答案错
+    assert not am._captcha_check("garbage", ans)        # cookie 非法
+    assert not am._captcha_check(cookie[:-1] + ("0" if cookie[-1] != "0" else "1"), ans)  # 签名被篡改
+
+def test_captcha_expired():
+    payload = "abcd|1"  # exp=1（1970 年，必过期）
+    sig = am.hmac.new(am.AUTH_TOKEN.encode(), payload.encode(), am.hashlib.sha256).hexdigest()
+    cookie = _b64.urlsafe_b64encode(payload.encode()).decode() + "." + sig
+    assert not am._captcha_check(cookie, "abcd")
+
+def test_captcha_svg_well_formed():
+    ans, _ = am._captcha_new()
+    svg = am._captcha_svg(ans)
+    assert svg.startswith("<svg") and svg.rstrip().endswith("</svg>")
