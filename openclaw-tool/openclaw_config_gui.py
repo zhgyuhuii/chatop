@@ -241,6 +241,19 @@ CHANNEL_TOKEN_URLS = {
     "irc": ("IRC 服务器与 NickServ 配置", "https://docs.openclaw.ai/channels/irc"),
     "bluebubbles": ("BlueBubbles 服务（iMessage 推荐）", "https://docs.openclaw.ai/channels/bluebubbles"),
     "imessage": ("iMessage 需 macOS + imsg", "https://docs.openclaw.ai/channels/imessage"),
+    # —— 补充：国内 + 官方其余通道 ——
+    "openclaw-weixin": ("微信（个人号，扫码登录；openclaw 内置）", "https://docs.openclaw.ai/channels/wechat"),
+    "qqbot": ("QQ 开放平台建机器人取 AppID/Secret", "https://q.qq.com/"),
+    "line": ("LINE Developers Console 取 Channel Access Token", "https://developers.line.biz/console/"),
+    "matrix": ("Matrix：注册账号取 Access Token", "https://matrix.org/"),
+    "zalo": ("Zalo 开发者平台建 OA 取 Token", "https://developers.zalo.me/"),
+    "nostr": ("Nostr：生成 nsec 私钥", "https://nostr.com/"),
+    "twitch": ("Twitch 开发者控制台建应用（OAuth）", "https://dev.twitch.tv/console"),
+    "sms": ("Twilio 控制台取 Auth Token", "https://www.twilio.com/console"),
+    "synology-chat": ("Synology Chat 集成里建 Webhook", "https://www.synology.com/"),
+    "nextcloud-talk": ("Nextcloud 管理里建 Talk Bot 取 Secret", "https://nextcloud.com/talk/"),
+    "clickclack": ("ClickClack 通道文档", "https://docs.openclaw.ai/channels/clickclack"),
+    "tlon": ("Tlon / Urbit 通道文档", "https://docs.openclaw.ai/channels/tlon"),
 }
 
 # 各通道配置与配对/验证引导（基于 OpenClaw 官方文档）
@@ -655,6 +668,19 @@ CHANNEL_PLUGINS = [
 
 # 国内通道（在「更多」通道展开时排到最前）
 CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot")
+
+# 新增到「启用通道」的单一凭据字段映射（ch_key -> openclaw.json 里的凭据字段名）。
+# 现有 12 个通道各自特判，不在此表；此表仅供新通道的通用 UI 构建与保存复用。
+CHANNEL_SIMPLE_TOKEN = {
+    "qqbot": "appId",
+    "line": "channelAccessToken",
+    "matrix": "accessToken",
+    "zalo": "botToken",
+    "nostr": "privateKey",
+    "sms": "authToken",
+    "nextcloud-talk": "botSecret",
+    "clickclack": "token",
+}
 
 # 安装前打开的官网（按官网要求：如需登录可先在此登录）
 OPENCLAW_DOCS_URL = "https://docs.openclaw.ai"
@@ -2801,13 +2827,27 @@ class OpenClawConfigApp:
 
         # (ch_key, 显示名, 是否有Token字段, token变量名botToken/token, Token获取URL键, 是否有群组策略)
         channels_list = [
+            # —— 国内通道置顶 ——
+            ("feishu", "飞书 Feishu/Lark（国内）", True, "appId", "feishu", False),
+            ("openclaw-weixin", "微信 WeChat（国内·扫码登录）", False, None, "openclaw-weixin", False),
+            ("qqbot", "QQ 机器人（国内）", True, "appId", "qqbot", False),
+            # —— 国际主流 ——
             ("telegram", "Telegram", True, "botToken", "telegram", True),
             ("discord", "Discord", True, "token", "discord", False),
             ("whatsapp", "WhatsApp", False, None, "whatsapp", False),
             ("slack", "Slack", True, "botToken", "slack", False),
             ("signal", "Signal", False, None, "signal", False),
-            ("feishu", "飞书 Feishu/Lark", True, "appId", "feishu", False),
             ("googlechat", "Google Chat", True, "serviceAccount", "googlechat", False),
+            ("line", "LINE", True, "channelAccessToken", "line", False),
+            ("matrix", "Matrix", True, "accessToken", "matrix", False),
+            ("zalo", "Zalo", True, "botToken", "zalo", False),
+            ("nostr", "Nostr", True, "privateKey", "nostr", False),
+            ("twitch", "Twitch（OAuth）", False, None, "twitch", False),
+            ("sms", "短信 SMS", True, "authToken", "sms", False),
+            ("synology-chat", "Synology Chat（Webhook）", False, None, "synology-chat", False),
+            ("nextcloud-talk", "Nextcloud Talk", True, "botSecret", "nextcloud-talk", False),
+            ("clickclack", "ClickClack", True, "token", "clickclack", False),
+            ("tlon", "Tlon (Urbit)", False, None, "tlon", False),
             ("mattermost", "Mattermost", True, "botToken", "mattermost", False),
             ("msteams", "Microsoft Teams", True, "appId", "msteams", False),
             ("irc", "IRC", True, "password", "irc", False),
@@ -2870,12 +2910,12 @@ class OpenClawConfigApp:
                     _gui_entry(f, textvariable=self.vars["channels.bluebubbles.password"], width_chars=36, show="*").grid(row=r, column=1, sticky=tk.EW, padx=(8, 0))
                 else:
                     add_label_with_hint(f, r, f"  {label} Token", f"channels.{ch_key}.{token_field}")
-                    key = f"channels.{ch_key}.botToken" if token_field == "botToken" else f"channels.{ch_key}.token"
                     if ch_key == "irc":
                         key = "channels.irc.nickservPassword"
                         self.vars[key] = tk.StringVar(value=(cfg.get("nickserv") or {}).get("password", ""))
                     else:
-                        self.vars[key] = tk.StringVar(value=cfg.get("botToken", "") or cfg.get("token", ""))
+                        key = f"channels.{ch_key}.{token_field}"  # 按实际凭据字段命名，新通道也正确
+                        self.vars[key] = tk.StringVar(value=cfg.get(token_field, ""))
                     _gui_entry(f, textvariable=self.vars[key], width_chars=44, show="*").grid(row=r, column=1, sticky=tk.EW, padx=(8, 0))
                     if ch_key == "telegram":
                         tg_act = _gui_frame(f)
@@ -3266,7 +3306,7 @@ class OpenClawConfigApp:
         patch["channels"] = dict(ch_existing)
         patch["channels"]["defaults"] = ch_defaults
 
-        all_channel_keys = ("telegram", "discord", "whatsapp", "slack", "signal", "feishu", "googlechat", "mattermost", "msteams", "irc", "bluebubbles", "imessage")
+        all_channel_keys = ("feishu", "openclaw-weixin", "qqbot", "telegram", "discord", "whatsapp", "slack", "signal", "googlechat", "line", "matrix", "zalo", "nostr", "twitch", "sms", "synology-chat", "nextcloud-talk", "clickclack", "tlon", "mattermost", "msteams", "irc", "bluebubbles", "imessage")
         for ch_key in all_channel_keys:
             if f"channels.{ch_key}.enabled" not in self.vars:
                 continue
@@ -3328,6 +3368,11 @@ class OpenClawConfigApp:
                     entry["serverUrl"] = su.get().strip()
                 if pa and pa.get().strip():
                     entry["password"] = pa.get().strip()
+            elif ch_key in CHANNEL_SIMPLE_TOKEN:  # 新增通道：单一凭据字段通用保存
+                tf = CHANNEL_SIMPLE_TOKEN[ch_key]
+                v = self.vars.get(f"channels.{ch_key}.{tf}")
+                if v and v.get().strip():
+                    entry[tf] = v.get().strip()
             patch["channels"][ch_key] = entry
 
         sess = dict(self.config.get("session") or {})
