@@ -134,23 +134,40 @@ button:hover{filter:brightness(1.08)}
 .err{background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);color:#fca5a5;
  font-size:13px;padding:8px 10px;border-radius:8px;margin-bottom:6px}
 .foot{margin-top:20px;font-size:11px;color:#5f7399}
+.caprow{display:flex;gap:10px;align-items:center}
+.capimg{height:44px;border-radius:8px;cursor:pointer;flex:0 0 auto}
+.brandfoot{margin-top:22px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);
+ display:flex;align-items:center;gap:14px;justify-content:center;text-align:left}
+.brandfoot .qr{width:88px;height:88px;object-fit:contain;border-radius:8px;background:#fff;padding:4px}
+.brandfoot .bf_txt{display:flex;flex-direction:column;gap:4px}
+.brandfoot .bf_follow{font-size:13px;color:#cdd9ea;font-weight:600}
+.brandfoot .bf_link{font-size:13px;color:#3b82f6;text-decoration:none}
+.brandfoot .bf_cr{font-size:11px;color:#5f7399}
 </style></head><body><div class="card">
 __LOGOIMG__
 <div class="title">察元AI工舱</div><div class="sub">AI 云桌面 · 安全登录</div>
 __ERR__
 <form method="POST" action="/login" autocomplete="off">
-<label>用户名</label><input name="username" value="" autofocus autocomplete="username">
-<label>密码</label><input name="password" type="password" autocomplete="current-password">
+<label>用户名</label><input name="username" value="" autofocus autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+<label>密码</label><input name="password" type="password" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+<label>验证码</label>
+<div class="caprow"><input name="captcha" autocomplete="off" maxlength="6" style="flex:1;text-transform:uppercase">
+<img class="capimg" src="/captcha" alt="验证码" title="点击刷新" onclick="this.src='/captcha?'+Date.now()"></div>
 <button type="submit">登 录</button></form>
+__FOOT__
 <div class="foot">Powered by 察元AI工舱</div>
 </div></body></html>"""
 
-def _login_html(error=False):
+def _login_html(err_code=""):
     logo = _logo_data_uri()
     img = ('<img class="logo" src="%s" alt="察元AI工舱">' % logo) if logo else ''
+    msg = {"1": "用户名或密码错误", "2": "验证码错误或已过期"}.get(str(err_code), "")
+    err = ('<div class="err">%s</div>' % msg) if msg else ''
+    foot = _brand_footer_html(_follow_qr_data_uri())
     return (_LOGIN_TMPL
             .replace("__LOGOIMG__", img)
-            .replace("__ERR__", '<div class="err">用户名或密码错误</div>' if error else ''))
+            .replace("__ERR__", err)
+            .replace("__FOOT__", foot))
 
 def _cookie_ok(cookie_header):
     for part in (cookie_header or "").split(";"):
@@ -507,8 +524,19 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # 登录页（品牌化，取代 KasmVNC 原生 basic-auth 弹窗）
         if self.path.split("?",1)[0].rstrip("/") == "/login":
-            err = "e=1" in (urlparse(self.path).query or "")
+            err = parse_qs(urlparse(self.path).query).get("e",[""])[0]
             return self._send_html(200, _login_html(err))
+        # 登录图形验证码（SVG）：下发签名 cookie，Caddy @public 放行
+        if self.path.split("?", 1)[0].rstrip("/") == "/captcha":
+            ans, cookie = _captcha_new()
+            b = _captcha_svg(ans).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Set-Cookie",
+                "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=%d" % (CAPTCHA_COOKIE, cookie, CAPTCHA_TTL))
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers(); self.wfile.write(b); return
         # Caddy forward_auth 校验端点：cookie 有效 → 200；否则 302 回登录页
         if self.path.split("?",1)[0].rstrip("/") == "/auth":
             if _cookie_ok(self.headers.get("Cookie","")):
@@ -571,11 +599,22 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length",0))
             form=parse_qs(self.rfile.read(n).decode("utf-8","ignore"))
             u=form.get("username",[""])[0]; p=form.get("password",[""])[0]
+            cap=form.get("captcha",[""])[0]
+            ip=self.client_address[0]
+            delay=_ratelimit_delay(ip)
+            if delay: time.sleep(delay)
+            # 先校验验证码（无状态签名 cookie）
+            if not _captcha_check(_get_cookie(self.headers.get("Cookie",""), CAPTCHA_COOKIE), cap):
+                _ratelimit_record_fail(ip)
+                self.send_response(302); self.send_header("Location","/login?e=2"); self.end_headers(); return
             if u==AUTH_USER and AUTH_PW and hmac.compare_digest(p, AUTH_PW):
+                _ratelimit_reset(ip)
                 self.send_response(302); self.send_header("Location","/")
                 self.send_header("Set-Cookie",
                     "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400" % (AUTH_COOKIE, AUTH_TOKEN))
+                self.send_header("Set-Cookie", "%s=; Path=/; Max-Age=0" % CAPTCHA_COOKIE)  # 验证码一次性
                 self.end_headers(); return
+            _ratelimit_record_fail(ip)
             self.send_response(302); self.send_header("Location","/login?e=1"); self.end_headers(); return
         if self.path.rstrip("/") == "/apps/groups":
             n = int(self.headers.get("Content-Length", 0))
