@@ -1829,6 +1829,16 @@ class OpenClawConfigApp:
         self.root.minsize(720, 560)
         self.root.geometry("960x680")
 
+        # 禁用 Tk 输入法(XIM)。根因(2026-07-08 gdb 实证)：zh_CN.UTF-8 语言环境下、容器内无
+        # 输入法服务器(ibus/fcitx)时，Tk 实现窗口会调 XCreateIC 初始化 XIM，触发 libX11 的
+        # _XimLocalCreateIC→_XReply 段错误——确定性 SIGSEGV，表现为建到某个控件时崩、整个配置器
+        # 打不开(KasmVNC/Xvnc/Xvfb 任何 X 都复现)。关掉输入法后 Tk 不再调 XCreateIC。代价仅是
+        # GUI 内不能用 IME 打中文(可粘贴)，中文显示不受影响。必须在任何窗口被实现前调用。
+        try:
+            self.root.tk.call("tk", "useinputmethods", "0")
+        except Exception:
+            pass
+
         self.config = load_config()
         if isinstance(self.config, dict) and self.config.get("_load_error"):
             msg = self.config.pop("_load_error", "")
