@@ -38,7 +38,7 @@ def _logo_data_uri():
 
 _LOGIN_TMPL = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>察元AI · 登录</title><style>
+<title>察元AI工舱 · 登录</title><style>
 *{box-sizing:border-box}html,body{height:100%;margin:0}
 body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
  background:radial-gradient(1200px 600px at 50% -10%,#1b3a6b 0%,#0b1220 55%,#070b14 100%);
@@ -62,18 +62,18 @@ button:hover{filter:brightness(1.08)}
 .foot{margin-top:20px;font-size:11px;color:#5f7399}
 </style></head><body><div class="card">
 __LOGOIMG__
-<div class="title">察元AI</div><div class="sub">AI 云桌面 · 安全登录</div>
+<div class="title">察元AI工舱</div><div class="sub">AI 云桌面 · 安全登录</div>
 __ERR__
 <form method="POST" action="/login" autocomplete="off">
 <label>用户名</label><input name="username" value="__USER__" autofocus autocomplete="username">
 <label>密码</label><input name="password" type="password" autocomplete="current-password">
 <button type="submit">登 录</button></form>
-<div class="foot">Powered by 察元AI</div>
+<div class="foot">Powered by 察元AI工舱</div>
 </div></body></html>"""
 
 def _login_html(error=False):
     logo = _logo_data_uri()
-    img = ('<img class="logo" src="%s" alt="察元AI">' % logo) if logo else ''
+    img = ('<img class="logo" src="%s" alt="察元AI工舱">' % logo) if logo else ''
     return (_LOGIN_TMPL
             .replace("__LOGOIMG__", img)
             .replace("__ERR__", '<div class="err">用户名或密码错误</div>' if error else '')
@@ -530,6 +530,21 @@ class Handler(BaseHTTPRequestHandler):
             subprocess.Popen(["bash","-lc",ex], env=env, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             return self._json(202, {"key":body.get("key"),"state":"launched"})
+        # 返回桌面：显示桌面（最小化所有窗口）。wmctrl -k on 置 _NET_SHOWING_DESKTOP，幂等。
+        if self.path.rstrip("/") == "/apps/show-desktop":
+            env = dict(os.environ); env["DISPLAY"] = env.get("DISPLAY", ":1") or ":1"
+            subprocess.Popen(["bash","-lc","wmctrl -k on"], env=env, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return self._json(202, {"state":"show-desktop"})
+        # 退出登录：清除签名 cookie（与登录同属性 + Max-Age=0），前端随后跳 /login
+        if self.path.rstrip("/") == "/apps/logout":
+            body = b'{"ok":true}'
+            self.send_response(200)
+            self.send_header("Content-Type","application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Set-Cookie",
+                "%s=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0" % AUTH_COOKIE)
+            self.end_headers(); self.wfile.write(body); return
         if self.path.startswith("/apps/files/upload"):
             if not FILES_UPLOAD: return self._json(403, {"error":"upload disabled"})
             name = parse_qs(urlparse(self.path).query).get("name",[""])[0]

@@ -17,11 +17,10 @@ OPEN_COMMANDS: dict[str, list[str] | None] = {
     "openhuman": None,
 }
 
-# 打开配置界面：openclaw → agent-builder 可视化配置器；hermes → hermes setup；
+# 打开配置界面：openclaw → openclaw-tool 可视化配置器(tkinter)；hermes → hermes setup；
 # claude/codex 配置在其 CLI 内；openhuman 配置在应用内
 CONFIG_COMMANDS: dict[str, list[str] | None] = {
-    "openclaw": ["bash", "-lc",
-                 'google-chrome-stable --app="file://$HOME/Applications/agent-builder/index.html"'],
+    "openclaw": ["python3", "/opt/openclaw-tool/openclaw_config_gui.py"],
     "hermes": ["chatop-run-cli", "hermes", "setup"],
     "claude-code": ["chatop-run-cli", "claude"],
     "codex": ["chatop-run-cli", "codex", "login"],

@@ -55,7 +55,7 @@ import { perfLogger } from '../core/util/performance-logger.js';
 // Enable performance logging
 // perfLogger.enable(5000);
 
-const PAGE_TITLE = "察元AI";
+const PAGE_TITLE = "察元AI工舱";
 
 var currentEventCount = -1;
 var idleCounter = 0;
@@ -619,6 +619,17 @@ const UI = {
         // chatop: 应用管理器入口按钮
         UI.addClickHandle('chatop_apps_button', () => ChatopApps.open());
 
+        // chatop: 返回桌面（显示桌面，最小化所有窗口）
+        UI.addClickHandle('chatop_showdesktop_button', () => {
+            fetch('/apps/show-desktop', { method: 'POST' }).catch(() => {});
+        });
+        // chatop: 退出登录（清 cookie → 回登录页）
+        UI.addClickHandle('chatop_logout_button', () => {
+            if (!window.confirm('确定退出登录？')) return;
+            fetch('/apps/logout', { method: 'POST' })
+                .finally(() => { window.location.href = '/login'; });
+        });
+
         // 权限：按后端 config 显隐上传/下载按钮。
         UI.refreshFilesPermission();
     },
@@ -846,7 +857,7 @@ const UI = {
             case 'init':
                 break;
             case 'connecting':
-                transitionElem.textContent = _("正在连接察元AI…");
+                transitionElem.textContent = _("正在连接察元AI工舱…");
                 document.documentElement.classList.add("noVNC_connecting");
                 break;
             case 'connected':
@@ -860,7 +871,7 @@ const UI = {
                 document.documentElement.classList.add("noVNC_disconnected");
                 break;
             case 'reconnecting':
-                transitionElem.textContent = _("正在重新连接察元AI…");
+                transitionElem.textContent = _("正在重新连接察元AI工舱…");
                 document.documentElement.classList.add("noVNC_reconnecting");
                 break;
             default:

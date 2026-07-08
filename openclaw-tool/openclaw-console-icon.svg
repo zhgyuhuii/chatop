@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OpenClaw console">
+  <defs>
+    <linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E53935"/>
+      <stop offset="100%" style="stop-color:#C62828"/>
+    </linearGradient>
+    <linearGradient id="claw" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF7043"/>
+      <stop offset="100%" style="stop-color:#E64A19"/>
+    </linearGradient>
+    <linearGradient id="termBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#263238"/>
+      <stop offset="100%" style="stop-color:#1E272E"/>
+    </linearGradient>
+  </defs>
+  <!-- OpenClaw lobster (same as OpenClaw.desktop icon) -->
+  <ellipse cx="14" cy="32" rx="10" ry="14" fill="url(#claw)" stroke="#BF360C" stroke-width="1.5"/>
+  <ellipse cx="14" cy="32" rx="6" ry="9" fill="#FFAB91"/>
+  <ellipse cx="50" cy="32" rx="10" ry="14" fill="url(#claw)" stroke="#BF360C" stroke-width="1.5"/>
+  <ellipse cx="50" cy="32" rx="6" ry="9" fill="#FFAB91"/>
+  <ellipse cx="32" cy="34" rx="16" ry="12" fill="url(#body)" stroke="#B71C1C" stroke-width="1.5"/>
+  <ellipse cx="32" cy="48" rx="12" ry="6" fill="url(#body)" stroke="#B71C1C" stroke-width="1.2"/>
+  <path d="M22 44 Q32 42 42 44" fill="none" stroke="#B71C1C" stroke-width="1.2"/>
+  <path d="M24 48 Q32 46 40 48" fill="none" stroke="#B71C1C" stroke-width="1"/>
+  <circle cx="26" cy="28" r="5" fill="#FFF" stroke="#37474F" stroke-width="1"/>
+  <circle cx="38" cy="28" r="5" fill="#FFF" stroke="#37474F" stroke-width="1"/>
+  <circle cx="26" cy="28" r="2.5" fill="#263238"/>
+  <circle cx="38" cy="28" r="2.5" fill="#263238"/>
+  <path d="M24 22 Q16 14 12 10" fill="none" stroke="#C62828" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M40 22 Q48 14 52 10" fill="none" stroke="#C62828" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Control? badge: bottom-right corner -->
+  <g transform="translate(36, 36)">
+    <rect x="0" y="0" width="26" height="26" rx="3" ry="3" fill="url(#termBg)" stroke="#546E7A" stroke-width="1"/>
+    <rect x="1" y="1" width="24" height="6" rx="1" ry="1" fill="#37474F"/>
+    <circle cx="4" cy="4" r="0.8" fill="#EF5350"/>
+    <circle cx="7" cy="4" r="0.8" fill="#FFEE58"/>
+    <circle cx="10" cy="4" r="0.8" fill="#66BB6A"/>
+    <path d="M2 11.5 h3 M3.5 11 v4 M2 13 h3" fill="none" stroke="#A5D6A7" stroke-width="0.6" stroke-linecap="round"/>
+    <line x1="2" y1="14.5" x2="22" y2="14.5" stroke="#81D4FA" stroke-width="0.6"/>
+    <rect x="20" y="13" width="1.2" height="3.5" fill="#ECEFF1" rx="0.2"/>
+  </g>
+</svg>

@@ -1,7 +1,11 @@
 # 拆分 base 镜像 + 增量产品镜像 —— 设计文档
 
+> ⚠️ **已被取代（2026-07-07）**：因双镜像盘面 footprint 翻倍，已合并回单一 Dockerfile，
+> 移除 `Dockerfile.base` / `build-base.*`。见
+> `docs/superpowers/specs/2026-07-07-merge-single-dockerfile-design.md`。本文档仅存历史。
+
 - 日期：2026-07-04
-- 状态：已实现（2026-07-04）
+- 状态：已取代（2026-07-07 合并回单文件）
 - 背景问题：`docker compose up --build` 每次都很慢、都在联网下载。
 
 ## 1. 问题与根因

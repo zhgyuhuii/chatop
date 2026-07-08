@@ -1,12 +1,17 @@
+# 固定 compose 项目名=chatop-ai：保证无论从哪个目录跑，都复用既有数据卷
+# chatop-ai_chatop-home（含用户 home），不会因目录名变成 chatop_* 而新建空卷丢数据。
+name: chatop-ai
+
 services:
-  chatop:
+  chatop-ai:
     build:
       context: .
       args:
         VERSION: ${VERSION:-1.0.0}
-    image: chatop:${VERSION:-1.0.0}
+    image: chatop-ai:${VERSION:-1.0.0}
+    # 本地单镜像，FROM 公共 kasm 基底；build 后用本地 tag，别去远程 pull
     pull_policy: build
-    container_name: chatop
+    container_name: chatop-ai
     environment:
       - VNC_PW=${PASSWORD:?请在 .env 设置 PASSWORD}
       - LOGIN_USER=${LOGIN_USER:-admin}

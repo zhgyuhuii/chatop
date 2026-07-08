@@ -36,24 +36,11 @@ install -m755 "$(find /tmp -maxdepth 3 -name rtk -type f | head -1)" "$HOME/.loc
 rm -rf /tmp/rtk.tgz
 "$HOME/.local/bin/rtk" --version || true
 
-echo "==== [preinstall] openclaw-agent-builder (单文件 HTML 配置器) ===="
-mkdir -p "$HOME/Applications/agent-builder"
-gh_fetch "https://raw.githubusercontent.com/nathancarlton/openclaw-agent-builder/main/index.html" \
-  "$HOME/Applications/agent-builder/index.html"
-test -s "$HOME/Applications/agent-builder/index.html"
+# OpenClaw 配置改用本项目 openclaw-tool（tkinter 可视化配置器，镜像内 /opt/openclaw-tool，
+# 桌面图标与智能启动在 Dockerfile 产品层生成）；原 agent-builder(HTML) 已移除。
 
-# 桌面图标：agent-builder(Chrome 打开本地 HTML) + tokscale(终端 TUI 监控)
+# 桌面图标：tokscale(终端 TUI 监控)
 mkdir -p "$HOME/.local/share/applications"
-cat > "$HOME/.local/share/applications/chatop-agent-builder.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=OpenClaw 配置器
-Comment=openclaw-agent-builder 可视化配置
-Exec=/usr/local/bin/google-chrome --app=file://$HOME/Applications/agent-builder/index.html
-Icon=preferences-system
-Categories=Development;
-Terminal=false
-EOF
 cat > "$HOME/.local/share/applications/chatop-tokscale.desktop" <<EOF
 [Desktop Entry]
 Type=Application
@@ -64,10 +51,9 @@ Icon=utilities-system-monitor
 Categories=Development;System;
 Terminal=false
 EOF
-cp -f "$HOME/.local/share/applications/chatop-agent-builder.desktop" \
-      "$HOME/.local/share/applications/chatop-tokscale.desktop" "$HOME/Desktop/" 2>/dev/null || true
+cp -f "$HOME/.local/share/applications/chatop-tokscale.desktop" "$HOME/Desktop/" 2>/dev/null || true
 
-# === 重量级智能体预装（Hermes / OpenHuman），PREINSTALL_HEAVY=0 可跳过（磁盘/网络受限时） ===
+# === Hermes 预装（uv+py3.11，--skip-setup），PREINSTALL_HEAVY=0 可跳过（磁盘/网络受限时） ===
 if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
   echo "==== [preinstall] Hermes Agent (uv+py3.11 安装器, --skip-setup) ===="
   ok=""
@@ -79,7 +65,13 @@ if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
   done
   [ -n "$ok" ] || { echo "Hermes 预装失败(3 次)。网络受限可 PREINSTALL_HEAVY=0 跳过后走应用市场安装"; exit 1; }
   command -v hermes >/dev/null || export PATH="$HOME/.local/bin:$PATH"
+else
+  echo "==== [preinstall] PREINSTALL_HEAVY=0：跳过 Hermes（可从应用市场一键安装） ===="
+fi
 
+# === OpenHuman 独立门控，默认不预装（解包后 ~1.3GB；PREINSTALL_OPENHUMAN=1 才烤进镜像） ===
+# WPS 从不预装（proot-apps 市场应用）；OpenHuman 默认也改为市场按需装，控制镜像体积。
+if [ "${PREINSTALL_OPENHUMAN:-0}" = "1" ]; then
   echo "==== [preinstall] OpenHuman (AppImage 解包到 ~/Applications) ===="
   OH_URL="https://github.com/tinyhumansai/openhuman/releases/download/v0.58.0/OpenHuman_0.58.0_amd64.AppImage"
   oh_ok=""
@@ -89,16 +81,25 @@ if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
     fi
     echo "[WARN] openhuman install via [${prefix:-direct}] failed"
   done
-  [ -n "$oh_ok" ] || { echo "OpenHuman 预装失败(直连+镜像)。可 PREINSTALL_HEAVY=0 跳过后走应用市场安装"; exit 1; }
+  [ -n "$oh_ok" ] || { echo "OpenHuman 预装失败(直连+镜像)。可 PREINSTALL_OPENHUMAN=0 跳过后走应用市场安装"; exit 1; }
 else
-  echo "==== [preinstall] PREINSTALL_HEAVY=0：跳过 Hermes/OpenHuman（可从应用市场一键安装） ===="
+  echo "==== [preinstall] PREINSTALL_OPENHUMAN=0：跳过 OpenHuman（可从应用市场一键安装） ===="
 fi
+
+echo "==== [preinstall] 清理构建缓存(只删下载/构建/浏览器缓存，不动任何工具本体) ===="
+# 这些都是可再生的下载/构建缓存，跟着 home 迁进镜像会白白撑大预装层。工具二进制/venv 不受影响。
+# 实测大头：.cache/ms-playwright(~646MB，某 npm 包 postinstall 拉的 Playwright 浏览器) + node-gyp。
+npm cache clean --force >/dev/null 2>&1 || true
+rm -rf "$HOME/.npm/_cacache" "$HOME/.npm/_logs" \
+       "$HOME/.cache/uv" "$HOME/.cache/pip" "$HOME/.cache/node" \
+       "$HOME/.cache/ms-playwright" "$HOME/.cache/node-gyp" \
+       "$HOME/.cache/yarn" "$HOME/.cache/Cypress" 2>/dev/null || true
 
 echo "==== [preinstall] 已装命令自检 ===="
 ls -l "$HOME/.npm-global/bin/" | grep -E 'openclaw|codex|claude|tokscale' || true
 ls -l "$HOME/.local/bin/rtk" 2>/dev/null || echo "rtk MISSING"
 if [ "${PREINSTALL_HEAVY:-1}" = "1" ]; then
   command -v hermes >/dev/null && echo "hermes OK" || echo "hermes MISSING"
-  test -d "$HOME/Applications/openhuman/squashfs-root" && echo "openhuman OK" || echo "openhuman MISSING"
 fi
+[ "${PREINSTALL_OPENHUMAN:-0}" = "1" ] && { test -d "$HOME/Applications/openhuman/squashfs-root" && echo "openhuman OK" || echo "openhuman MISSING"; }
 echo "==== [preinstall] 完成 ===="

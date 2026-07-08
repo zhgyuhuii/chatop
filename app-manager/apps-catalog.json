@@ -215,21 +215,6 @@
       "notes": "镜像已预装；MIT，桌面有监控图标"
     },
     {
-      "id": "agent-builder",
-      "name": "OpenClaw 配置器",
-      "category": "gui",
-      "kind": "html",
-      "icon": "agent-builder.png",
-      "description": "openclaw-agent-builder：浏览器内可视化编辑 openclaw 配置，单文件零依赖",
-      "install": "mkdir -p $HOME/Applications/agent-builder && curl -fsSL -o $HOME/Applications/agent-builder/index.html https://raw.githubusercontent.com/nathancarlton/openclaw-agent-builder/main/index.html",
-      "remove": "rm -rf $HOME/Applications/agent-builder",
-      "detect": "test -f $HOME/Applications/agent-builder/index.html",
-      "needs": [],
-      "homepage": "https://github.com/nathancarlton/openclaw-agent-builder",
-      "notes": "镜像已预装；MIT，桌面图标用 Chrome 打开",
-      "launch": "/usr/local/bin/google-chrome --app=file://$HOME/Applications/agent-builder/index.html"
-    },
-    {
       "id": "void",
       "name": "Void IDE",
       "category": "gui",

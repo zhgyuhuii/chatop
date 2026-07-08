@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenClaw 配置
+Name[zh_CN]=OpenClaw 配置
+Comment=可视化配置 OpenClaw 网关、模型、通道与会话（配置后直接可用）
+Comment[zh_CN]=可视化配置 OpenClaw 网关、模型、通道与会话（配置后直接可用）
+Exec=python3 /opt/openclaw-tool/openclaw_config_gui.py
+Icon=/opt/openclaw-tool/openclaw-icon.svg
+Path=/opt/openclaw-tool
+Terminal=false
+Categories=Settings;Network;
+StartupNotify=true
