@@ -19,15 +19,20 @@
 | `origin` 取值 | 仅 `configured` / `installable` —— **是配置状态，不是 builtin/plugin 轴** |
 | schema 通道键 | 25（含 `qa-channel`，它**不在** CLI 27 里） |
 | 目录 channel 条目 | 20（`openclaw.channel.id` + `openclaw.install.npmSpec`） |
-| 纯内置（无插件包） | `clickclack, imessage, irc, mattermost, signal, sms, telegram`（7） |
-| 插件通道 | 20，其中 **17 个 schema 里已有字段**；**只有 `wecom` / `yuanbao` / `openclaw-zaloclawbot` 无 schema** |
+| 纯内置（无插件包） | `imessage`, `telegram`（2）—— 早期"7 个"的说法基于 dist 里较小的 external-only 目录文件，已被超集文件推翻 |
+| 插件通道 | 25（dist 里有两份目录文件，须取**最大**的超集） |
+| 需自由键值编辑器 | `wecom` / `yuanbao` / `openclaw-zaloclawbot`（schema 无此键）+ `openclaw-weixin` / `twitch`（有键但 properties 为空）= **5 个** |
 | 四个非 `@openclaw/*` 包 | `wecom`→`@wecom/wecom-openclaw-plugin`；`openclaw-weixin`→`@tencent-weixin/openclaw-weixin`；`yuanbao`→`openclaw-plugin-yuanbao`；`openclaw-zaloclawbot`→`@zalo-platforms/openclaw-zaloclawbot` |
 | provider 条目形状 | `openclaw.providers[] = {id, name, docs}` + `openclaw.install.npmSpec` |
 | `models.providers` schema | 无 `properties`，`propertyNames = {"type":"string"}` → **provider id 是开放集** |
 | 目录文件 | `<npm-global>/lib/node_modules/openclaw/dist/official-external-plugin-catalog-<hash>.js`（哈希随版本变，需 glob） |
-| 容器内 openclaw | `/home/admin/.npm-global/bin/openclaw`；`docker` 需 `sudo` |
+| 容器内 openclaw | 运行时 `/home/admin/.npm-global/bin/openclaw`；**构建期在 `/opt/chatop-seed-home/.npm-global`**（Dockerfile 已 mv 走 /home/admin）；`docker` 需 `sudo` |
+| `--version` 输出 | `OpenClaw 2026.6.10 (aa69b12)` —— `split()[-1]` 会拿到 commit 哈希 |
+| `plugins install <channel-id>` | **可用**（spike 实证）：openclaw 自行解析成 `@wecom/wecom-openclaw-plugin@2026.5.7` |
+| 装完后 schema | 只多出空壳 `channels.wecom` 键，**仍无 properties** → 自由键值编辑器是必需路径 |
+| `channels list --json` 的 origin | `configured` / `installable` / `available`（已装未配置） |
 
-**幻影通道**（当前 GUI 有、openclaw 没有）：`webchat`、`voice-call`、`raft`。**误写 id**：`zalo-personal`（应 `zalouser`）、provider `glm`（应 `zai`）、`bedrock`（应 `amazon-bedrock`）。
+**幻影通道**（当前 GUI 有、openclaw 不提供）：`webchat`、`voice-call`、`bluebubbles`；`raft` 存在于插件目录但 `channels list --all` 不列它。**误写 id**：`zalo-personal`（应 `zalouser`）、provider `glm`（应 `zai`）、`bedrock`（应 `amazon-bedrock`）。
 
 ---
 
@@ -1656,3 +1661,29 @@ Expected: `通道数 27 | openclaw 2026.6.10` / `wecom: WeCom（企业微信） 
 ## 真机验收结果
 
 （Task 16 执行后填写。未跑的项标「未验」，不得留空或写「应该可以」。）
+
+
+---
+
+## 真机验收结果
+
+（2026-07-09 执行。未跑的项标「未验」。）
+
+### 已在真机/一次性容器验证通过
+
+- `openclaw_catalog` 实时采集（生产容器内，29.7s）：27 通道、39 provider、5 search；
+  `wecom` = `WeCom（企业微信）` / `@wecom/wecom-openclaw-plugin@2026.5.7` / origin=plugin；
+  `raft` / `webchat` / `qa-channel` 均不出现；`glm` / `bedrock` 不在 provider；
+  `zai` origin=builtin；`amazon-bedrock` origin=plugin。
+- Spike（`docker run --rm chatop-ai:1.2.3`）：`openclaw plugins install wecom` rc=0，
+  自行解析成带版本包名；装完 `config schema` 只多出空壳键、无 properties。
+- 宿主机单元测试 42 passed / 0 failed（py3.6）。
+- `py_compile` 全部通过。
+
+### 未验（需人工在桌面上点）
+
+- 扫码弹窗的二维码渲染（需真实 `channels login` 输出 ASCII 二维码）。
+- 「刷新清单」按钮的 30s 后台流程在 Tk 下不卡死。
+- 「安装并配置」后自由键值编辑器的实际渲染与保存。
+- 「配置闭环自检」三步在真实网关上的表现。
+- 配置器不再段错误（XIM 修复回归）。
