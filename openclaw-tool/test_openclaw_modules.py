@@ -232,6 +232,13 @@ def test_parse_channels_list():
     assert st["openclaw-weixin"] == {"installed": True, "configured": True, "accounts": ("default",)}
 
 
+def test_parse_version_takes_number_not_commit_hash():
+    """真实输出 `OpenClaw 2026.6.10 (aa69b12)`；split()[-1] 会拿到 commit 哈希。"""
+    assert cat.parse_version("OpenClaw 2026.6.10 (aa69b12)") == "2026.6.10"
+    assert cat.parse_version("openclaw 1.2.3") == "1.2.3"
+    assert cat.parse_version("") is None
+
+
 def test_parse_channels_list_bad_json():
     assert cat.parse_channels_list("not json") == {}
 

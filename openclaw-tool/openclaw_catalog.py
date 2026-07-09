@@ -360,6 +360,19 @@ def _run(cmd, timeout=60):
     return out.decode("utf-8", "replace")
 
 
+def parse_version(text):
+    """从 `openclaw --version` 抽版本号。
+
+    实际输出是 `OpenClaw 2026.6.10 (aa69b12)` —— 取 split()[-1] 会拿到 commit 哈希，
+    不是版本号。取第一个形如数字开头的 token。
+    """
+    for token in (text or "").split():
+        stripped = token.strip("()")
+        if stripped and stripped[0].isdigit():
+            return stripped
+    return (text or "").strip() or None
+
+
 def _find_catalog_js(openclaw_bin):
     """读 dist 里的官方插件目录。
 
@@ -395,7 +408,7 @@ def collect(openclaw_bin="openclaw", timeout=60):
     命令互不依赖、可并发（约 12s），但本机仅 7.3G 内存且生产容器常驻，
     并发会同起多个 node 进程 → 默认串行。
     """
-    version = _run([openclaw_bin, "--version"], timeout=15).strip().split()[-1]
+    version = parse_version(_run([openclaw_bin, "--version"], timeout=15))
     channels_json = _run([openclaw_bin, "channels", "list", "--all", "--json"], timeout)
     schema_json = _run([openclaw_bin, "config", "schema"], timeout)
     models_json = _run([openclaw_bin, "models", "list", "--all", "--json"], timeout)
