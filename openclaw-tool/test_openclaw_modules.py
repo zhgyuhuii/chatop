@@ -385,6 +385,28 @@ def test_load_catalog_corrupt_cache_falls_through():
         shutil.rmtree(tmp)
 
 
+def test_gui_model_provider_ids_have_no_bogus_entries():
+    """回归：GUI 的 MODEL_PROVIDERS 不得再出现 openclaw 没有的 provider id。
+
+    静态解析源码（不 import GUI，避免依赖 tkinter）。
+    证据：openclaw 无 glm provider（glm/ 前缀零模型，真实 id 为 zai）；
+    Bedrock 的 id 是 amazon-bedrock（插件）；阿里云百炼由 qwen-provider 提供。
+    """
+    import re
+    gui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "openclaw_config_gui.py")
+    with open(gui, encoding="utf-8") as fh:
+        src = fh.read()
+    body = re.search(r"^MODEL_PROVIDERS\s*=\s*\[(.*?)^\]", src, re.S | re.M).group(1)
+    ids = re.findall(r"^\s*\(\"([^\"]+)\"", body, re.M)
+    for bogus in ("glm", "bedrock", "alibaba"):
+        assert bogus not in ids, "%s 不是 openclaw 的 provider id" % bogus
+    for real in ("zai", "amazon-bedrock", "qwen"):
+        assert real in ids, real
+    # 查赋值而非字符串 —— 源码注释里保留了对该表的血泪说明，那段该留。
+    assert not re.search(r"^CHANNEL_PLUGINS\s*=", src, re.M), "通道硬编码表必须保持删除状态"
+    assert not re.search(r"^CHANNEL_AUTH\s*=", src, re.M), "auth 必须来自 catalog"
+
+
 # ---- P2: 扫码 ----
 def test_qr_channels_from_catalog():
     chans = {c.id: c for c in _build_from_fixtures()["channels"]}
@@ -420,6 +442,8 @@ def test_orchestrator_read_handoff_missing_or_broken():
 def test_diag_validate_ok():
     res = diag.check_config_valid(runner=lambda cmd, timeout=30: (0, "ok"))
     assert res["status"] == "ok"
+    # GUI 的 _render_diagnostics 按 it["name"] / it["detail"] / it["fix"] 渲染，键名必须对上
+    assert set(("key", "name", "status", "detail", "fix")).issubset(res)
 
 
 def test_diag_validate_reports_reason():

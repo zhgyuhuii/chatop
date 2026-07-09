@@ -880,14 +880,17 @@ MODEL_PROVIDERS = [
     ("together", "Together AI", "api_key", "TOGETHER_API_KEY", "together/meta-llama/Llama-3-70b-chat-hf", "https://api.together.xyz/settings/api-keys"),
     ("huggingface", "Hugging Face Inference", "api_key", "HF_TOKEN", "huggingface/meta-llama/Llama-3-70b-chat-hf", "https://huggingface.co/settings/tokens"),
     ("nvidia", "NVIDIA NIM", "api_key", "NIM_API_KEY", "nvidia/llama-3.1-70b-instruct", "https://build.nvidia.com/explore/discover"),
-    ("bedrock", "Amazon Bedrock", "api_key", "AWS_ACCESS_KEY_ID", "bedrock/us.anthropic.claude-v2", "https://aws.amazon.com/bedrock"),
+    # 真实 id 是 amazon-bedrock（插件 @openclaw/amazon-bedrock-provider，需 plugins install）
+    ("amazon-bedrock", "Amazon Bedrock（需装插件）", "api_key", "AWS_ACCESS_KEY_ID", "amazon-bedrock/us.anthropic.claude-v2", "https://aws.amazon.com/bedrock"),
     # === 国内 / 区域 ===
     ("moonshot", "Moonshot / Kimi（月之暗面）", "api_key", "MOONSHOT_API_KEY", "moonshot/kimi-k2.5", "https://platform.moonshot.cn/console/api-keys"),
-    ("glm", "智谱 GLM（ChatGLM）", "api_key", "ZHIPU_API_KEY", "glm/glm-4-flash", "https://open.bigmodel.cn/usercenter/apikeys"),
     ("qianfan", "百度千帆", "api_key", "QIANFAN_ACCESS_KEY", "qianfan/ernie-bot-4", "https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application"),
     ("qwen", "通义千问 Qwen（OAuth）", "oauth", None, "qwen/qwen-max", "https://openclaw.ai"),
     ("minimax", "MiniMax（海螺 AI）", "api_key", "MINIMAX_API_KEY", "minimax/abab6.5s-chat", "https://platform.minimax.cn/"),
-    ("zai", "Z.AI", "api_key", "ZAI_API_KEY", "zai/model-name", "https://docs.openclaw.ai/providers/zai"),
+    # 智谱 GLM 在 openclaw 里的真实 provider id 是 zai（内置，14 个模型 glm-4.5~glm-5.2）。
+    # 曾另有一行 ("glm", ..., "ZHIPU_API_KEY", ...) —— openclaw 无 glm provider，glm/ 前缀零模型，
+    # 那行写进 config.env 的 ZHIPU_API_KEY 无人读取，是「配了不生效」的典型。已删。
+    ("zai", "智谱 GLM（Z.ai）", "api_key", "ZAI_API_KEY", "zai/glm-4.7", "https://open.bigmodel.cn/usercenter/apikeys"),
     ("xiaomi", "小米 MiMo", "api_key", "XIAOMI_API_KEY", "xiaomi/model-name", "https://docs.openclaw.ai/providers/xiaomi"),
     # === 网关 / 代理 ===
     ("litellm", "LiteLLM（统一网关）", "api_key", "LITELLM_API_KEY", "litellm/provider/model", "https://docs.litellm.ai/docs/proxy/custom_auth"),
@@ -900,7 +903,9 @@ MODEL_PROVIDERS = [
     # 国内 / 区域
     ("deepseek", "DeepSeek 深度求索", "api_key", "DEEPSEEK_API_KEY", "deepseek/deepseek-chat", "https://platform.deepseek.com/api_keys"),
     ("volcengine", "火山引擎 / 豆包 Doubao", "api_key", "VOLCANO_ENGINE_API_KEY", "volcengine/doubao-seed-1-8-251228", "https://console.volcengine.com/ark"),
-    ("alibaba", "阿里云百炼 / 通义千问（DashScope）", "api_key", "DASHSCOPE_API_KEY", "alibaba/qwen-max", "https://bailian.console.aliyun.com/"),
+    # 阿里云百炼/通义千问由插件 @openclaw/qwen-provider 提供，provider id 是 qwen（非 alibaba）。
+    # 上面已有一行 ("qwen", ..., "oauth", ...)；此处保留 API Key 方式，id 统一为 qwen。
+    ("qwen", "阿里云百炼 / 通义千问（API Key，需装插件）", "api_key", "DASHSCOPE_API_KEY", "qwen/qwen-max", "https://bailian.console.aliyun.com/"),
     ("tencent-tokenhub", "腾讯云 / 混元 Hunyuan", "api_key", "TOKENHUB_API_KEY", "tencent-tokenhub/hunyuan-turbo", "https://console.cloud.tencent.com/hunyuan"),
     ("byteplus", "BytePlus ModelArk", "api_key", "BYTEPLUS_API_KEY", "byteplus/seed-1-8-251228", "https://console.byteplus.com/"),
     # 国际主流
@@ -2096,6 +2101,7 @@ class OpenClawConfigApp:
         _gui_button(btn_row, text="🔄 刷新一览", command=lambda: self._update_config_overview(include_channel_status=True)).pack(side=tk.LEFT, padx=(0, 8))
         _gui_button(btn_row, text="🩺 一键体检", command=self._run_diagnostics).pack(side=tk.LEFT, padx=(0, 8))
         _gui_button(btn_row, text="🚀 一键智能配置", command=self._run_one_click_auto).pack(side=tk.LEFT, padx=(0, 8))
+        _gui_button(btn_row, text="✅ 配置闭环自检", command=self._run_verify_closure).pack(side=tk.LEFT, padx=(0, 8))
         self._diag_frame = _gui_frame(f)
         self._diag_frame.grid(row=r, column=0, columnspan=2, sticky=tk.EW, pady=4); r += 1
         _gui_label(f, text="体检逐项亮灯：红项右侧「修复/一步到位」按钮 = 装插件→扫码/填Token→连上，一步到位。", font=("", 8), foreground="gray").grid(row=r, column=0, columnspan=2, sticky=tk.W); r += 1
@@ -2180,10 +2186,46 @@ class OpenClawConfigApp:
             try:
                 self.config = load_config()
                 items = _diag.probe(self.config, enabled_channels=self._enabled_channels_list())
+                # openclaw 自带的两项权威检查（config validate 不启网关；gateway probe 探活）
+                items = items + [_diag.check_config_valid(), _diag.check_gateway_probe()]
             except Exception as e:
                 items = [{"key": "err", "name": "体检失败", "status": "fail",
                           "detail": str(e), "fix": None, "fix_label": ""}]
             self.root.after(0, lambda: self._render_diagnostics(items))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _run_verify_closure(self):
+        """配置闭环：config validate → gateway start → gateway probe。
+
+        顺序不可调 —— 配置非法时若先起网关，真正的原因会被「网关启动失败」掩盖，
+        用户看到的是症状不是根因。
+        """
+        if _orch is None:
+            messagebox.showerror("闭环自检", "编排模块未加载"); return
+        for w in self._diag_frame.winfo_children():
+            w.destroy()
+        lbl = _gui_label(self._diag_frame, text="正在自检…", foreground="gray")
+        lbl.pack(anchor=tk.W)
+        names = {"config_validate": "① 校验配置", "gateway_start": "② 启动网关",
+                 "gateway_probe": "③ 探活网关"}
+
+        def on_progress(step, state):
+            self.root.after(0, lambda: lbl.config(text="%s … %s" % (names.get(step, step), state)))
+
+        def work():
+            try:
+                res = _orch.verify_and_start(on_progress=on_progress)
+            except Exception as exc:
+                res = {"ok": False, "failed_step": "内部错误", "detail": str(exc)}
+
+            def done():
+                if res["ok"]:
+                    lbl.config(text="✅ " + res["detail"], foreground="#2e7d32")
+                else:
+                    lbl.config(text="❌ 卡在「%s」：%s" % (names.get(res["failed_step"], res["failed_step"]),
+                                                        res["detail"]), foreground="#c62828")
+            self.root.after(0, done)
+
         threading.Thread(target=work, daemon=True).start()
 
     def _render_diagnostics(self, items):

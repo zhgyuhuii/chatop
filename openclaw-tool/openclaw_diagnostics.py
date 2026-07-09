@@ -229,9 +229,9 @@ def check_config_valid(runner=None):
     runner = runner or _validate_runner
     rc, out = runner(["config", "validate"], timeout=30)
     if rc == 0:
-        return {"key": "config_valid", "名称": "配置合法性", "status": "ok",
+        return {"key": "config_valid", "name": "配置合法性", "status": "ok",
                 "detail": "配置通过 schema 校验", "fix": None, "fix_label": None}
-    return {"key": "config_valid", "名称": "配置合法性", "status": "fail",
+    return {"key": "config_valid", "name": "配置合法性", "status": "fail",
             "detail": (out or "").strip()[-400:] or "校验失败（无输出）",
             "fix": None, "fix_label": "查看详情"}
 
@@ -240,6 +240,6 @@ def check_gateway_probe(runner=None):
     """`openclaw gateway probe` —— 网关可达性与认证能力。"""
     runner = runner or _validate_runner
     rc, out = runner(["gateway", "probe"], timeout=30)
-    return {"key": "gateway_probe", "名称": "网关可达性",
+    return {"key": "gateway_probe", "name": "网关可达性",
             "status": "ok" if rc == 0 else "fail",
             "detail": (out or "").strip()[-400:], "fix": None, "fix_label": None}
