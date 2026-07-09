@@ -19,3 +19,26 @@ cp .env.example .env   # 按需改端口/密码
 - 注册：`nickname`（逻辑标识，非 IP）+ 所属 `dept`
 
 调度器、CI 门禁、评审、晨审队列等中央机制部署在 DMZ 隔离区（宿主禁 IP 转发、容器互不可见）。
+
+## 许可证
+
+本项目以 **GPL-2.0** 发布，全文见 [`LICENSE`](./LICENSE)。
+
+之所以开源，是因为云桌面底座 **KasmVNC 采用 GPL-2.0**，我们随镜像再分发它。
+源码公开、不限并发、不锁品牌 —— 你可以自由修改、再分发，并从源码自行构建镜像。
+
+官方镜像内置序列号激活闸门（`app-manager/chatop_license/`，纯离线 HMAC 校验）。
+序列号买到的是**开箱即跑的官方构建、持续更新与商业支持**，不是"解锁功能"；
+依据 GPL-2.0 第 6 条，本项目不对你行使许可证权利施加任何进一步限制。
+
+几个需要留意的边界：
+
+- `novnc-src/` 是 vendored 的 [@kasmtech/noVNC](https://github.com/kasmtech/noVNC)，
+  适用 **MPL-2.0**（及 BSD / OFL / CC BY-SA）而非本仓库的 GPL-2.0，
+  保留其自身的 [`novnc-src/LICENSE.txt`](./novnc-src/LICENSE.txt)。
+- **分发镜像即分发 KasmVNC**：GPL-2.0 第 3 条要求随附对应源码，或提供一份
+  有效期至少三年的书面源码获取要约。
+- 官方镜像内预装 **Google Chrome 与 Claude Code 等专有软件**，它们各自受上游
+  条款约束，不在本项目 GPL-2.0 覆盖范围内；公开再分发前请自行确认其条款。
+
+完整的第三方组件清单与许可说明见 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)。
