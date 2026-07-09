@@ -8,6 +8,9 @@ services:
       context: .
       args:
         VERSION: ${VERSION:-1.0.0}
+        # 序列号激活密钥（64 位 hex）。不设 → 激活闸门关闭，登录页维持「用户名+密码+验证码」。
+        # 只从环境读，绝不写进 .env 提交到仓库。
+        CHATOP_LICENSE_HMAC_KEY: ${CHATOP_LICENSE_HMAC_KEY:-}
     image: chatop-ai:${VERSION:-1.0.0}
     # 本地单镜像，FROM 公共 kasm 基底；build 后用本地 tag，别去远程 pull
     pull_policy: build
@@ -28,6 +31,11 @@ services:
       - CLIPBOARD_IN=${CLIPBOARD_IN:-1}
       # 上传目标 / 下载来源目录（不写死路径：留空则 app-manager 默认 ~/Desktop，自动跟随 HOME=/home/<用户名>）
       - FILES_DIR=${FILES_DIR:-}
+      # 固定本机指纹（可选）。默认指纹派生自 home 卷内的 node-id，`down -v` 删卷后会变、
+      # 需重新领序列号；设了这个就跟卷解绑，换卷不换号。
+      - CHATOP_MACHINE_ID=${CHATOP_MACHINE_ID:-}
+      # 运行时覆盖激活密钥（可选，优先于镜像内 /opt/chatop/license-keys.json）
+      - CHATOP_LICENSE_HMAC_KEY=${CHATOP_LICENSE_HMAC_KEY:-}
     ports:
       # 单一对外端口 → 容器内 Caddy(7443)；Caddy 再反代 KasmVNC(6901) 与 filebrowser(8585)。
       # KasmVNC 的 6901 与 filebrowser 的 8585 仅容器内可达，不再对外发布。

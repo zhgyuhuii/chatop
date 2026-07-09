@@ -178,8 +178,14 @@ RUN su admin -c "PREINSTALL_HEAVY=${PREINSTALL_HEAVY} PREINSTALL_OPENHUMAN=${PRE
 
 # === OpenClaw 可视化配置器（openclaw-tool，tkinter）===
 # python3-tk 是 GUI 运行前提；置于产品层顶（首次装好后缓存命中，不冲上方重层，也不联网重下 Chrome）
+#
+# 隐式依赖，改动前必读：jammy 的 python3-tk(3.10.8) 这个 deb 里**同时**含 3.10 和 3.11 两套
+# tkinter（含 _tkinter.cpython-311-*.so，共 18 个 3.11 文件）。deadsnakes 的 python3.11 靠它
+# 拿到 tkinter —— jammy/deadsnakes 都没有 python3.11-tk 包可装。我们的运行时统一在 3.11，
+# 所以下面的断言校验的是 3.11 而非默认 python3；基底镜像换代后若断言失败，配置器必然打不开。
 RUN apt-get update && apt-get install -y --no-install-recommends python3-tk \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && python3.11 -c "import tkinter, _tkinter; print('python3.11 tkinter OK', _tkinter.__file__)"
 COPY openclaw-tool /opt/openclaw-tool
 RUN chmod +x /opt/openclaw-tool/*.sh 2>/dev/null || true
 
@@ -191,15 +197,18 @@ RUN mkdir -p /usr/share/chatop && \
     ( cd /opt/openclaw-tool && \
       HOME=/opt/chatop-seed-home \
       PATH=/opt/chatop-seed-home/.npm-global/bin:$PATH \
-      python3 -m openclaw_catalog --snapshot --out /usr/share/chatop/openclaw-catalog.json \
+      python3.11 -m openclaw_catalog --snapshot --out /usr/share/chatop/openclaw-catalog.json \
         --bin /opt/chatop-seed-home/.npm-global/bin/openclaw && \
-      python3 -c "import json,sys; d=json.load(open('/usr/share/chatop/openclaw-catalog.json')); \
+      python3.11 -c "import json,sys; d=json.load(open('/usr/share/chatop/openclaw-catalog.json')); \
         n=len(d['channels']); assert n >= 20, n; \
         print('openclaw catalog snapshot OK: %s, %d channels' % (d['meta']['openclaw_version'], n))" \
     ) || echo "WARN: openclaw catalog 快照失败，运行时将降级到静态兜底"
 
 # === app-manager：后端 + catalog + 图标 + 启动脚本 + GUI/CLI 脚本 + 播种脚本 ===
 COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
+# 序列号激活闸门 + 多语言（均为纯标准库）。app_manager.py 与它们同目录，脚本目录自动在 sys.path 上。
+COPY app-manager/chatop_license/ /usr/local/lib/chatop/chatop_license/
+COPY app-manager/chatop_i18n/ /usr/local/lib/chatop/chatop_i18n/
 COPY app-manager/apps-catalog.json /etc/chatop/apps-catalog.json
 COPY app-manager/icons/ /usr/share/kasmvnc/www/app-icons/
 COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
@@ -294,6 +303,52 @@ COPY assets/logo-sm.png /usr/share/kasmvnc/www/app-icons/chatop-logo.png
 COPY assets/follow-qr.jpg /usr/share/kasmvnc/www/app-icons/follow-qr.jpg
 COPY app-manager/apps-icon.svg /usr/share/kasmvnc/www/app-icons/apps.svg
 COPY assets/background-splash.jpg /usr/share/kasmvnc/www/app/images/splash.jpg
+
+# === 序列号激活密钥（可选）===
+# 密钥**不入 git**，只在构建时注入：
+#     docker compose build --build-arg CHATOP_LICENSE_HMAC_KEY=<64位hex>
+# 不注入 → 文件不存在 → gate.state()=="off" → 激活闸门关闭，登录页行为与上线前一致。
+# 这是刻意的：自建/开发镜像不该把自己锁在门外。
+#
+# ARG 必须放在这里（产品层尾部）。ARG 被消费的位置决定缓存失效边界 —— 放到上游会让
+# 5GB 的重层在每次换密钥时全部重建，然后 export 阶段把 dockerd OOM 掉（1.3.0 的教训）。
+#
+# 取舍已知并经用户确认：纯离线验证要求镜像内含对称 HMAC 密钥。镜像若推公开 registry，
+# 任何人可提取密钥为任意指纹自签序列号。这是业务闸门，不是数学防 keygen。
+ARG CHATOP_LICENSE_HMAC_KEY=""
+RUN if [ -n "$CHATOP_LICENSE_HMAC_KEY" ]; then \
+      mkdir -p /opt/chatop && \
+      printf '{"active_key_id":1,"hmac_keys":{"1":"%s"}}\n' "$CHATOP_LICENSE_HMAC_KEY" \
+        > /opt/chatop/license-keys.json && \
+      chmod 0644 /opt/chatop/license-keys.json && \
+      echo "license gate: ENABLED"; \
+    else \
+      echo "license gate: DISABLED (未注入 CHATOP_LICENSE_HMAC_KEY)"; \
+    fi
+
+# === 多语言：locale 自检 + 语言注入入口点 ===
+# 上面第 95 行的 `locale-gen zh_CN.UTF-8` 之外，我们支持的另外 4 种 locale 实测**已由
+# kasm 基底提供**（`locale -a` 有 222 个，170 个 language-pack）。不去改第 95 行那一层，
+# 是因为它在 Chrome / 预装等重层之上，一动就是全量重建 + 全量导出（5GB，dockerd 会 OOM）。
+# 这里「缺则补、必断言」：基底哪天缩水，构建就红，而不是等用户切到日语看见一片英文。
+RUN set -e; \
+    for l in zh_CN.UTF-8 en_US.UTF-8 zh_TW.UTF-8 ja_JP.UTF-8 ko_KR.UTF-8; do \
+      locale -a | grep -qix "$(echo "$l" | sed 's/UTF-8/utf8/')" || locale-gen "$l"; \
+    done; \
+    for l in zh_CN.utf8 en_US.utf8 zh_TW.utf8 ja_JP.utf8 ko_KR.utf8; do \
+      locale -a | grep -qix "$l" || { echo "MISSING LOCALE: $l"; exit 1; }; \
+    done; \
+    echo "locales OK: zh_CN en_US zh_TW ja_JP ko_KR"
+
+# 入口点包一层：在 vnc_startup.sh 拉起 xfce4-session **之前**把 LC_ALL 设成用户选的语言。
+# 实测进程树：xfce4-session=PID 90，custom_startup.sh=PID 137 —— 后者太晚，改不动 XFCE。
+COPY app-manager/chatop-lang-entrypoint.sh /usr/local/bin/chatop-lang-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/chatop-lang-entrypoint.sh && \
+    chmod +x /usr/local/bin/chatop-lang-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/chatop-lang-entrypoint.sh", \
+            "/dockerstartup/kasm_default_profile.sh", \
+            "/dockerstartup/vnc_startup.sh", \
+            "/dockerstartup/kasm_startup.sh"]
 
 # 构建期可能建出 root 属主 /tmp/caddy，运行时 uid 1000 写不进，删掉让运行时重建
 RUN rm -rf /tmp/caddy

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """chatop-ai 应用管理器后端：catalog/status/install/remove/logs。
 仅监听 127.0.0.1，命令只来自 catalog（白名单），绝不执行前端传入字符串。"""
 import json, os, re, glob, shutil, subprocess, threading, queue
@@ -33,6 +33,63 @@ AUTH_COOKIE = "chatop_auth"
 CAPTCHA_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"  # 去掉易混的 0/O/1/I/L
 CAPTCHA_TTL = 120
 CAPTCHA_COOKIE = "chatop_cap"
+
+# === 序列号激活闸门（首启需输入序列号；见 chatop_license/gate.py）===
+# 未注入 HMAC 密钥时 gate.state() 恒为 "off"，登录页与鉴权行为跟激活功能上线前完全一致。
+try:
+    from chatop_license import gate as _gate
+except Exception:   # 包缺失/损坏也绝不能让登录页打不开
+    _gate = None
+
+# === 多语言（见 chatop_i18n/）。包缺失时全部退化成英文原文，登录页仍可用。===
+try:
+    import chatop_i18n as _i18n
+except Exception:
+    _i18n = None
+
+BRAND = "察元AI工舱"   # 品牌名不翻译；station 的 _brand_intact() 心跳靠它探测品牌完整性
+
+def tr(key, lang):
+    return _i18n.t(key, lang) if _i18n else key
+
+def resolve_lang(cookie_header, accept_language):
+    """→ (lang, chosen)。chosen=False 表示「跟随系统」。"""
+    if not _i18n:
+        return ("en", False)
+    return _i18n.resolve(_get_cookie(cookie_header, _i18n.COOKIE), accept_language)
+
+# 错误码 1/2 归登录表单，3-9 归激活（与 gate.py 的 ERR_* 对齐）
+LOGIN_ERRORS = {
+    "1": "Incorrect username or password",
+    "2": "Captcha is wrong or expired",
+    "3": "Invalid serial number, please check it is complete",
+    "4": "This serial number was not issued for this machine",
+    "5": "This serial number does not include a workstation license",
+    "6": "Count-based serial numbers are not supported, please use a time-based one",
+    "7": "This serial number has expired",
+    "8": "Your license has expired, please enter a new serial number",
+    "9": "System clock error, please correct it and retry",
+}
+
+def gate_state():
+    """→ (state, err_code)。gate 不可用时一律视为闸门关闭，宁可放行也不锁死用户。"""
+    if _gate is None:
+        return ("off", 0)
+    try:
+        return _gate.state_detail()
+    except Exception:
+        return ("off", 0)
+
+def gate_passable(state):
+    return state in ("off", "active")
+
+def gate_mid():
+    if _gate is None:
+        return ""
+    try:
+        return _gate.machine.mid()
+    except Exception:
+        return ""
 
 def _captcha_new(n=4):
     """生成 (答案, 签名cookie值)。答案小写入签名，校验时大小写不敏感。"""
@@ -110,11 +167,11 @@ def _logo_data_uri():
     except OSError:
         return ""
 
-_LOGIN_TMPL = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+_LOGIN_TMPL = """<!DOCTYPE html><html lang="__HTMLLANG__"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>察元AI工舱 · 登录</title><style>
+<title>__BRAND__ · __T_SIGNIN__</title><style>
 *{box-sizing:border-box}html,body{height:100%;margin:0}
-body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
  background:radial-gradient(1200px 600px at 50% -10%,#1b3a6b 0%,#0b1220 55%,#070b14 100%);
  display:flex;align-items:center;justify-content:center;color:#eaf0fa}
 .card{width:360px;max-width:92vw;background:rgba(255,255,255,.04);
@@ -128,7 +185,7 @@ label{font-size:12px;color:#9fb3d1;margin-bottom:-6px}
 input{width:100%;padding:11px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.14);
  background:rgba(255,255,255,.06);color:#fff;font-size:14px;outline:none}
 input:focus{border-color:#3b82f6;background:rgba(59,130,246,.10)}
-button{margin-top:8px;padding:12px;border:0;border-radius:9px;cursor:pointer;
+button{margin-top:8px;padding:12px;border:0;border-radius:9px;cursor:pointer;letter-spacing:2px;
  background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:15px;font-weight:600}
 button:hover{filter:brightness(1.08)}
 .err{background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);color:#fca5a5;
@@ -143,29 +200,142 @@ button:hover{filter:brightness(1.08)}
 .brandfoot .bf_follow{font-size:13px;color:#cdd9ea;font-weight:600}
 .brandfoot .bf_link{font-size:13px;color:#3b82f6;text-decoration:none}
 .brandfoot .bf_cr{font-size:11px;color:#5f7399}
-</style></head><body><div class="card">
+.actbox{margin-top:2px;padding:10px 12px;border-radius:9px;
+ background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.22)}
+.actbox .fp_row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.actbox .fp_lbl{font-size:12px;color:#9fb3d1;flex:0 0 auto}
+.actbox .fp_val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;
+ color:#eaf0fa;letter-spacing:1px;flex:1;user-select:all}
+.actbox .fp_btn{flex:0 0 auto;margin:0;padding:4px 9px;font-size:11px;font-weight:500;
+ border-radius:6px;background:rgba(255,255,255,.10)}
+.actbox .fp_btn:hover{background:rgba(255,255,255,.18);filter:none}
+.actbox .hint{font-size:12px;color:#9fb3d1;line-height:1.6}
+.exp{font-size:11px;color:#5f7399;margin-top:10px;text-align:center}
+.langbox{position:fixed;top:16px;right:18px;z-index:10}
+.langbtn{display:flex;align-items:center;gap:6px;margin:0;padding:7px 11px;border-radius:9px;
+ background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+ color:#cdd9ea;font-size:13px;font-weight:500;cursor:pointer}
+.langbtn:hover{background:rgba(255,255,255,.12);filter:none}
+.langbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6}
+.langmenu{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:150px;
+ background:#101a2e;border:1px solid rgba(255,255,255,.12);border-radius:10px;
+ box-shadow:0 12px 32px rgba(0,0,0,.5);overflow:hidden;padding:4px}
+.langbox.open .langmenu{display:block}
+.langmenu a{display:block;padding:9px 12px;border-radius:7px;color:#cdd9ea;
+ font-size:13px;text-decoration:none;white-space:nowrap}
+.langmenu a:hover{background:rgba(255,255,255,.08)}
+.langmenu a.on{color:#3b82f6;font-weight:600}
+.langmenu .sep{height:1px;margin:4px 6px;background:rgba(255,255,255,.10)}
+.langnote{font-size:11px;color:#5f7399;margin-top:8px;text-align:center}
+</style></head><body>
+<div class="langbox" id="langbox">
+<button type="button" class="langbtn" onclick="document.getElementById('langbox').classList.toggle('open');event.stopPropagation()">
+<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.5 9h17M3.5 15h17"/></svg>
+<span>__LANGNAME__</span></button>
+<div class="langmenu">__LANGITEMS__</div></div>
+<script>document.addEventListener('click',function(){document.getElementById('langbox').classList.remove('open')});</script>
+<div class="card">
 __LOGOIMG__
-<div class="title">察元AI工舱</div><div class="sub">智能体驱动的 AI 云桌面</div>
+<div class="title">__BRAND__</div><div class="sub">__T_TAGLINE__</div>
 __ERR__
 <form method="POST" action="/login" autocomplete="off">
-<label>用户名</label><input name="username" value="" autofocus autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
-<label>密码</label><input name="password" type="password" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
-<label>验证码</label>
-<div class="caprow"><input name="captcha" autocomplete="off" maxlength="6" style="flex:1;text-transform:uppercase">
-<img class="capimg" src="/captcha" alt="验证码" title="点击刷新" onclick="this.src='/captcha?'+Date.now()"></div>
-<button type="submit">登 录</button></form>
+<label>__T_USERNAME__</label><input name="username" value="" autofocus autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+<label>__T_PASSWORD__</label><input name="password" type="password" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+__AUTHFIELD__
+<button type="submit">__SUBMIT__</button></form>
+__EXPIRY__
+__LANGNOTE__
 __FOOT__
 </div></body></html>"""
 
-def _login_html(err_code=""):
+# 已激活：图形验证码。AUTH_TOKEN 签名的无状态 cookie，一次性。
+_CAPTCHA_FIELD = """<label>__T_CAPTCHA__</label>
+<div class="caprow"><input name="captcha" autocomplete="off" maxlength="6" style="flex:1;text-transform:uppercase">
+<img class="capimg" src="/captcha" alt="__T_CAPTCHA__" title="__T_REFRESH__" onclick="this.src='/captcha?'+Date.now()"></div>"""
+
+# 未激活：序列号占掉验证码的位置。提示语指向页脚那张已有的关注二维码。
+_SERIAL_FIELD = """<label>__T_SERIAL__</label>
+<input name="serial" autocomplete="off" maxlength="40" required
+ placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" style="text-transform:uppercase;letter-spacing:1px">
+<div class="actbox">
+<div class="fp_row"><span class="fp_lbl">__T_FP__</span>
+<span class="fp_val" id="fp">__MID__</span>
+<button type="button" class="fp_btn" onclick="cp()">__T_COPY__</button></div>
+<div class="hint">__T_HINT1__<br>__T_HINT2__</div></div>
+<script>function cp(){var t=document.getElementById('fp').textContent;
+var d=function(){var e=document.createElement('textarea');e.value=t;document.body.appendChild(e);
+e.select();document.execCommand('copy');document.body.removeChild(e)};
+if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).catch(d)}else{d()}
+var b=event.target;var o=b.textContent;b.textContent='__T_COPIED__';setTimeout(function(){b.textContent=o},1200)}</script>"""
+
+
+def safe_next(nxt):
+    """把 ?next= 收敛到本站绝对路径，杜绝开放重定向。
+
+    要挡住的形态：`//evil.com`（协议相对 URL）、`https://evil.com`、`/\\evil.com`
+    （部分浏览器把反斜杠当斜杠）、以及任何不以 / 开头的东西。
+    """
+    nxt = (nxt or "").strip()
+    if not nxt.startswith("/") or nxt.startswith("//") or "\\" in nxt:
+        return "/login"
+    return nxt
+
+
+def _lang_menu_html(lang, chosen, next_path="/login"):
+    """右上角下拉。选项都是普通链接 → 无 JS 也能切，且服务端一次性把 cookie 与卷内文件写好。"""
+    codes = _i18n.SUPPORTED if _i18n else ()
+    nxt = quote(next_path, safe="/")
+    items = ['<a href="/lang?set=auto&next=%s" class="%s">%s</a>' % (
+        nxt, "" if chosen else "on", tr("Follow system", lang)), '<div class="sep"></div>']
+    for code in codes:
+        items.append('<a href="/lang?set=%s&next=%s" class="%s">%s</a>' % (
+            code, nxt, "on" if (chosen and code == lang) else "", _i18n.NATIVE_NAMES[code]))
+    label = _i18n.NATIVE_NAMES[lang] if (_i18n and chosen) else tr("Follow system", lang)
+    return "".join(items), label
+
+
+def _login_html(err_code="", state="off", mid="", expire_at=None, lang="zh_CN", chosen=False):
     logo = _logo_data_uri()
-    img = ('<img class="logo" src="%s" alt="察元AI工舱">' % logo) if logo else ''
-    msg = {"1": "用户名或密码错误", "2": "验证码错误或已过期"}.get(str(err_code), "")
-    err = ('<div class="err">%s</div>' % msg) if msg else ''
-    foot = _brand_footer_html(_follow_qr_data_uri())
+    img = ('<img class="logo" src="%s" alt="%s">' % (logo, BRAND)) if logo else ''
+    msg = LOGIN_ERRORS.get(str(err_code), "")
+    err = ('<div class="err">%s</div>' % tr(msg, lang)) if msg else ''
+    foot = _brand_footer_html(_follow_qr_data_uri(), lang)
+    items, label = _lang_menu_html(lang, chosen)
+    if gate_passable(state):
+        field = (_CAPTCHA_FIELD
+                 .replace("__T_CAPTCHA__", tr("Captcha", lang))
+                 .replace("__T_REFRESH__", tr("Click to refresh", lang)))
+        submit, expiry = tr("Sign in", lang), ""
+        if expire_at:
+            expiry = '<div class="exp">%s %s</div>' % (tr("License valid until", lang), expire_at[:10])
+    else:
+        field = (_SERIAL_FIELD
+                 .replace("__MID__", mid or tr("Unavailable", lang))
+                 .replace("__T_SERIAL__", tr("Serial number", lang))
+                 .replace("__T_FP__", tr("Machine fingerprint", lang))
+                 .replace("__T_COPY__", tr("Copy", lang))
+                 .replace("__T_COPIED__", tr("Copied", lang))
+                 .replace("__T_HINT1__", tr("Follow our official account to get a serial number", lang))
+                 .replace("__T_HINT2__", tr("Enter this fingerprint to obtain your serial number", lang)))
+        submit, expiry = tr("Activate and sign in", lang), ""
+    # 桌面语言只在容器启动时由入口脚本读取，已经在跑的 XFCE 改不了 —— 明说，别让用户以为坏了
+    note = ('<div class="langnote">%s</div>' % tr("Desktop language applies after restart", lang)) if chosen else ''
+    html_lang = _i18n.HTML_LANG.get(lang, "en") if _i18n else "en"
     return (_LOGIN_TMPL
+            .replace("__HTMLLANG__", html_lang)
+            .replace("__BRAND__", BRAND)
+            .replace("__T_SIGNIN__", tr("Sign in", lang))
+            .replace("__T_TAGLINE__", tr("Agent-powered AI cloud desktop", lang))
+            .replace("__T_USERNAME__", tr("Username", lang))
+            .replace("__T_PASSWORD__", tr("Password", lang))
+            .replace("__LANGNAME__", label)
+            .replace("__LANGITEMS__", items)
+            .replace("__LANGNOTE__", note)
             .replace("__LOGOIMG__", img)
             .replace("__ERR__", err)
+            .replace("__AUTHFIELD__", field)
+            .replace("__SUBMIT__", submit)
+            .replace("__EXPIRY__", expiry)
             .replace("__FOOT__", foot))
 
 def _cookie_ok(cookie_header):
@@ -189,12 +359,14 @@ def _follow_qr_data_uri():
     except OSError:
         return ""
 
-def _brand_footer_html(qr_uri):
-    qr = ('<img class="qr" src="%s" alt="关注我们二维码">' % qr_uri) if qr_uri else ''
+def _brand_footer_html(qr_uri, lang="zh_CN"):
+    qr = ('<img class="qr" src="%s" alt="%s">' % (qr_uri, tr("Official account QR code", lang))) if qr_uri else ''
+    # 公司名不翻译（工商注册名）；"版权所有" 翻译。
     return ('<div class="brandfoot">%s'
-            '<div class="bf_txt"><div class="bf_follow">关注我们</div>'
+            '<div class="bf_txt"><div class="bf_follow">%s</div>'
             '<a class="bf_link" href="https://aidooo.com" target="_blank" rel="noopener">aidooo.com</a>'
-            '<div class="bf_cr">版权所有 © 北京智灵鸟科技中心</div></div></div>') % qr
+            '<div class="bf_cr">%s © 北京智灵鸟科技中心</div></div></div>') % (
+                qr, tr("Follow us", lang), tr("All rights reserved", lang))
 
 def _safe_path(name):
     """把前端传来的文件名收敛到 FILES_DIR 内的单个文件，杜绝 ../ 越权。"""
@@ -524,7 +696,32 @@ class Handler(BaseHTTPRequestHandler):
         # 登录页（品牌化，取代 KasmVNC 原生 basic-auth 弹窗）
         if self.path.split("?",1)[0].rstrip("/") == "/login":
             err = parse_qs(urlparse(self.path).query).get("e",[""])[0]
-            return self._send_html(200, _login_html(err))
+            state, gerr = gate_state()
+            # 没带 ?e= 时，让状态自己说话：到期(8)/时钟回拨(9)
+            if not err and gerr:
+                err = str(gerr)
+            info = _gate.info() if (_gate is not None and state == "active") else {}
+            lang, chosen = resolve_lang(self.headers.get("Cookie",""),
+                                        self.headers.get("Accept-Language",""))
+            return self._send_html(200, _login_html(
+                err, state, gate_mid() if not gate_passable(state) else "",
+                info.get("expire_at"), lang, chosen))
+        # 语言切换：写 cookie（给 noVNC 的 JS 读）+ 写卷内文件（给下次启动的 XFCE 读）。
+        # Caddy @public 已放行 /lang —— 未登录时也必须能切语言，否则登录页的下拉是死的。
+        if self.path.split("?",1)[0].rstrip("/") == "/lang":
+            q = parse_qs(urlparse(self.path).query)
+            want = (q.get("set",[""])[0] or "").strip()
+            nxt = safe_next(q.get("next",["/login"])[0])
+            code = _i18n.write_lang_file(want) if _i18n else ""
+            self.send_response(302)
+            self.send_header("Location", nxt)
+            if code:
+                self.send_header("Set-Cookie",
+                    "%s=%s; Path=/; Max-Age=31536000; SameSite=Lax; Secure" % (_i18n.COOKIE, code))
+            elif _i18n:
+                # auto / 非法值 → 清 cookie，回到「跟随系统」
+                self.send_header("Set-Cookie", "%s=; Path=/; Max-Age=0" % _i18n.COOKIE)
+            self.end_headers(); return
         # 登录图形验证码（SVG）：下发签名 cookie，Caddy @public 放行
         if self.path.split("?", 1)[0].rstrip("/") == "/captcha":
             ans, cookie = _captcha_new()
@@ -536,9 +733,14 @@ class Handler(BaseHTTPRequestHandler):
                 "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=%d" % (CAPTCHA_COOKIE, cookie, CAPTCHA_TTL))
             self.send_header("Content-Length", str(len(b)))
             self.end_headers(); self.wfile.write(b); return
-        # Caddy forward_auth 校验端点：cookie 有效 → 200；否则 302 回登录页
+        # Caddy forward_auth 校验端点：cookie 有效 **且** 已激活 → 200；否则 302 回登录页。
+        #
+        # 激活检查必须放这里，不能只放 POST /login：chatop_auth 的 cookie 值就是常量
+        # AUTH_TOKEN = HMAC(sha256("chatop-auth|"+密码), "v1")，知道密码的人可以自行算出来
+        # 并直接伪造 cookie，完全绕过登录表单。/auth 是所有受保护路径的必经之地。
+        # 顺带好处：授权到期会立刻把人弹回激活页，而不是等 24h cookie 自然过期。
         if self.path.split("?",1)[0].rstrip("/") == "/auth":
-            if _cookie_ok(self.headers.get("Cookie","")):
+            if _cookie_ok(self.headers.get("Cookie","")) and gate_passable(gate_state()[0]):
                 return self._json(200, {"ok":True})
             self.send_response(302); self.send_header("Location","/login"); self.end_headers(); return
         if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog())
@@ -598,16 +800,31 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length",0))
             form=parse_qs(self.rfile.read(n).decode("utf-8","ignore"))
             u=form.get("username",[""])[0]; p=form.get("password",[""])[0]
-            cap=form.get("captcha",[""])[0]
+            cap=form.get("captcha",[""])[0]; serial=form.get("serial",[""])[0]
             ip=self.client_address[0]
             delay=_ratelimit_delay(ip)
             if delay: time.sleep(delay)
-            # 先校验验证码（无状态签名 cookie）
-            if not _captcha_check(_get_cookie(self.headers.get("Cookie",""), CAPTCHA_COOKIE), cap):
+            state, _ = gate_state()
+            need_activation = not gate_passable(state)
+            pending = None
+            if need_activation:
+                # 未激活：序列号占掉验证码的位置。先 validate（不落盘），密码也过了才 commit。
+                # 顺序不能反：先验密码会让 e=1/e=3 变成密码预言机（见 gate.validate 注释）。
+                ok, code, pending = _gate.validate(serial)
+                if not ok:
+                    _ratelimit_record_fail(ip)
+                    self.send_response(302); self.send_header("Location","/login?e=%d" % code)
+                    self.end_headers(); return
+            elif not _captcha_check(_get_cookie(self.headers.get("Cookie",""), CAPTCHA_COOKIE), cap):
                 _ratelimit_record_fail(ip)
                 self.send_response(302); self.send_header("Location","/login?e=2"); self.end_headers(); return
             if u==AUTH_USER and AUTH_PW and hmac.compare_digest(p, AUTH_PW):
                 _ratelimit_reset(ip)
+                if pending is not None:
+                    _gate.commit(pending)     # 序列号与密码都过了，此刻才写激活记录
+                elif _gate is not None:
+                    try: _gate.touch()        # 推进 seen_max（时钟回拨检测的单调基线）
+                    except Exception: pass
                 self.send_response(302); self.send_header("Location","/")
                 self.send_header("Set-Cookie",
                     "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400" % (AUTH_COOKIE, AUTH_TOKEN))

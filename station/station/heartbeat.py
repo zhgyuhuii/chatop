@@ -38,21 +38,48 @@ def _endpoint() -> str:
     return "https://" + host + "/api/node-sync"
 
 
-def _hid() -> str:
-    """匿名工位标识：首次生成 UUID 持久化到卷内，跨重启稳定，与个人身份无关。"""
+def _valid_hid(v: str) -> bool:
+    return 8 <= len(v) <= 64 and all(c in "0123456789abcdef-" for c in v.lower())
+
+
+def _read_hid() -> str:
     try:
         v = _HID_FILE.read_text().strip()
-        if 8 <= len(v) <= 64 and all(c in "0123456789abcdef-" for c in v.lower()):
-            return v
     except OSError:
-        pass
+        return ""
+    return v if _valid_hid(v) else ""
+
+
+def _hid() -> str:
+    """匿名工位标识：首次生成 UUID 持久化到卷内，跨重启稳定，与个人身份无关。
+
+    这个文件同时是 app-manager 序列号激活的**指纹锚点**（chatop_license/machine.py），
+    而 custom_startup.sh 并行拉起 station 与 app-manager。所以创建必须是
+    「出现即完整」的：先写满 tmp，再 os.link 原子占位，最后一律回读。
+
+    别改回 read→write：那样两边首启会各写一个 UUID，指纹翻一次，把刚激活的授权作废。
+    裸 O_EXCL 也不行 —— 它只保证谁创建原子，输的一方会读到尚未写完的空文件。
+    """
+    v = _read_hid()
+    if v:
+        return v
     v = str(uuid.uuid4())
+    tmp = _HID_FILE.with_name(f"{_HID_FILE.name}.{v}.tmp")
     try:
         _HID_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _HID_FILE.write_text(v)
+        tmp.write_text(v)
+        try:
+            os.link(tmp, _HID_FILE)
+        except FileExistsError:
+            pass
     except OSError:
-        pass
-    return v
+        return v
+    finally:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+    return _read_hid() or v
 
 
 def _brand_intact() -> bool:

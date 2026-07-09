@@ -6,7 +6,7 @@
     tls /tmp/caddy/tls.crt /tmp/caddy/tls.key
 
     # 自定义品牌登录页与校验端点（app-manager 提供），放行、不参与鉴权
-    @public path /login /login/* /auth /auth/* /captcha /captcha/*
+    @public path /login /login/* /auth /auth/* /captcha /captcha/* /lang /lang/*
     handle @public {
         reverse_proxy 127.0.0.1:8686
     }

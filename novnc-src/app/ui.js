@@ -3720,42 +3720,46 @@ const UI = {
 };
 
 // Set up translations
-const LINGUAS = ["af", "af_ZA", "am_ET", "am", "ar_AE", "ar_BH", "ar_DZ", "ar_EG", "ar_IN", "ar_IQ", "ar_JO", "ar_KW", "ar_LB", "ar_LY", "ar_MA", "ar_OM", "ar", "ar_QA", "ar_SA", "ar_SD", "ar_SY", "ar_TN", "ar_YE", "az_AZ", "az", "be_BY", "be", "bg_BG", "bg", "bn_BD", "bn_IN", "bn", "bs_BA", "bs", "ca_AD", "ca_ES", "ca_FR", "ca_IT", "ca", "cs_CZ", "cs", "cy_GB", "cy", "da_DK", "da", "de_AT", "de_BE", "de_CH", "de_DE", "de_LU", "de", "el", "es_AR", "es_BO", "es_CL", "es_CO", "es_CR", "es_CU", "es_DO", "es_EC", "es_ES", "es_GT", "es_HN", "es_MX", "es_NI", "es_PA", "es_PE", "es", "es_PR", "es_PY", "es_SV", "es_US", "es_UY", "es_VE", "et_EE", "et", "eu_ES", "eu", "fa_IR", "fa", "fi_FI", "fi", "fr_BE", "fr_CA", "fr_CH", "fr_FR", "fr_LU", "fr", "fy_DE", "fy_NL", "fy", "ga_IE", "ga", "gd_GB", "gd", "gl_ES", "gl", "gu_IN", "gu", "ha_NG", "ha", "he_IL", "he", "hi_IN", "hi", "hr_HR", "hr", "ht_HT", "ht", "hu_HU", "hu", "hy_AM", "hy", "id_ID", "id", "ig_NG", "ig", "is_IS", "is", "it_CH", "it_IT", "it", "ja_JP", "ja", "ka_GE", "ka", "kk_KZ", "kk", "km_KH", "km", "kn_IN", "kn", "ko_KR", "ko", "ku", "ku_TR", "ky_KG", "ky", "lb_LU", "lb", "lo_LA", "lo", "lt_LT", "lt", "lv_LV", "lv", "mg_MG", "mg", "mi_NZ", "mi", "mk_MK", "mk", "ml_IN", "ml", "mn_MN", "mn", "mr_IN", "mr", "ms_MY", "ms", "mt_MT", "mt", "my_MM", "my", "ne_NP", "ne", "nl_AW", "nl_BE", "nl_NL", "nl", "pa_IN", "pa_PK", "pa", "pl_PL", "pl", "ps_AF", "ps", "pt_BR", "pt", "pt_PT", "ro", "ro_RO", "ru", "ru_RU", "ru_UA", "sd_IN", "sd", "si_LK", "si", "sk", "sk_SK", "sl", "sl_SI", "so_DJ", "so_ET", "so_KE", "so", "so_SO", "sq_AL", "sq_MK", "sq", "st", "st_ZA", "sv_FI", "sv", "sv_SE", "sw_KE", "sw", "ta_IN", "ta_LK", "ta", "te_IN", "te", "tg", "tg_TJ", "th", "th_TH", "tl_PH", "tl", "tr_CY", "tr", "tr_TR", "tt", "tt_RU", "uk", "uk_UA", "ur_IN", "ur_PK", "ur", "uz", "uz_UZ", "vi", "vi_VN", "xh", "xh_ZA", "yi", "yi_US", "yo_NG", "yo", "zh_CN", "zh_TW", "zu", "zu_ZA"];
+// chatop-ai: 语言集合刻意收窄到 5 种（en 是源语言，不需要词典文件）。
+// 不是系统层的限制 —— 容器里有 222 个 locale、170 个 language-pack；限制来自
+// 我们自己的文案翻译量。开放到上游那 243 种，登录页与自定义文案只能退回英文，
+// 阿拉伯/泰文等还会因未装对应 Noto 字体显示成豆腐块。
+const LINGUAS = ["zh_CN", "zh_TW", "ja", "ko"];
 l10n.setup(LINGUAS);
 
-// chatop-ai: apply persisted language choice before loading dictionary
-try {
-    const savedLang = localStorage.getItem('chatop_lang');
-    if (savedLang && LINGUAS.includes(savedLang)) {
-        l10n.language = savedLang;
-    }
-} catch (e) { /* localStorage unavailable */ }
+// chatop-ai: 语言选择的**唯一真源**是 cookie chatop_lang，由 app-manager 的 /lang 端点写入
+// （同一次请求里它还会把选择写进卷内 ~/.local/share/chatop/lang，供下次启动的 XFCE 读取）。
+// 没有 cookie = 「跟随系统」，交回 l10n.setup() 基于 navigator.languages 的自动探测。
+// 不要改回 localStorage：那样登录页选的语言到了桌面就丢了，两处各说各话。
+function chatopSavedLang() {
+    const m = document.cookie.match(/(?:^|;\s*)chatop_lang=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : '';
+}
+const savedLang = chatopSavedLang();
+if (savedLang === 'en' || LINGUAS.includes(savedLang)) {
+    l10n.language = savedLang;
+}
 
-// chatop-ai: populate and wire the settings-panel language switcher
+// chatop-ai: 设置面板里的语言下拉。选中后跳 /lang，由服务端统一写 cookie + 卷内文件再跳回来。
 (function setupLanguageSelector() {
     const sel = document.getElementById('noVNC_setting_language');
     if (!sel) {
         return;
     }
-    function nativeName(code) {
-        try {
-            const dn = new Intl.DisplayNames([code.replace('_', '-')], { type: 'language' });
-            return dn.of(code.replace('_', '-')) || code;
-        } catch (e) {
-            return code;
-        }
-    }
-    // "en" is the base language and may not be listed in LINGUAS
-    const codes = LINGUAS.includes('en') ? LINGUAS.slice() : ['en'].concat(LINGUAS);
-    for (let i = 0; i < codes.length; i++) {
-        UI.addOption(sel, nativeName(codes[i]), codes[i]);
-    }
-    sel.value = l10n.language;
+    const NATIVE = {
+        zh_CN: '\u7b80\u4f53\u4e2d\u6587',
+        en: 'English',
+        zh_TW: '\u7e41\u9ad4\u4e2d\u6587',
+        ja: '\u65e5\u672c\u8a9e',
+        ko: '\ud55c\uad6d\uc5b4',
+    };
+    // "Follow system" 走 l10n，其余是母语名，本来就不该被翻译
+    UI.addOption(sel, 'Follow system', 'auto');
+    ['zh_CN', 'en', 'zh_TW', 'ja', 'ko'].forEach((code) => UI.addOption(sel, NATIVE[code], code));
+    sel.value = savedLang || 'auto';
     sel.addEventListener('change', () => {
-        try {
-            localStorage.setItem('chatop_lang', sel.value);
-        } catch (e) { /* localStorage unavailable */ }
-        location.reload();
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = '/lang?set=' + encodeURIComponent(sel.value) + '&next=' + next;
     });
 })();
 
