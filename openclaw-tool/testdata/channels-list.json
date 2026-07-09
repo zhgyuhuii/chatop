@@ -1,0 +1,141 @@
+{
+  "chat": {
+    "openclaw-weixin": {
+      "accounts": [
+        "default"
+      ],
+      "installed": true,
+      "origin": "configured"
+    },
+    "feishu": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "wecom": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "googlechat": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "nostr": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "msteams": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "mattermost": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "nextcloud-talk": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "matrix": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "line": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "zalo": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "openclaw-zaloclawbot": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "clickclack": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "yuanbao": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "zalouser": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "sms": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "synology-chat": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "tlon": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "discord": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "imessage": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "irc": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "qqbot": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "signal": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "slack": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "telegram": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "twitch": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    },
+    "whatsapp": {
+      "accounts": [],
+      "installed": false,
+      "origin": "installable"
+    }
+  }
+}

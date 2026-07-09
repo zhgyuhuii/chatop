@@ -1,0 +1,2256 @@
+{
+ "properties": {
+  "channels": {
+   "properties": {
+    "clickclack": {
+     "type": "object"
+    },
+    "discord": {
+     "type": "object"
+    },
+    "feishu": {
+     "type": "object"
+    },
+    "googlechat": {
+     "type": "object"
+    },
+    "imessage": {
+     "type": "object"
+    },
+    "irc": {
+     "type": "object"
+    },
+    "line": {
+     "type": "object"
+    },
+    "matrix": {
+     "type": "object"
+    },
+    "mattermost": {
+     "type": "object"
+    },
+    "msteams": {
+     "type": "object"
+    },
+    "nextcloud-talk": {
+     "type": "object"
+    },
+    "nostr": {
+     "type": "object"
+    },
+    "qa-channel": {
+     "type": "object"
+    },
+    "qqbot": {
+     "type": "object"
+    },
+    "signal": {
+     "type": "object"
+    },
+    "slack": {
+     "type": "object"
+    },
+    "sms": {
+     "type": "object"
+    },
+    "synology-chat": {
+     "type": "object"
+    },
+    "telegram": {
+     "type": "object"
+    },
+    "tlon": {
+     "type": "object"
+    },
+    "twitch": {
+     "type": "object"
+    },
+    "whatsapp": {
+     "type": "object"
+    },
+    "zalo": {
+     "type": "object"
+    },
+    "zalouser": {
+     "type": "object"
+    },
+    "openclaw-weixin": {
+     "type": "object"
+    }
+   }
+  },
+  "models": {
+   "properties": {
+    "providers": {
+     "type": "object",
+     "propertyNames": {
+      "type": "string"
+     },
+     "additionalProperties": {
+      "type": "object",
+      "properties": {
+       "baseUrl": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Model Provider Base URL",
+        "description": "Base URL for the provider endpoint used to serve model requests for that provider entry. Use HTTPS endpoints and keep URLs environment-specific through config templating where needed."
+       },
+       "apiKey": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "oneOf": [
+           {
+            "type": "object",
+            "properties": {
+             "source": {
+              "type": "string",
+              "const": "env"
+             },
+             "provider": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+             },
+             "id": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+             }
+            },
+            "required": [
+             "source",
+             "provider",
+             "id"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "source": {
+              "type": "string",
+              "const": "file"
+             },
+             "provider": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+             },
+             "id": {
+              "type": "string"
+             }
+            },
+            "required": [
+             "source",
+             "provider",
+             "id"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "source": {
+              "type": "string",
+              "const": "exec"
+             },
+             "provider": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+             },
+             "id": {
+              "type": "string"
+             }
+            },
+            "required": [
+             "source",
+             "provider",
+             "id"
+            ],
+            "additionalProperties": false
+           }
+          ]
+         }
+        ],
+        "title": "Model Provider API Key",
+        "description": "Provider credential used for API-key based authentication when the provider requires direct key auth. Use secret/env substitution and avoid storing real keys in committed config files."
+       },
+       "auth": {
+        "anyOf": [
+         {
+          "type": "string",
+          "const": "api-key"
+         },
+         {
+          "type": "string",
+          "const": "aws-sdk"
+         },
+         {
+          "type": "string",
+          "const": "oauth"
+         },
+         {
+          "type": "string",
+          "const": "token"
+         }
+        ],
+        "title": "Model Provider Auth Mode",
+        "description": "Selects provider auth style: \"api-key\" for API key auth, \"token\" for bearer token auth, \"oauth\" for OAuth credentials, and \"aws-sdk\" for AWS credential resolution. Match this to your provider requirements."
+       },
+       "api": {
+        "type": "string",
+        "enum": [
+         "openai-completions",
+         "openai-responses",
+         "openai-chatgpt-responses",
+         "anthropic-messages",
+         "google-generative-ai",
+         "google-vertex",
+         "github-copilot",
+         "bedrock-converse-stream",
+         "ollama",
+         "azure-openai-responses"
+        ],
+        "title": "Model Provider API Adapter",
+        "description": "Provider API adapter selection controlling request/response compatibility handling for model calls. Use the adapter that matches your upstream provider protocol to avoid feature mismatch."
+       },
+       "contextWindow": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "title": "Model Provider Context Window",
+        "description": "Default native context window applied to models under this provider when a model entry does not set contextWindow. Use model-level contextWindow for per-model overrides."
+       },
+       "contextTokens": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "title": "Model Provider Context Tokens",
+        "description": "Default effective runtime context cap applied to models under this provider when a model entry does not set contextTokens. Use this when runtime should budget below the native contextWindow."
+       },
+       "maxTokens": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "title": "Model Provider Max Tokens",
+        "description": "Default maximum output token budget applied to models under this provider when a model entry does not set maxTokens."
+       },
+       "timeoutSeconds": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "title": "Model Provider Request Timeout",
+        "description": "Optional per-provider model request timeout in seconds. Provider-level request settings affect explicit provider-owned model rows; they do not create implicit models. For custom providers, set it alongside the provider baseUrl and models. Applies to provider HTTP fetches, including connect, headers, body, and total request abort handling, and also raises the LLM idle/stream watchdog ceiling for this provider above the implicit ~120s default. Use this for slow local or self-hosted model servers, or for cloud providers that buffer reasoning tokens silently on the wire (Gemini preview, large-tool-payload Claude/Opus), instead of changing global agent timeouts."
+       },
+       "region": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Model Provider Region",
+        "description": "Optional provider deployment/API region interpreted by providers that expose regional endpoints. Use provider docs for supported values; baseUrl overrides usually take precedence when both are set."
+       },
+       "injectNumCtxForOpenAICompat": {
+        "type": "boolean",
+        "title": "Model Provider Inject num_ctx (OpenAI Compat)",
+        "description": "Controls whether OpenClaw injects `options.num_ctx` for Ollama providers configured with the OpenAI-compatible adapter (`openai-completions`). Default is true. Set false only if your proxy/upstream rejects unknown `options` payload fields."
+       },
+       "params": {
+        "type": "object",
+        "propertyNames": {
+         "type": "string"
+        },
+        "additionalProperties": {},
+        "title": "Model Provider Runtime Parameters",
+        "description": "Provider-specific runtime parameters interpreted by provider plugins. Keep keys documented by the provider, and prefer explicit provider docs over ad hoc shared assumptions."
+       },
+       "agentRuntime": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string",
+          "title": "Model Provider Runtime ID",
+          "description": "Provider agent runtime id: \"openclaw\", \"auto\", a registered plugin harness id such as \"codex\", or a supported CLI backend alias such as \"claude-cli\". OpenAI on the official endpoint defaults to the Codex harness when omitted."
+         }
+        },
+        "additionalProperties": false,
+        "title": "Model Provider Runtime",
+        "description": "Optional low-level agent runtime policy for this provider. Use provider/model runtime policy instead of agent-wide runtime pins; omitted/default lets OpenClaw choose the runtime for the selected provider."
+       },
+       "localService": {
+        "type": "object",
+        "properties": {
+         "command": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Model Provider Local Service Command",
+          "description": "Absolute executable path for the local model server process. Keep this path explicit so provider startup is deterministic and does not depend on shell PATH lookup."
+         },
+         "args": {
+          "type": "array",
+          "items": {
+           "type": "string"
+          },
+          "title": "Model Provider Local Service Arguments",
+          "description": "Argument list passed to the local model server command without shell expansion."
+         },
+         "cwd": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Model Provider Local Service Working Directory",
+          "description": "Working directory for the local model server process."
+         },
+         "env": {
+          "type": "object",
+          "propertyNames": {
+           "type": "string"
+          },
+          "additionalProperties": {
+           "type": "string"
+          },
+          "title": "Model Provider Local Service Environment",
+          "description": "Additional environment variables for the local model server process. Values that look secret are redacted from config snapshots."
+         },
+         "healthUrl": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Model Provider Local Service Health URL",
+          "description": "Readiness URL probed before model requests. If omitted, OpenClaw uses the provider baseUrl with /models appended."
+         },
+         "readyTimeoutMs": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Model Provider Local Service Ready Timeout",
+          "description": "Maximum milliseconds to wait for the local model server readiness probe after starting the process."
+         },
+         "idleStopMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Model Provider Local Service Idle Stop",
+          "description": "Milliseconds to keep an OpenClaw-started local model server alive after the last request finishes. Set 0 to keep it alive until OpenClaw exits."
+         }
+        },
+        "required": [
+         "command"
+        ],
+        "additionalProperties": false,
+        "title": "Model Provider Local Service",
+        "description": "Optional on-demand local model server process for this provider. OpenClaw probes healthUrl, starts the command when needed, waits for readiness, and then sends the model request."
+       },
+       "headers": {
+        "type": "object",
+        "propertyNames": {
+         "type": "string"
+        },
+        "additionalProperties": {
+         "anyOf": [
+          {
+           "type": "string"
+          },
+          {
+           "oneOf": [
+            {
+             "type": "object",
+             "properties": {
+              "source": {
+               "type": "string",
+               "const": "env"
+              },
+              "provider": {
+               "type": "string",
+               "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+              },
+              "id": {
+               "type": "string",
+               "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+              }
+             },
+             "required": [
+              "source",
+              "provider",
+              "id"
+             ],
+             "additionalProperties": false
+            },
+            {
+             "type": "object",
+             "properties": {
+              "source": {
+               "type": "string",
+               "const": "file"
+              },
+              "provider": {
+               "type": "string",
+               "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+              },
+              "id": {
+               "type": "string"
+              }
+             },
+             "required": [
+              "source",
+              "provider",
+              "id"
+             ],
+             "additionalProperties": false
+            },
+            {
+             "type": "object",
+             "properties": {
+              "source": {
+               "type": "string",
+               "const": "exec"
+              },
+              "provider": {
+               "type": "string",
+               "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+              },
+              "id": {
+               "type": "string"
+              }
+             },
+             "required": [
+              "source",
+              "provider",
+              "id"
+             ],
+             "additionalProperties": false
+            }
+           ]
+          }
+         ]
+        },
+        "title": "Model Provider Headers",
+        "description": "Static HTTP headers merged into provider requests for tenant routing, proxy auth, or custom gateway requirements. Use this sparingly and keep sensitive header values in secrets."
+       },
+       "authHeader": {
+        "type": "boolean",
+        "title": "Model Provider Authorization Header",
+        "description": "When true, credentials are sent via the HTTP Authorization header even if alternate auth is possible. Use this only when your provider or proxy explicitly requires Authorization forwarding."
+       },
+       "request": {
+        "type": "object",
+        "properties": {
+         "headers": {
+          "type": "object",
+          "propertyNames": {
+           "type": "string"
+          },
+          "additionalProperties": {
+           "anyOf": [
+            {
+             "type": "string"
+            },
+            {
+             "oneOf": [
+              {
+               "type": "object",
+               "properties": {
+                "source": {
+                 "type": "string",
+                 "const": "env"
+                },
+                "provider": {
+                 "type": "string",
+                 "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "id": {
+                 "type": "string",
+                 "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                }
+               },
+               "required": [
+                "source",
+                "provider",
+                "id"
+               ],
+               "additionalProperties": false
+              },
+              {
+               "type": "object",
+               "properties": {
+                "source": {
+                 "type": "string",
+                 "const": "file"
+                },
+                "provider": {
+                 "type": "string",
+                 "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "id": {
+                 "type": "string"
+                }
+               },
+               "required": [
+                "source",
+                "provider",
+                "id"
+               ],
+               "additionalProperties": false
+              },
+              {
+               "type": "object",
+               "properties": {
+                "source": {
+                 "type": "string",
+                 "const": "exec"
+                },
+                "provider": {
+                 "type": "string",
+                 "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "id": {
+                 "type": "string"
+                }
+               },
+               "required": [
+                "source",
+                "provider",
+                "id"
+               ],
+               "additionalProperties": false
+              }
+             ]
+            }
+           ]
+          },
+          "title": "Model Provider Request Headers",
+          "description": "Extra headers merged into provider requests after default attribution and auth resolution."
+         },
+         "auth": {
+          "anyOf": [
+           {
+            "type": "object",
+            "properties": {
+             "mode": {
+              "type": "string",
+              "const": "provider-default",
+              "title": "Model Provider Request Auth Mode",
+              "description": "Auth override mode: \"provider-default\", \"authorization-bearer\", or \"header\"."
+             }
+            },
+            "required": [
+             "mode"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "mode": {
+              "type": "string",
+              "const": "authorization-bearer",
+              "title": "Model Provider Request Auth Mode",
+              "description": "Auth override mode: \"provider-default\", \"authorization-bearer\", or \"header\"."
+             },
+             "token": {
+              "anyOf": [
+               {
+                "type": "string"
+               },
+               {
+                "oneOf": [
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "env"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "file"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "exec"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 }
+                ]
+               }
+              ],
+              "title": "Model Provider Request Bearer Token",
+              "description": "Bearer token used when auth mode is authorization-bearer."
+             }
+            },
+            "required": [
+             "mode",
+             "token"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "mode": {
+              "type": "string",
+              "const": "header",
+              "title": "Model Provider Request Auth Mode",
+              "description": "Auth override mode: \"provider-default\", \"authorization-bearer\", or \"header\"."
+             },
+             "headerName": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Model Provider Request Auth Header Name",
+              "description": "Custom auth header name used when auth mode is header."
+             },
+             "value": {
+              "anyOf": [
+               {
+                "type": "string"
+               },
+               {
+                "oneOf": [
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "env"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "file"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "source": {
+                    "type": "string",
+                    "const": "exec"
+                   },
+                   "provider": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                   },
+                   "id": {
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "source",
+                   "provider",
+                   "id"
+                  ],
+                  "additionalProperties": false
+                 }
+                ]
+               }
+              ],
+              "title": "Model Provider Request Auth Header Value",
+              "description": "Custom auth header value used when auth mode is header."
+             },
+             "prefix": {
+              "type": "string",
+              "title": "Model Provider Request Auth Header Prefix",
+              "description": "Optional prefix prepended to request.auth.value when auth mode is header."
+             }
+            },
+            "required": [
+             "mode",
+             "headerName",
+             "value"
+            ],
+            "additionalProperties": false
+           }
+          ],
+          "title": "Model Provider Request Auth Override",
+          "description": "Override provider request authentication behavior for this provider."
+         },
+         "proxy": {
+          "anyOf": [
+           {
+            "type": "object",
+            "properties": {
+             "mode": {
+              "type": "string",
+              "const": "env-proxy",
+              "title": "Model Provider Request Proxy Mode",
+              "description": "Proxy override mode for model-provider requests: \"env-proxy\" or \"explicit-proxy\"."
+             },
+             "tls": {
+              "type": "object",
+              "properties": {
+               "ca": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS CA",
+                "description": "Custom CA bundle used to verify the proxy TLS certificate chain."
+               },
+               "cert": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Cert",
+                "description": "Client TLS certificate presented to the proxy when mutual TLS is required."
+               },
+               "key": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Key",
+                "description": "Private key paired with request.proxy.tls.cert for proxy mutual TLS."
+               },
+               "passphrase": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Passphrase",
+                "description": "Optional passphrase used to decrypt request.proxy.tls.key."
+               },
+               "serverName": {
+                "type": "string",
+                "title": "Model Provider Request Proxy TLS Server Name",
+                "description": "Optional SNI/server-name override used when establishing TLS to the proxy."
+               },
+               "insecureSkipVerify": {
+                "type": "boolean",
+                "title": "Model Provider Request Proxy TLS Skip Verify",
+                "description": "Skips proxy TLS certificate verification. Use only for controlled development environments."
+               }
+              },
+              "additionalProperties": false,
+              "title": "Model Provider Request Proxy TLS",
+              "description": "Optional TLS settings used when connecting to the configured proxy."
+             }
+            },
+            "required": [
+             "mode"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "mode": {
+              "type": "string",
+              "const": "explicit-proxy",
+              "title": "Model Provider Request Proxy Mode",
+              "description": "Proxy override mode for model-provider requests: \"env-proxy\" or \"explicit-proxy\"."
+             },
+             "url": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Model Provider Request Proxy URL",
+              "description": "Explicit proxy URL used when request.proxy.mode is explicit-proxy. Credentials embedded in the URL are treated as sensitive and redacted from snapshots."
+             },
+             "tls": {
+              "type": "object",
+              "properties": {
+               "ca": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS CA",
+                "description": "Custom CA bundle used to verify the proxy TLS certificate chain."
+               },
+               "cert": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Cert",
+                "description": "Client TLS certificate presented to the proxy when mutual TLS is required."
+               },
+               "key": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Key",
+                "description": "Private key paired with request.proxy.tls.cert for proxy mutual TLS."
+               },
+               "passphrase": {
+                "anyOf": [
+                 {
+                  "type": "string"
+                 },
+                 {
+                  "oneOf": [
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "env"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "file"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   },
+                   {
+                    "type": "object",
+                    "properties": {
+                     "source": {
+                      "type": "string",
+                      "const": "exec"
+                     },
+                     "provider": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                     },
+                     "id": {
+                      "type": "string"
+                     }
+                    },
+                    "required": [
+                     "source",
+                     "provider",
+                     "id"
+                    ],
+                    "additionalProperties": false
+                   }
+                  ]
+                 }
+                ],
+                "title": "Model Provider Request Proxy TLS Passphrase",
+                "description": "Optional passphrase used to decrypt request.proxy.tls.key."
+               },
+               "serverName": {
+                "type": "string",
+                "title": "Model Provider Request Proxy TLS Server Name",
+                "description": "Optional SNI/server-name override used when establishing TLS to the proxy."
+               },
+               "insecureSkipVerify": {
+                "type": "boolean",
+                "title": "Model Provider Request Proxy TLS Skip Verify",
+                "description": "Skips proxy TLS certificate verification. Use only for controlled development environments."
+               }
+              },
+              "additionalProperties": false,
+              "title": "Model Provider Request Proxy TLS",
+              "description": "Optional TLS settings used when connecting to the configured proxy."
+             }
+            },
+            "required": [
+             "mode",
+             "url"
+            ],
+            "additionalProperties": false
+           }
+          ],
+          "title": "Model Provider Request Proxy",
+          "description": "Optional proxy override for model-provider requests. Use \"env-proxy\" to honor environment proxy settings or \"explicit-proxy\" to route through a specific proxy URL."
+         },
+         "tls": {
+          "type": "object",
+          "properties": {
+           "ca": {
+            "anyOf": [
+             {
+              "type": "string"
+             },
+             {
+              "oneOf": [
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "env"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "file"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "exec"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               }
+              ]
+             }
+            ],
+            "title": "Model Provider Request TLS CA",
+            "description": "Custom CA bundle used to verify the upstream TLS certificate chain."
+           },
+           "cert": {
+            "anyOf": [
+             {
+              "type": "string"
+             },
+             {
+              "oneOf": [
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "env"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "file"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "exec"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               }
+              ]
+             }
+            ],
+            "title": "Model Provider Request TLS Cert",
+            "description": "Client TLS certificate presented to the upstream endpoint when mutual TLS is required."
+           },
+           "key": {
+            "anyOf": [
+             {
+              "type": "string"
+             },
+             {
+              "oneOf": [
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "env"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "file"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "exec"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               }
+              ]
+             }
+            ],
+            "title": "Model Provider Request TLS Key",
+            "description": "Private key paired with request.tls.cert for upstream mutual TLS."
+           },
+           "passphrase": {
+            "anyOf": [
+             {
+              "type": "string"
+             },
+             {
+              "oneOf": [
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "env"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{0,127}$"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "file"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               },
+               {
+                "type": "object",
+                "properties": {
+                 "source": {
+                  "type": "string",
+                  "const": "exec"
+                 },
+                 "provider": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                 },
+                 "id": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "source",
+                 "provider",
+                 "id"
+                ],
+                "additionalProperties": false
+               }
+              ]
+             }
+            ],
+            "title": "Model Provider Request TLS Passphrase",
+            "description": "Optional passphrase used to decrypt request.tls.key."
+           },
+           "serverName": {
+            "type": "string",
+            "title": "Model Provider Request TLS Server Name",
+            "description": "Optional SNI/server-name override used when establishing upstream TLS."
+           },
+           "insecureSkipVerify": {
+            "type": "boolean",
+            "title": "Model Provider Request TLS Skip Verify",
+            "description": "Skips upstream TLS certificate verification. Use only for controlled development environments."
+           }
+          },
+          "additionalProperties": false,
+          "title": "Model Provider Request TLS",
+          "description": "Optional TLS settings used when connecting directly to the upstream model endpoint."
+         },
+         "allowPrivateNetwork": {
+          "type": "boolean",
+          "title": "Model Provider Request Allow Private Network",
+          "description": "When true, allow model-provider HTTP requests to private, CGNAT, or similar ranges through the provider HTTP fetch guard (fetchWithSsrFGuard). Custom/local provider base URLs already trust the exact configured origin, except metadata/link-local origins; set this to false to opt out of that trust. OpenAI Responses WebSocket reuses request for headers/TLS but does not use that fetch SSRF path. Use true only for operator-controlled self-hosted endpoints that must reach private origins outside the configured baseUrl origin."
+         }
+        },
+        "additionalProperties": false,
+        "title": "Model Provider Request Overrides",
+        "description": "Optional request overrides for model-provider requests, including extra headers, auth overrides, proxy routing, TLS client settings, and optional allowPrivateNetwork for trusted self-hosted endpoints. Use these only when your upstream or enterprise network path requires transport customization."
+       },
+       "models": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string",
+           "minLength": 1
+          },
+          "name": {
+           "type": "string",
+           "minLength": 1
+          },
+          "api": {
+           "type": "string",
+           "enum": [
+            "openai-completions",
+            "openai-responses",
+            "openai-chatgpt-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+            "google-vertex",
+            "github-copilot",
+            "bedrock-converse-stream",
+            "ollama",
+            "azure-openai-responses"
+           ]
+          },
+          "baseUrl": {
+           "type": "string",
+           "minLength": 1
+          },
+          "reasoning": {
+           "type": "boolean"
+          },
+          "input": {
+           "type": "array",
+           "items": {
+            "anyOf": [
+             {
+              "type": "string",
+              "const": "text"
+             },
+             {
+              "type": "string",
+              "const": "image"
+             },
+             {
+              "type": "string",
+              "const": "video"
+             },
+             {
+              "type": "string",
+              "const": "audio"
+             }
+            ]
+           }
+          },
+          "cost": {
+           "type": "object",
+           "properties": {
+            "input": {
+             "type": "number"
+            },
+            "output": {
+             "type": "number"
+            },
+            "cacheRead": {
+             "type": "number"
+            },
+            "cacheWrite": {
+             "type": "number"
+            },
+            "tieredPricing": {
+             "type": "array",
+             "items": {
+              "type": "object",
+              "properties": {
+               "input": {
+                "type": "number"
+               },
+               "output": {
+                "type": "number"
+               },
+               "cacheRead": {
+                "type": "number"
+               },
+               "cacheWrite": {
+                "type": "number"
+               },
+               "range": {
+                "anyOf": [
+                 {
+                  "type": "array",
+                  "items": [
+                   {
+                    "type": "number"
+                   },
+                   {
+                    "type": "number"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "array",
+                  "items": [
+                   {
+                    "type": "number"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              "required": [
+               "input",
+               "output",
+               "cacheRead",
+               "cacheWrite",
+               "range"
+              ],
+              "additionalProperties": false
+             }
+            }
+           },
+           "additionalProperties": false
+          },
+          "contextWindow": {
+           "type": "number",
+           "exclusiveMinimum": 0
+          },
+          "contextTokens": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "maxTokens": {
+           "type": "number",
+           "exclusiveMinimum": 0
+          },
+          "thinkingLevelMap": {
+           "type": "object",
+           "properties": {
+            "off": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "minimal": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "low": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "medium": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "high": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "xhigh": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            },
+            "max": {
+             "anyOf": [
+              {
+               "type": "string"
+              },
+              {
+               "type": "null"
+              }
+             ]
+            }
+           },
+           "additionalProperties": false
+          },
+          "params": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {}
+          },
+          "agentRuntime": {
+           "type": "object",
+           "properties": {
+            "id": {
+             "type": "string",
+             "title": "Model Runtime ID",
+             "description": "Model agent runtime id: \"openclaw\", \"auto\", a registered plugin harness id such as \"codex\", or a supported CLI backend alias such as \"claude-cli\"."
+            }
+           },
+           "additionalProperties": false,
+           "title": "Model Runtime",
+           "description": "Optional low-level agent runtime policy for this specific model. Model runtime policy overrides the provider runtime policy."
+          },
+          "headers": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "string"
+           }
+          },
+          "compat": {
+           "type": "object",
+           "properties": {
+            "supportsStore": {
+             "type": "boolean"
+            },
+            "supportsPromptCacheKey": {
+             "type": "boolean"
+            },
+            "supportsDeveloperRole": {
+             "type": "boolean"
+            },
+            "supportsReasoningEffort": {
+             "type": "boolean"
+            },
+            "supportsUsageInStreaming": {
+             "type": "boolean"
+            },
+            "supportsTools": {
+             "type": "boolean"
+            },
+            "supportsStrictMode": {
+             "type": "boolean"
+            },
+            "requiresStringContent": {
+             "type": "boolean"
+            },
+            "strictMessageKeys": {
+             "type": "boolean"
+            },
+            "visibleReasoningDetailTypes": {
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1
+             }
+            },
+            "supportedReasoningEfforts": {
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1
+             }
+            },
+            "reasoningEffortMap": {
+             "type": "object",
+             "propertyNames": {
+              "type": "string",
+              "minLength": 1
+             },
+             "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+             }
+            },
+            "maxTokensField": {
+             "anyOf": [
+              {
+               "type": "string",
+               "const": "max_completion_tokens"
+              },
+              {
+               "type": "string",
+               "const": "max_tokens"
+              }
+             ]
+            },
+            "thinkingFormat": {
+             "type": "string",
+             "enum": [
+              "openai",
+              "openrouter",
+              "deepseek",
+              "together",
+              "qwen",
+              "qwen-chat-template",
+              "zai"
+             ]
+            },
+            "requiresToolResultName": {
+             "type": "boolean"
+            },
+            "requiresAssistantAfterToolResult": {
+             "type": "boolean"
+            },
+            "requiresThinkingAsText": {
+             "type": "boolean"
+            },
+            "requiresReasoningContentOnAssistantMessages": {
+             "type": "boolean"
+            },
+            "toolSchemaProfile": {
+             "type": "string"
+            },
+            "unsupportedToolSchemaKeywords": {
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1
+             }
+            },
+            "nativeWebSearchTool": {
+             "type": "boolean"
+            },
+            "toolCallArgumentsEncoding": {
+             "type": "string"
+            },
+            "requiresMistralToolIds": {
+             "type": "boolean"
+            },
+            "requiresOpenAiAnthropicToolPayload": {
+             "type": "boolean"
+            }
+           },
+           "additionalProperties": false
+          },
+          "mediaInput": {
+           "type": "object",
+           "properties": {
+            "image": {
+             "type": "object",
+             "properties": {
+              "maxBytes": {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991,
+               "title": "Model Image Max Bytes",
+               "description": "Maximum encoded image payload size accepted by the provider for this model."
+              },
+              "maxPixels": {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991,
+               "title": "Model Image Max Pixels",
+               "description": "Maximum image pixel count accepted by the provider for this model."
+              },
+              "maxSidePx": {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991,
+               "title": "Model Image Max Side",
+               "description": "Maximum image width or height accepted by the provider for this model."
+              },
+              "preferredSidePx": {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991,
+               "title": "Model Image Preferred Side",
+               "description": "Preferred image resize side for balanced compression. Leave unset to use OpenClaw's conservative default."
+              },
+              "tokenMode": {
+               "anyOf": [
+                {
+                 "type": "string",
+                 "const": "tile"
+                },
+                {
+                 "type": "string",
+                 "const": "detail"
+                },
+                {
+                 "type": "string",
+                 "const": "provider"
+                }
+               ],
+               "title": "Model Image Token Mode",
+               "description": "Provider image token accounting style: \"tile\", \"detail\", or \"provider\"."
+              }
+             },
+             "additionalProperties": false,
+             "title": "Model Image Input",
+             "description": "Optional image input limits for this model, such as maximum side length, maximum pixels, and preferred compression side."
+            }
+           },
+           "additionalProperties": false,
+           "title": "Model Media Input",
+           "description": "Optional model media capability metadata used by tools to choose conservative image compression defaults."
+          },
+          "metadataSource": {
+           "type": "string",
+           "const": "models-add"
+          }
+         },
+         "required": [
+          "id",
+          "name"
+         ],
+         "additionalProperties": false
+        },
+        "title": "Model Provider Model List",
+        "description": "Declared model list for a provider including identifiers, metadata, provider-specific params, and optional compatibility/cost hints. Keep IDs exact to provider catalog values so selection and fallback resolve correctly."
+       }
+      },
+      "additionalProperties": false
+     },
+     "title": "Model Providers",
+     "description": "Provider map keyed by provider ID containing connection/auth settings and concrete model definitions. Built-in providers may be tuned with provider-level overlays; custom providers must include baseUrl and models. Use stable provider keys so references from agents and tooling remain portable across environments."
+    }
+   }
+  }
+ }
+}
