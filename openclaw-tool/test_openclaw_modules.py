@@ -119,6 +119,21 @@ def test_probe_all_green_when_ok(tmp_path=None):
     assert by["ch:telegram"]["status"] == "ok"
 
 
+def test_probe_node_ok_without_nvm():
+    """回归：容器用 npm-global/系统 node（无 ~/.nvm）时，Node 环境不得误报 FAIL。"""
+    def runner(cmd, timeout=20):
+        if cmd == "node -v":
+            return True, "v20.10.0"
+        if cmd == "openclaw --version":
+            return True, "OpenClaw 2026.6.10"
+        return True, ""
+    items = diag.probe({"gateway": {"port": 18789}}, env={"NVM_DIR": "/nonexistent-nvm"},
+                       gateway_check=lambda p: True, cmd_runner=runner, network_check=lambda: True)
+    node = {i["key"]: i for i in items}["node"]
+    assert node["status"] == "ok", f"无 nvm 但 node 可用应为 ok，实际 {node}"
+    assert "npm-global" in node["detail"] or "系统" in node["detail"]
+
+
 def test_probe_flags_failures():
     def runner(cmd, timeout=20):
         if cmd == "openclaw --version":

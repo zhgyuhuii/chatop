@@ -123,15 +123,17 @@ def probe(config, env=None, *, gateway_check=None, cmd_runner=None,
     config = config or {}
     items = []
 
-    # 1. nvm / Node 环境
-    nvm_sh = Path(env.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
+    # 1. Node 环境。判据只看「node 能不能跑」——nvm 只是安装 node 的方式之一，
+    # 镜像里也可能是 npm-global / 系统 node。要求 nvm.sh 存在会对后者误报 FAIL。
     node_ok, node_out = cmd_runner("node -v", 10)
-    if nvm_sh.exists() and node_ok:
-        items.append({"key": "node", "name": "nvm / Node 环境", "status": "ok",
-                      "detail": f"Node {node_out.strip()}", "fix": None, "fix_label": ""})
+    if node_ok:
+        nvm_sh = Path(env.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
+        via = "nvm" if nvm_sh.exists() else "系统/npm-global"
+        items.append({"key": "node", "name": "Node 环境", "status": "ok",
+                      "detail": f"Node {node_out.strip()}（{via}）", "fix": None, "fix_label": ""})
     else:
-        items.append({"key": "node", "name": "nvm / Node 环境", "status": "fail",
-                      "detail": "未检测到 nvm/Node（openclaw 依赖它）",
+        items.append({"key": "node", "name": "Node 环境", "status": "fail",
+                      "detail": "node 不可用（openclaw 依赖它）",
                       "fix": "install_node", "fix_label": "安装 Node"})
 
     # 2. openclaw 已安装
