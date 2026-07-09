@@ -202,3 +202,44 @@ def probe(config, env=None, *, gateway_check=None, cmd_runner=None,
                       "detail": "npm 源可达", "fix": None, "fix_label": ""})
 
     return items
+
+
+# ---------- P3：openclaw 自带的校验/探活命令 ----------
+# 三条命令均已在容器内实证存在（openclaw 2026.6.10）：
+#   config validate  —— 不启网关，纯 schema 校验
+#   gateway probe    —— 可达性 + 认证能力 + 读探针
+#   doctor --json    —— 诊断并可 --fix 修复
+
+def _validate_runner(cmd, timeout=30):
+    """跑 openclaw 子命令，返回 (rc, 合并输出)。走登录 shell 以加载 nvm/npm-global。"""
+    import subprocess
+    inner = ('nvm_sh="${NVM_DIR:-$HOME/.nvm}/nvm.sh"; [ -s "$nvm_sh" ] && . "$nvm_sh"; '
+             "openclaw " + " ".join(cmd))
+    proc = subprocess.Popen(["bash", "-lc", inner], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    out, _ = proc.communicate(timeout=timeout)
+    return proc.returncode, out.decode("utf-8", "replace")
+
+
+def check_config_valid(runner=None):
+    """`openclaw config validate` —— 不启网关，纯 schema 校验。
+
+    放在起网关之前：配置非法时若先起网关，真正的原因会被「网关启动失败」掩盖。
+    """
+    runner = runner or _validate_runner
+    rc, out = runner(["config", "validate"], timeout=30)
+    if rc == 0:
+        return {"key": "config_valid", "名称": "配置合法性", "status": "ok",
+                "detail": "配置通过 schema 校验", "fix": None, "fix_label": None}
+    return {"key": "config_valid", "名称": "配置合法性", "status": "fail",
+            "detail": (out or "").strip()[-400:] or "校验失败（无输出）",
+            "fix": None, "fix_label": "查看详情"}
+
+
+def check_gateway_probe(runner=None):
+    """`openclaw gateway probe` —— 网关可达性与认证能力。"""
+    runner = runner or _validate_runner
+    rc, out = runner(["gateway", "probe"], timeout=30)
+    return {"key": "gateway_probe", "名称": "网关可达性",
+            "status": "ok" if rc == 0 else "fail",
+            "detail": (out or "").strip()[-400:], "fix": None, "fix_label": None}

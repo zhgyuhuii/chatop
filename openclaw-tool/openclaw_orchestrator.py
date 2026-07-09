@@ -9,25 +9,14 @@
 
 副作用（终端、轮询、UI 回填）以可注入回调提供，核心决策逻辑是纯函数、可单测。
 """
+import json
 import os
 import re
+import subprocess
 
-# —— 通道 → npm 插件包名（builtin/内置无需装插件 → None）——
-PLUGIN_MAP = {
-    "feishu": "@openclaw/feishu", "qqbot": "@openclaw/qqbot", "slack": "@openclaw/slack",
-    "discord": "@openclaw/discord", "whatsapp": "@openclaw/whatsapp",
-    "msteams": "@openclaw/msteams", "mattermost": "@openclaw/mattermost",
-    "line": "@openclaw/line", "matrix": "@openclaw/matrix", "signal": "@openclaw/signal",
-    "zalo": "@openclaw/zalo", "zalo-personal": "@openclaw/zalo-personal",
-    "nostr": "@openclaw/nostr", "twitch": "@openclaw/twitch", "sms": "@openclaw/sms",
-    "googlechat": "@openclaw/googlechat", "nextcloud-talk": "@openclaw/nextcloud-talk",
-    "synology-chat": "@openclaw/synology-chat", "clickclack": "@openclaw/clickclack",
-    "tlon": "@openclaw/tlon", "irc": "@openclaw/irc", "voice-call": "@openclaw/voice-call",
-    "raft": "@openclaw/raft",
-    # 内置/外部 stock 扩展：无需 npm 安装
-    "openclaw-weixin": None, "yuanbao": None, "webchat": None, "telegram": None,
-    "imessage": None, "bluebubbles": None,
-}
+import openclaw_catalog
+
+HANDOFF_DIR = "/tmp"
 
 # —— 状态机 ——
 S_START = "START"
@@ -58,13 +47,55 @@ def next_state(state, event):
     return state
 
 
-def plugin_pkg_for(channel_key):
-    return PLUGIN_MAP.get(channel_key)
+def _channel_entry(channel_key, catalog=None):
+    catalog = catalog or openclaw_catalog.load_catalog()
+    for entry in catalog["channels"]:
+        if entry.id == channel_key:
+            return entry
+    return None
+
+
+def plugin_pkg_for(channel_key, catalog=None):
+    """通道的 npm 包名 —— 从 openclaw 的官方插件目录取，**绝不拼接 `@openclaw/<id>`**。
+
+    企业微信/微信/元宝/Zalo ClawBot 由第三方厂商发布，包名不遵守该模式。旧的
+    PLUGIN_MAP 硬编码表按模式假设手抄，恰好漏掉这四个，并凭空写出 raft/webchat/
+    voice-call/bluebubbles 等 openclaw 根本不提供的通道。
+    内置通道（imessage / telegram）返回 None。
+    """
+    entry = _channel_entry(channel_key, catalog)
+    return entry.npm_spec if entry else None
+
+
+def handoff_path(channel_key):
+    """终端子进程把 QR/状态写到这里，GUI watcher 轮询读取。"""
+    return os.path.join(HANDOFF_DIR, "openclaw-oneclick-%s.json" % channel_key)
+
+
+def build_login_cmd(channel_key, account=None):
+    """`openclaw channels login` 是 openclaw 自带的扫码/授权入口（`--help` 实证）。"""
+    cmd = ["channels", "login", "--channel", channel_key]
+    if account:
+        cmd += ["--account", account]
+    return cmd
+
+
+def read_handoff(path):
+    """读交接文件；不存在 / 半截写入 → None（不抛异常）。"""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:
+        return None
 
 
 def build_login_script(channel_key, auth, pkg, log_path, skill_install_delay=0):
     """构造终端里要跑的 bash（纯函数，可单测）：先加载 nvm，可选装插件，
-    再按 auth 执行 login/启用；全部输出 tee 到 log_path 供 GUI 抽二维码/状态。"""
+    再按 auth 执行 login/启用；全部输出 tee 到 log_path 供 GUI 抽二维码/状态。
+
+    装插件走 `openclaw plugins install`（openclaw 自己的机制，校验完整性），
+    不用裸 `npm i -g` —— 后者绕过 openclaw 的 expectedIntegrity 校验。
+    """
     parts = [
         'nvm_sh="${NVM_DIR:-$HOME/.nvm}/nvm.sh"',
         '[ -s "$nvm_sh" ] && . "$nvm_sh"',
@@ -72,15 +103,15 @@ def build_login_script(channel_key, auth, pkg, log_path, skill_install_delay=0):
     ]
     if pkg:
         parts.append(f'echo "[1/3] 安装插件 {pkg} ..." | tee -a "{log_path}"')
-        parts.append(f'npm i -g {pkg} 2>&1 | tee -a "{log_path}"')
+        parts.append(f'openclaw plugins install {pkg} 2>&1 | tee -a "{log_path}"')
     if auth == "qr":
         parts.append(f'echo "[2/3] 扫码登录，请用手机扫描下方二维码 ..." | tee -a "{log_path}"')
-        parts.append(f'openclaw channels login --channel {channel_key} 2>&1 | tee -a "{log_path}"')
+        login = " ".join(build_login_cmd(channel_key))
+        parts.append(f'openclaw {login} 2>&1 | tee -a "{log_path}"')
     elif auth == "builtin":
         parts.append(f'echo "[2/3] 启用内置通道 {channel_key} ..." | tee -a "{log_path}"')
     parts.append(f'echo "[done] 完成，可关闭本窗口" | tee -a "{log_path}"')
-    inner = " ; ".join(parts)
-    return inner
+    return " ; ".join(parts)
 
 
 # —— 二维码从混合日志里抽取（纯函数）——
@@ -267,3 +298,42 @@ def run_all(config, enabled_channels, auth_of, *, cmd_runner, terminal_runner,
         results.append((ch_key, "已连接" if st == S_CONNECTED else st))
     ui("summary", results=results)
     return results
+
+
+# ---------- P3：配置闭环（校验 → 起网关 → 探活） ----------
+
+VERIFY_STEPS = (
+    ("config_validate", ["config", "validate"], 30),
+    ("gateway_start", ["gateway", "start"], 120),
+    ("gateway_probe", ["gateway", "probe"], 30),
+)
+
+
+def _default_cli_runner(cmd, timeout=30):
+    """通过登录 shell 跑 openclaw（GUI 由 .desktop 拉起时 PATH 无 nvm/npm-global）。"""
+    inner = 'nvm_sh="${NVM_DIR:-$HOME/.nvm}/nvm.sh"; [ -s "$nvm_sh" ] && . "$nvm_sh"; openclaw ' + " ".join(cmd)
+    proc = subprocess.Popen(["bash", "-lc", inner], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    out, _ = proc.communicate(timeout=timeout)
+    return proc.returncode, out.decode("utf-8", "replace")
+
+
+def verify_and_start(runner=None, on_progress=None):
+    """配置 → 校验 → 起网关 → 探活。任一步失败即停在原地并给出可读原因。
+
+    顺序不可调：配置非法时若先起网关，真正的原因会被「网关启动失败」掩盖，
+    用户看到的是症状不是根因。
+    """
+    runner = runner or _default_cli_runner
+    for name, cmd, timeout in VERIFY_STEPS:
+        if on_progress:
+            on_progress(name, "running")
+        rc, out = runner(cmd, timeout=timeout)
+        if rc != 0:
+            if on_progress:
+                on_progress(name, "failed")
+            return {"ok": False, "failed_step": name,
+                    "detail": (out or "").strip()[-600:] or "无输出"}
+        if on_progress:
+            on_progress(name, "ok")
+    return {"ok": True, "failed_step": None, "detail": "配置已生效，网关可达"}
