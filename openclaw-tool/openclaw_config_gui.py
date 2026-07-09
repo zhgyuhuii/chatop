@@ -16,7 +16,7 @@ import urllib.error
 import urllib.parse
 from pathlib import Path
 
-# 新模块（同目录）：体检 / 编排 / 二维码。防御式导入，缺失时降级不崩。
+# 新模块（同目录）：体检 / 编排 / 二维码 / 目录服务。防御式导入，缺失时降级不崩。
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     import openclaw_diagnostics as _diag
@@ -24,6 +24,35 @@ try:
     import openclaw_qr as _qr
 except Exception:
     _diag = _orch = _qr = None
+try:
+    import openclaw_catalog as _cat
+except Exception:
+    _cat = None
+
+# 目录惰性单例。**只读文件，绝不在此调 CLI** —— CLI 每次 8~12s 且无热缓存，
+# 挂在启动路径上会让配置器打不开（代价参见 XIM 段错误事故）。
+_CATALOG_CACHE = {"data": None}
+
+_EMPTY_CATALOG = {"channels": [], "providers": [], "search": [],
+                  "meta": {"source": "unavailable", "openclaw_version": None}}
+
+
+def catalog(force_reload=False):
+    if _cat is None:
+        return _EMPTY_CATALOG
+    if force_reload or _CATALOG_CACHE["data"] is None:
+        try:
+            _CATALOG_CACHE["data"] = _cat.load_catalog()
+        except Exception:
+            return _EMPTY_CATALOG
+    return _CATALOG_CACHE["data"]
+
+
+def channel_entry(channel_key):
+    for entry in catalog()["channels"]:
+        if entry.id == channel_key:
+            return entry
+    return None
 
 if sys.platform == "win32":
     import msvcrt
@@ -655,51 +684,25 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
     return summary
 
 
-# 需通过插件安装的通道（npm 包名）
-# 通道扩展插件（openclaw 2026.6.10：telegram/discord/slack/whatsapp 为内置，其余作扩展提供，
-# 包名 @openclaw/<key>，均已在 npm 验证存在）。telegram 无独立包(核心内置)故不列。
-CHANNEL_PLUGINS = [
-    # —— 国内通道置顶 ——（微信 openclaw-weixin 与腾讯元宝 yuanbao 为内置 stock 扩展、无需 npm 安装，
-    #   见「更多」通道展开与 openclaw channels add；飞书/QQ 走插件安装）
-    ("@openclaw/feishu", "飞书(Feishu)"),
-    ("@openclaw/qqbot", "QQ机器人(QQ Bot)"),
-    # —— 国际 ——
-    ("@openclaw/slack", "Slack"),
-    ("@openclaw/discord", "Discord"),
-    ("@openclaw/whatsapp", "WhatsApp"),
-    ("@openclaw/msteams", "微软Teams(Microsoft Teams)"),
-    ("@openclaw/mattermost", "Mattermost"),
-    ("@openclaw/line", "LINE"),
-    ("@openclaw/matrix", "Matrix"),
-    ("@openclaw/signal", "信号(Signal)"),
-    ("@openclaw/zalo", "Zalo"),
-    ("@openclaw/nostr", "Nostr"),
-    ("@openclaw/twitch", "Twitch"),
-    ("@openclaw/sms", "短信(SMS)"),
-    ("@openclaw/googlechat", "谷歌Chat(Google Chat)"),
-    ("@openclaw/nextcloud-talk", "Nextcloud Talk"),
-    ("@openclaw/synology-chat", "群晖Chat(Synology Chat)"),
-    ("@openclaw/clickclack", "ClickClack"),
-    ("@openclaw/tlon", "Tlon"),
-    ("@openclaw/irc", "IRC"),
-]
+# 通道清单不再硬编码 —— 由 openclaw_catalog 从 openclaw 自身取（channels list --all --json
+# 为 id 权威，官方插件目录提供包名/中文名/QR 标记）。
+#
+# 血泪：原 CHANNEL_PLUGINS 的 20 条包名清一色套用 `@openclaw/<id>` 模式假设，而企业微信
+# (@wecom/wecom-openclaw-plugin)、微信(@tencent-weixin/openclaw-weixin)、元宝
+# (openclaw-plugin-yuanbao)、Zalo ClawBot(@zalo-platforms/openclaw-zaloclawbot) 由第三方
+# 厂商发布，不遵守该命名 —— 恰好漏掉的全是中国区最要紧的三个。同时那张表还凭空写出
+# webchat / voice-call / raft / bluebubbles 等 openclaw 根本不提供的通道。
+#
+# 不要在此处重建任何通道 id / 包名的手抄表。要加中文名或申请地址，去 catalog_overrides.py。
 
 # 国内通道（在「更多」通道展开时排到最前）
-CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot", "yuanbao")
-
-# 通道认证方式（供一步到位编排数据驱动分支）：qr 扫码 / token 填令牌 / webhook / oauth / builtin 内置。
-# 未列出的默认按 token 处理。orchestrator 只 switch(auth)，加通道零改逻辑。
-CHANNEL_AUTH = {
-    "openclaw-weixin": "qr", "whatsapp": "qr", "signal": "qr",
-    "zalo-personal": "qr", "yuanbao": "qr",
-    "webchat": "builtin", "imessage": "builtin",
-    "synology-chat": "webhook", "bluebubbles": "webhook",
-    "twitch": "oauth",
-}
+CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot", "yuanbao", "wecom")
 
 
 def auth_of(channel_key):
-    return CHANNEL_AUTH.get(channel_key, "token")
+    """通道认证方式（qr/token/webhook/oauth/builtin），来自目录。"""
+    entry = channel_entry(channel_key)
+    return entry.auth if entry else "token"
 
 # 新增到「启用通道」的单一凭据字段映射（ch_key -> openclaw.json 里的凭据字段名）。
 # 现有 12 个通道各自特判，不在此表；此表仅供新通道的通用 UI 构建与保存复用。
@@ -2371,20 +2374,22 @@ class OpenClawConfigApp:
         if not check_network_ok():
             messagebox.showwarning("通道插件安装", "网络不可用，请检查网络连接后再试。\n安装已取消。")
             return
-        installed_keys = self._channel_plugin_installed_keys()
         if selected_only:
-            to_install = [(pkg, name) for (pkg, name, var, w) in self._channel_plugin_widgets
-                          if not (isinstance(w, ttk.Label) or (ctk and isinstance(w, ctk.CTkLabel))) and var.get()]
+            to_install = [e for (e, var, w) in self._channel_plugin_widgets
+                          if not e.installed and var.get()]
             if not to_install:
                 messagebox.showinfo("通道插件安装", "请先勾选要安装的通道插件（灰色「已安装」的不可选）。")
                 return
         else:
-            to_install = [(pkg, name) for (pkg, name) in CHANNEL_PLUGINS if pkg.split("/")[-1] not in installed_keys]
+            to_install = [e for e in catalog()["channels"]
+                          if e.origin == "plugin" and not e.installed]
             if not to_install:
                 messagebox.showinfo("通道插件安装", "当前所有通道插件均已安装，无需操作。")
                 return
         open_url(OPENCLAW_DOCS_URL)
-        cmd = " && ".join(f"openclaw plugins install {pkg}" for pkg, _ in to_install)
+        # 传通道 id 而非包名：实测 `openclaw plugins install wecom` 会自行解析成
+        # @wecom/wecom-openclaw-plugin@2026.5.7。这让目录解析失败也不影响安装。
+        cmd = " && ".join(f"openclaw plugins install {e.id}" for e in to_install)
         ok, msg = run_in_system_terminal(cmd)
         if not ok:
             messagebox.showerror("通道插件安装", msg)
@@ -2999,29 +3004,14 @@ class OpenClawConfigApp:
         ch = self.config.get("channels") or {}
         defaults = ch.get("defaults") or {}
         r = 0
-        # 通道插件安装（已安装的灰色不可选，未安装的可勾选；安装成功后自动提示并刷新）
-        _gui_label(f, text="通道插件安装（需联网；安装时会先打开官网，再在命令行弹窗中执行；已安装的显示为灰色不可选）", font=("", 9, "bold")).grid(row=r, column=0, columnspan=4, sticky=tk.W); r += 1
+        # 清单来源状态条：降级必须可见。上一版设计基于「openclaw 无企业微信插件」这个
+        # 未经核实的事实做了排除决策，且无任何机制让该错误暴露 —— 这行字就是防复发机制。
+        self._build_catalog_bar(f, r); r += 1
+        _gui_label(f, text="通道插件安装（需联网；勾选后一键安装；已安装的显示为灰色不可选；带「扫码」的可在 GUI 内扫码登录）", font=("", 9, "bold")).grid(row=r, column=0, columnspan=4, sticky=tk.W); r += 1
         plugin_frame = _gui_frame(f)
         plugin_frame.grid(row=r, column=0, columnspan=4, sticky=tk.W, pady=4); r += 1
         self._channel_plugin_frame = plugin_frame
-        self._channel_plugin_vars = []
-        self._channel_plugin_widgets = []  # (pkg, name, var, cb_or_label)
-        installed_keys = self._channel_plugin_installed_keys()
-        PLUGIN_COLS = 4  # 横向排列，每行 4 个，满即换行，省纵向空间
-        for i, (pkg, name) in enumerate(CHANNEL_PLUGINS):
-            key = pkg.split("/")[-1]
-            is_installed = key in installed_keys
-            var = tk.BooleanVar(value=False)
-            self._channel_plugin_vars.append(var)
-            gp = dict(row=i // PLUGIN_COLS, column=i % PLUGIN_COLS, sticky=tk.W, padx=6, pady=1)
-            if is_installed:
-                lb = _gui_label(plugin_frame, text=f"{name} (已安装)")
-                lb.grid(**gp)
-                self._channel_plugin_widgets.append((pkg, name, var, lb))
-            else:
-                cb = _gui_checkbox(plugin_frame, text=name, variable=var)
-                cb.grid(**gp)
-                self._channel_plugin_widgets.append((pkg, name, var, cb))
+        self._render_channel_plugin_grid()
         btn_plugin = _gui_frame(f)
         btn_plugin.grid(row=r, column=0, columnspan=4, sticky=tk.W, pady=6); r += 1
         _gui_button(btn_plugin, text="安装选中的通道插件", command=lambda: self._install_channel_plugins(selected_only=True)).pack(side=tk.LEFT, padx=4)
@@ -3032,33 +3022,217 @@ class OpenClawConfigApp:
         r += 1
         self._add_tab_channels_rest(f, ch, defaults, r)
 
-    def _refresh_channel_plugin_list(self):
-        """根据当前 config 重新生成通道插件列表（已安装的灰色不可选）。"""
-        if not getattr(self, "_channel_plugin_frame", None):
+    # ---------- 目录来源状态条 / 刷新 ----------
+
+    def _catalog_source_text(self):
+        meta = catalog()["meta"]
+        names = {"cache": "已刷新", "factory": "出厂快照",
+                 "fallback": "静态兜底（openclaw 不可用）",
+                 "unavailable": "不可用（目录模块缺失）"}
+        ver = meta.get("openclaw_version") or "未知版本"
+        return "清单来源：%s（openclaw %s，%d 个通道）" % (
+            names.get(meta.get("source"), str(meta.get("source"))),
+            ver, len(catalog()["channels"]))
+
+    def _build_catalog_bar(self, parent, row):
+        bar = _gui_frame(parent)
+        bar.grid(row=row, column=0, columnspan=4, sticky=tk.W, pady=2)
+        self._catalog_lbl = _gui_label(bar, text=self._catalog_source_text())
+        self._catalog_lbl.pack(side=tk.LEFT)
+        self._catalog_btn = _gui_button(bar, text="刷新清单", command=self._refresh_catalog)
+        self._catalog_btn.pack(side=tk.LEFT, padx=8)
+
+    def _refresh_catalog(self):
+        """后台跑 CLI 重建目录（真机实测约 30s，串行）。
+
+        失败时**保留旧快照并弹出错误**，绝不静默吞掉 —— 静默失败会让用户以为
+        看到的是最新清单，正是上一版事故的形态。
+        """
+        if _cat is None:
+            messagebox.showerror("刷新清单", "目录模块 openclaw_catalog 未能加载。")
             return
+        self._catalog_btn.config(state=tk.DISABLED, text="刷新中…")
+
+        def work():
+            err = None
+            try:
+                fresh = _cat.collect(openclaw_bin="openclaw", timeout=90)
+                _cat.save_catalog(_cat.CACHE_PATH, fresh)
+                catalog(force_reload=True)
+            except Exception as exc:
+                err = str(exc)
+
+            def done():
+                self._catalog_btn.config(state=tk.NORMAL, text="刷新清单")
+                if err:
+                    messagebox.showerror("刷新失败", "已保留原有清单，未做改动。\n\n%s" % err)
+                    return
+                self._catalog_lbl.config(text=self._catalog_source_text())
+                self._render_channel_plugin_grid()
+            self.root.after(0, done)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    # ---------- P2：扫码弹窗 ----------
+
+    def _open_qr_dialog(self, entry):
+        """扫码登录：长任务(channels login)在终端跑（日志可见、不卡 GUI），
+        GUI 侧 watcher 轮询日志，抽到二维码就在弹窗里渲染成图片。
+
+        抓不到二维码 → 明确提示「在终端窗口扫码」，永不卡死。
+        """
+        if _orch is None or _qr is None:
+            messagebox.showerror("扫码设置", "二维码模块未能加载。")
+            return
+        log_path = os.path.join("/tmp", "openclaw-oneclick-%s.log" % entry.id)
+        try:
+            os.remove(log_path)
+        except OSError:
+            pass
+
+        win = tk.Toplevel(self.root)
+        win.title("扫码设置 — %s" % entry.label)
+        status = _gui_label(win, text="正在启动 openclaw channels login …")
+        status.pack(padx=12, pady=8)
+        holder = _gui_frame(win)
+        holder.pack(padx=12, pady=4)
+
+        pkg = _orch.install_target_for(entry.id, catalog()) if not entry.installed else None
+        inner = _orch.build_login_script(entry.id, "qr", pkg, log_path)
+        ok, msg = run_in_system_terminal(inner)
+        if not ok:
+            status.config(text="无法启动终端：%s" % msg)
+            return
+
+        state = {"ticks": 0, "drawn": False, "closed": False}
+        win.protocol("WM_DELETE_WINDOW", lambda: (state.update(closed=True), win.destroy()))
+
+        def poll():
+            if state["closed"]:
+                return
+            state["ticks"] += 1
+            text = ""
+            try:
+                with open(log_path, encoding="utf-8", errors="replace") as fh:
+                    text = fh.read()
+            except Exception:
+                pass
+            if text and not state["drawn"]:
+                block = _orch.extract_qr_block(text)
+                source, matrix = _qr.capture({"qr_ascii": block}) if block else (None, None)
+                if matrix:
+                    _qr.render_matrix_tk(holder, matrix).pack()
+                    status.config(text="请用「%s」扫描上方二维码" % entry.label)
+                    state["drawn"] = True
+                elif block:
+                    status.config(text="二维码已在终端窗口显示，请在终端扫码。")
+                    state["drawn"] = True
+            if "登录成功" in text or "Connected" in text or "connected" in text:
+                status.config(text="已连接。可以关闭本窗口。")
+                self._refresh_channel_plugin_list()
+                return
+            if state["ticks"] > 300:      # 5 分钟
+                status.config(text="超时未连接。请检查终端窗口的输出。")
+                return
+            win.after(1000, poll)
+
+        win.after(800, poll)
+
+    # ---------- 无字段通道的自由键值编辑器 ----------
+
+    def _render_freeform_kv(self, parent, entry):
+        """schema 无字段时的降级路径（**必需品，非可选**）。
+
+        实测：装上 wecom 插件后 config schema 只多出一个空壳 channels.wecom 键，仍无
+        properties；openclaw-weixin / twitch 亦然。若不降级，GUI 会渲染出一个没有任何
+        输入框的空表单。
+        """
+        if not hasattr(self, "_freeform_rows"):
+            self._freeform_rows = {}
+        _gui_label(parent, text="%s 未向 openclaw 暴露字段清单，请按官方文档手工填写键值。"
+                   % entry.label).pack(anchor=tk.W)
+        if entry.apply_url:
+            _gui_button(parent, text="查看官方文档 / 申请凭据",
+                        command=lambda: open_url(entry.apply_url)).pack(anchor=tk.W, pady=2)
+        rows_frame = _gui_frame(parent)
+        rows_frame.pack(fill=tk.X, pady=4)
+        rows = []
+
+        def add_row(k="", v=""):
+            rf = _gui_frame(rows_frame)
+            rf.pack(fill=tk.X, pady=1)
+            kv, vv = tk.StringVar(value=k), tk.StringVar(value=v)
+            _gui_entry(rf, textvariable=kv, width_chars=22).pack(side=tk.LEFT, padx=2)
+            _gui_entry(rf, textvariable=vv, width_chars=40).pack(side=tk.LEFT, padx=2)
+            _gui_button(rf, text="-", command=lambda: (rf.destroy(), rows.remove((kv, vv)))).pack(side=tk.LEFT)
+            rows.append((kv, vv))
+
+        existing = ((self.config.get("channels") or {}).get(entry.id) or {})
+        for k, v in sorted(existing.items()):
+            if not isinstance(v, (dict, list)):
+                add_row(k, str(v))
+        if not rows:
+            add_row()
+        _gui_button(parent, text="+ 添加一行", command=add_row).pack(anchor=tk.W)
+        self._freeform_rows[entry.id] = rows
+        return rows
+
+    def _freeform_patch(self):
+        """把自由键值编辑器的内容整理成 {"channels": {<id>: {k: v}}} 补丁。保存时并入。"""
+        channels = {}
+        for cid, rows in (getattr(self, "_freeform_rows", None) or {}).items():
+            data = {}
+            for kv, vv in rows:
+                key = (kv.get() or "").strip()
+                if key:
+                    data[key] = (vv.get() or "").strip()
+            if data:
+                channels[cid] = data
+        return {"channels": channels} if channels else {}
+
+    def _render_channel_plugin_grid(self):
+        """按目录渲染通道网格。三形态：内置 / 插件已装 / 插件未装（可勾选安装）。
+
+        id 权威来自目录（即 `channels list --all --json`），故此处不可能再出现幻影通道，
+        也不再用 `pkg.split("/")[-1]` 去猜包名与通道 id 的对应关系（对
+        @wecom/wecom-openclaw-plugin 会猜成 "wecom-openclaw-plugin"，与 id "wecom" 对不上）。
+        """
+        frame = getattr(self, "_channel_plugin_frame", None)
+        if not frame:
+            return
+        for w in frame.winfo_children():
+            w.destroy()
+        self._channel_plugin_vars = []
+        self._channel_plugin_widgets = []   # (entry, var, widget)
+        rows = [c for c in catalog()["channels"] if c.origin == "plugin"]
+        if not rows:
+            _gui_label(frame, text="（清单不可用：openclaw 未就绪，请点「刷新清单」）").grid(
+                row=0, column=0, sticky=tk.W)
+            return
+        PLUGIN_COLS = 4
+        for i, entry in enumerate(rows):
+            cell = _gui_frame(frame)
+            cell.grid(row=i // PLUGIN_COLS, column=i % PLUGIN_COLS, sticky=tk.W, padx=6, pady=1)
+            var = tk.BooleanVar(value=False)
+            self._channel_plugin_vars.append(var)
+            if entry.installed:
+                w = _gui_label(cell, text=f"{entry.label} (已安装)")
+            else:
+                w = _gui_checkbox(cell, text=entry.label, variable=var)
+            w.pack(side=tk.LEFT)
+            # 扫码按钮：判据 supports_qr 由 openclaw 自己给出
+            # （目录里就写着 "WhatsApp (QR link)" / "Zalo ClawBot (QR)"），不靠我们猜。
+            if entry.supports_qr:
+                _gui_button(cell, text="扫码设置",
+                            command=lambda e=entry: self._open_qr_dialog(e)).pack(side=tk.LEFT, padx=3)
+            self._channel_plugin_widgets.append((entry, var, w))
+
+    def _refresh_channel_plugin_list(self):
+        """重新读取 config 与目录，重绘通道网格。"""
         self.config = load_config()
         if isinstance(self.config, dict) and self.config.get("_load_error"):
             return
-        for w in self._channel_plugin_frame.winfo_children():
-            w.destroy()
-        self._channel_plugin_vars = []
-        self._channel_plugin_widgets = []
-        installed_keys = self._channel_plugin_installed_keys()
-        PLUGIN_COLS = 4  # 横向排列，每行 4 个，满即换行
-        for i, (pkg, name) in enumerate(CHANNEL_PLUGINS):
-            key = pkg.split("/")[-1]
-            is_installed = key in installed_keys
-            var = tk.BooleanVar(value=False)
-            self._channel_plugin_vars.append(var)
-            gp = dict(row=i // PLUGIN_COLS, column=i % PLUGIN_COLS, sticky=tk.W, padx=6, pady=1)
-            if is_installed:
-                lb = _gui_label(self._channel_plugin_frame, text=f"{name} (已安装)")
-                lb.grid(**gp)
-                self._channel_plugin_widgets.append((pkg, name, var, lb))
-            else:
-                cb = _gui_checkbox(self._channel_plugin_frame, text=name, variable=var)
-                cb.grid(**gp)
-                self._channel_plugin_widgets.append((pkg, name, var, cb))
+        self._render_channel_plugin_grid()
 
     def _add_tab_channels_rest(self, f, ch, defaults, r):
         """通道页后半部分：重复插件说明、默认策略、各通道配置。"""
@@ -3693,6 +3867,7 @@ class OpenClawConfigApp:
 
     def do_save(self):
         patch = self.collect_into_config()
+        patch = deep_merge(patch, self._freeform_patch())
         merged = deep_merge(self.config, patch)
         merged.pop("_load_error", None)  # 不写入磁盘，避免破坏 OpenClaw 解析
         try:

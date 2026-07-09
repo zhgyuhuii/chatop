@@ -181,6 +181,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3-tk \
 COPY openclaw-tool /opt/openclaw-tool
 RUN chmod +x /opt/openclaw-tool/*.sh 2>/dev/null || true
 
+# 构建期烤入 openclaw 目录快照：GUI 启动只读此文件，**永不在启动路径调 CLI**
+# （openclaw CLI 每次 8~12s 且无热缓存，挂在启动路径上会让配置器打不开）。
+# 注意 openclaw 此时在 /opt/chatop-seed-home/.npm-global（上一层已 mv 走 /home/admin）。
+# 采集失败**不阻断构建**：运行时自动降级到静态兜底，镜像永远能出。
+RUN mkdir -p /usr/share/chatop && \
+    ( cd /opt/openclaw-tool && \
+      HOME=/opt/chatop-seed-home \
+      PATH=/opt/chatop-seed-home/.npm-global/bin:$PATH \
+      python3 -m openclaw_catalog --snapshot --out /usr/share/chatop/openclaw-catalog.json \
+        --bin /opt/chatop-seed-home/.npm-global/bin/openclaw && \
+      python3 -c "import json,sys; d=json.load(open('/usr/share/chatop/openclaw-catalog.json')); \
+        n=len(d['channels']); assert n >= 20, n; \
+        print('openclaw catalog snapshot OK: %s, %d channels' % (d['meta']['openclaw_version'], n))" \
+    ) || echo "WARN: openclaw catalog 快照失败，运行时将降级到静态兜底"
+
 # === app-manager：后端 + catalog + 图标 + 启动脚本 + GUI/CLI 脚本 + 播种脚本 ===
 COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
 COPY app-manager/apps-catalog.json /etc/chatop/apps-catalog.json
