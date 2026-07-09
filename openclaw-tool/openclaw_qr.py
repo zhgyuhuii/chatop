@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """OpenClaw 配置器 — 二维码捕获与渲染模块。
 

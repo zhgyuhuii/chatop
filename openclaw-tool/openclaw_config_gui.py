@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """
 OpenClaw 可视化配置程序 — 完整复刻官方 onboard 引导流程

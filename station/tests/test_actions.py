@@ -16,10 +16,13 @@ def test_open_gui_agent_goes_through_app_manager_launch():
     assert r["ok"] and posts == [("/apps/launch", {"id": "openhuman"})]
 
 
-def test_configure_openclaw_opens_agent_builder():
+def test_configure_openclaw_opens_config_gui():
+    # v1.2.0(f4fa25d) 起 agent-builder 已被 openclaw-tool 配置器取代。
+    # 解释器钉死 python3.11：容器默认 python3 是 3.10，而 station venv / app-manager 均在 3.11，
+    # 混用会让配置器与主环境分家（tkinter、依赖解析都不同）。
     calls = []
     r = configure_agent("openclaw", spawn=calls.append, post=lambda p, b: None)
-    assert r["ok"] and "agent-builder" in " ".join(calls[0])
+    assert r["ok"] and calls == [["python3.11", "/opt/openclaw-tool/openclaw_config_gui.py"]]
 
 
 def test_configure_hermes_runs_setup_in_terminal():

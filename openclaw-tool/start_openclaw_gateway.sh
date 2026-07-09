@@ -7,7 +7,7 @@ LOG="${LOG:-/tmp/openclaw-gateway.log}"
 PORT=18789
 
 if [ -r "$CONFIG" ]; then
-    PORT=$(python3 -c "
+    PORT=$(python3.11 -c "
 import json
 try:
     with open('$CONFIG') as f:

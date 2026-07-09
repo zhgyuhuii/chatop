@@ -11,7 +11,7 @@
 # 若配置器再次必崩，不要指望重试——去查 __init__ 里的 useinputmethods 是否还在。
 GUI="$(dirname "$(readlink -f "$0")")/openclaw_config_gui.py"
 for attempt in 1 2 3 4 5; do
-  python3 "$GUI" "$@"
+  python3.11 "$GUI" "$@"
   rc=$?
   # 139=SIGSEGV，134=SIGABRT，132=SIGILL，136=SIGFPE：均视为原生崩溃，重试
   case "$rc" in

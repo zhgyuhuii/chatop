@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """OpenClaw 配置器 — 目录服务（通道/厂商/搜索三份清单的唯一真源出口）。
 
@@ -431,7 +431,7 @@ def main(argv=None):
     import sys
     argv = list(sys.argv[1:] if argv is None else argv)
     if "--snapshot" not in argv:
-        sys.stderr.write("用法: python3 -m openclaw_catalog --snapshot [--out PATH] [--bin PATH]\n")
+        sys.stderr.write("用法: python3.11 -m openclaw_catalog --snapshot [--out PATH] [--bin PATH]\n")
         return 2
     out = argv[argv.index("--out") + 1] if "--out" in argv else None
     binary = argv[argv.index("--bin") + 1] if "--bin" in argv else "openclaw"

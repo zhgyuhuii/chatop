@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """openclaw-tool 新模块单元测试（本机可跑，不依赖 tkinter/openclaw/qrcode）。"""
 import os

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """OpenClaw 配置器 — 体检/诊断模块（纯逻辑，无 tkinter）。
 

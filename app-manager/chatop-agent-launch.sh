@@ -10,8 +10,9 @@ ID="${1:?usage: chatop-agent-launch <agent-id>}"
 
 RUN=/usr/local/bin/chatop-run-cli
 # OpenClaw 可视化配置器（tkinter，本项目 openclaw-tool）；取代原 agent-builder(HTML)
-# 必须走 launch-config-gui.sh 重试壳：KasmVNC/Xvnc 无头 X 下 libX11 偶发段错误(退出码139)，
-# 冷启/高负载概率高，重试即成。直接 python3 拉起会「双击一次段错误、无反应」。
+# 走 launch-config-gui.sh：它负责钉死解释器(python3.11，与 station venv / app-manager 一致)。
+# 段错误根因已由 gdb 定案(9460e9d)：Tk 输入法 XIM 在无 IME 的 zh_CN 下调 XCreateIC 必崩，
+# 属确定性而非偶发；修法是 GUI 内 `tk useinputmethods 0`。脚本里的重试循环只是兜底，不是防线。
 OPENCLAW_CFG="bash /opt/openclaw-tool/launch-config-gui.sh"
 
 # 已配置 = 任一候选存在（目录，或非空文件）

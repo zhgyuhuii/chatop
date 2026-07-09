@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """本地补充元数据 —— 只放 openclaw 确实不提供的信息。
 
