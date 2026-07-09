@@ -16,6 +16,15 @@ import urllib.error
 import urllib.parse
 from pathlib import Path
 
+# 新模块（同目录）：体检 / 编排 / 二维码。防御式导入，缺失时降级不崩。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import openclaw_diagnostics as _diag
+    import openclaw_orchestrator as _orch
+    import openclaw_qr as _qr
+except Exception:
+    _diag = _orch = _qr = None
+
 if sys.platform == "win32":
     import msvcrt
 else:
@@ -439,11 +448,14 @@ def open_url(url):
 
 
 def check_gateway_running(port=18789):
-    """检测 OpenClaw 网关是否在运行。"""
+    """检测 OpenClaw 网关是否在运行。
+    用 TCP 连接判断端口是否在监听——比 HTTP GET 更可靠：网关根路径 `/` 是
+    Control-UI/WebSocket 端点，裸 GET 常返回 404/401/426(Upgrade Required) 等
+    非 2xx，urllib 会抛 HTTPError 而误报「未运行」。端口能连上即视为运行中
+    （与 start_openclaw_gateway.sh 的 `ss -tlnp | grep :PORT` 判活口径一致）。"""
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/", method="GET")
-        urllib.request.urlopen(req, timeout=2)
-        return True
+        with socket.create_connection(("127.0.0.1", int(port)), timeout=2):
+            return True
     except Exception:
         return False
 
@@ -553,10 +565,15 @@ def verify_slack_token(token):
 
 
 def get_channel_connection_status():
-    """调用 openclaw status --json 获取通道连接状态，返回多行字符串；失败时返回简短提示。"""
+    """调用 openclaw status --json 获取通道连接状态，返回多行字符串；失败时返回简短提示。
+    注意：必须经登录 shell + 加载 nvm。GUI 由桌面 .desktop(Terminal=false) 拉起时不经登录
+    shell，PATH 里没有 nvm 装的 openclaw，裸调会 FileNotFoundError 而误报「无法获取」
+    ——与 run_openclaw_cmd_sync 保持同一套加载方式。"""
     try:
+        nvm_sh = Path(os.environ.get("NVM_DIR", str(Path.home() / ".nvm"))) / "nvm.sh"
+        nvm_load = f'[ -s "{nvm_sh}" ] && . "{nvm_sh}" ; ' if nvm_sh.exists() else ""
         r = subprocess.run(
-            ["openclaw", "status", "--json"],
+            ["bash", "-lc", nvm_load + "openclaw status --json"],
             capture_output=True,
             text=True,
             timeout=20,
@@ -566,8 +583,9 @@ def get_channel_connection_status():
         out = (r.stdout or "").strip()
         if not out or r.returncode != 0:
             return "通道连接状态: 无法获取（请确认已安装 openclaw 且网关已启动）"
-        # 输出可能混有警告，取最后一个完整 JSON 对象
-        start = out.rfind("{")
+        # 输出可能混有警告：取**第一个** { 做括号配平拿顶层对象。
+        # 不能用 rfind——嵌套 JSON 时会落到内层子对象，导致 channelSummary 丢失。
+        start = out.find("{")
         if start < 0:
             return "通道连接状态: 无法解析"
         depth = 0
@@ -643,31 +661,45 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
 CHANNEL_PLUGINS = [
     # —— 国内通道置顶 ——（微信 openclaw-weixin 与腾讯元宝 yuanbao 为内置 stock 扩展、无需 npm 安装，
     #   见「更多」通道展开与 openclaw channels add；飞书/QQ 走插件安装）
-    ("@openclaw/feishu", "飞书 Feishu（国内）"),
-    ("@openclaw/qqbot", "QQ 机器人（国内）"),
+    ("@openclaw/feishu", "飞书(Feishu)"),
+    ("@openclaw/qqbot", "QQ机器人(QQ Bot)"),
     # —— 国际 ——
     ("@openclaw/slack", "Slack"),
     ("@openclaw/discord", "Discord"),
     ("@openclaw/whatsapp", "WhatsApp"),
-    ("@openclaw/msteams", "Microsoft Teams"),
+    ("@openclaw/msteams", "微软Teams(Microsoft Teams)"),
     ("@openclaw/mattermost", "Mattermost"),
     ("@openclaw/line", "LINE"),
     ("@openclaw/matrix", "Matrix"),
-    ("@openclaw/signal", "Signal"),
+    ("@openclaw/signal", "信号(Signal)"),
     ("@openclaw/zalo", "Zalo"),
     ("@openclaw/nostr", "Nostr"),
     ("@openclaw/twitch", "Twitch"),
-    ("@openclaw/sms", "短信 SMS"),
-    ("@openclaw/googlechat", "Google Chat"),
+    ("@openclaw/sms", "短信(SMS)"),
+    ("@openclaw/googlechat", "谷歌Chat(Google Chat)"),
     ("@openclaw/nextcloud-talk", "Nextcloud Talk"),
-    ("@openclaw/synology-chat", "Synology Chat"),
+    ("@openclaw/synology-chat", "群晖Chat(Synology Chat)"),
     ("@openclaw/clickclack", "ClickClack"),
     ("@openclaw/tlon", "Tlon"),
     ("@openclaw/irc", "IRC"),
 ]
 
 # 国内通道（在「更多」通道展开时排到最前）
-CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot")
+CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot", "yuanbao")
+
+# 通道认证方式（供一步到位编排数据驱动分支）：qr 扫码 / token 填令牌 / webhook / oauth / builtin 内置。
+# 未列出的默认按 token 处理。orchestrator 只 switch(auth)，加通道零改逻辑。
+CHANNEL_AUTH = {
+    "openclaw-weixin": "qr", "whatsapp": "qr", "signal": "qr",
+    "zalo-personal": "qr", "yuanbao": "qr",
+    "webchat": "builtin", "imessage": "builtin",
+    "synology-chat": "webhook", "bluebubbles": "webhook",
+    "twitch": "oauth",
+}
+
+
+def auth_of(channel_key):
+    return CHANNEL_AUTH.get(channel_key, "token")
 
 # 新增到「启用通道」的单一凭据字段映射（ch_key -> openclaw.json 里的凭据字段名）。
 # 现有 12 个通道各自特判，不在此表；此表仅供新通道的通用 UI 构建与保存复用。
@@ -821,9 +853,9 @@ def _policy_display_to_value(display_str, display_to_value_map):
 
 # 支持配对（pairing）的通道：(openclaw 通道名, 显示名)
 PAIRING_CHANNELS = [
-    ("telegram", "Telegram"),
+    ("telegram", "电报(Telegram)"),
     ("discord", "Discord"),
-    ("feishu", "飞书 Feishu"),
+    ("feishu", "飞书(Feishu)"),
     ("slack", "Slack"),
 ]
 
@@ -2059,6 +2091,11 @@ class OpenClawConfigApp:
         btn_row = _gui_frame(f)
         btn_row.grid(row=r, column=0, columnspan=2, sticky=tk.W, pady=4); r += 1
         _gui_button(btn_row, text="🔄 刷新一览", command=lambda: self._update_config_overview(include_channel_status=True)).pack(side=tk.LEFT, padx=(0, 8))
+        _gui_button(btn_row, text="🩺 一键体检", command=self._run_diagnostics).pack(side=tk.LEFT, padx=(0, 8))
+        _gui_button(btn_row, text="🚀 一键智能配置", command=self._run_one_click_auto).pack(side=tk.LEFT, padx=(0, 8))
+        self._diag_frame = _gui_frame(f)
+        self._diag_frame.grid(row=r, column=0, columnspan=2, sticky=tk.EW, pady=4); r += 1
+        _gui_label(f, text="体检逐项亮灯：红项右侧「修复/一步到位」按钮 = 装插件→扫码/填Token→连上，一步到位。", font=("", 8), foreground="gray").grid(row=r, column=0, columnspan=2, sticky=tk.W); r += 1
         _gui_separator(f, orient=tk.HORIZONTAL).grid(row=r, column=0, columnspan=2, sticky=tk.EW, pady=10); r += 1
         _gui_label(f, text="常用命令（点击后在系统终端中执行，请在终端内查看输出与交互）", font=("", 9, "bold")).grid(row=r, column=0, columnspan=2, sticky=tk.W, pady=(4, 0)); r += 1
         cmd_row = _gui_frame(f)
@@ -2120,6 +2157,213 @@ class OpenClawConfigApp:
             self._overview_text.insert(tk.END, summary)
             self._overview_text.config(state=tk.DISABLED)
         except tk.TclError:
+            pass
+
+    # ==================== 体检 / 一步到位 / 一键智能配置 ====================
+    def _enabled_channels_list(self):
+        """从当前配置取已启用通道 [(key, 显示名)]。名称暂用 key（诊断显示够用）。"""
+        cfg = self.config or {}
+        chs = cfg.get("channels") or {}
+        return [(k, k) for k, v in chs.items() if isinstance(v, dict) and v.get("enabled")]
+
+    def _run_diagnostics(self):
+        if _diag is None:
+            messagebox.showerror("体检", "诊断模块未加载"); return
+        for w in self._diag_frame.winfo_children():
+            w.destroy()
+        _gui_label(self._diag_frame, text="正在体检…", foreground="gray").pack(anchor=tk.W)
+
+        def work():
+            try:
+                self.config = load_config()
+                items = _diag.probe(self.config, enabled_channels=self._enabled_channels_list())
+            except Exception as e:
+                items = [{"key": "err", "name": "体检失败", "status": "fail",
+                          "detail": str(e), "fix": None, "fix_label": ""}]
+            self.root.after(0, lambda: self._render_diagnostics(items))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _render_diagnostics(self, items):
+        for w in self._diag_frame.winfo_children():
+            w.destroy()
+        colors = {"ok": "#2e7d32", "warn": "#ef6c00", "fail": "#c62828"}
+        for it in items:
+            row = _gui_frame(self._diag_frame)
+            row.pack(fill=tk.X, anchor=tk.W, pady=1)
+            _gui_label(row, text="●", foreground=colors.get(it["status"], "#888")).pack(side=tk.LEFT, padx=(0, 4))
+            _gui_label(row, text=f'{it["name"]}：{it["detail"]}').pack(side=tk.LEFT)
+            if it.get("fix"):
+                _gui_button(row, text=it.get("fix_label") or "修复",
+                            command=lambda d=it["fix"]: self._apply_fix(d)).pack(side=tk.LEFT, padx=(8, 0))
+
+    def _apply_fix(self, descriptor):
+        try:
+            if descriptor == "install_node":
+                run_in_system_terminal('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && . "$HOME/.nvm/nvm.sh" && nvm install --lts && node -v')
+            elif descriptor == "install_openclaw":
+                run_in_system_terminal("npm i -g openclaw@latest && openclaw --version")
+            elif descriptor == "start_gateway":
+                run_in_system_terminal("bash /opt/openclaw-tool/start_openclaw_gateway.sh || openclaw gateway")
+            elif descriptor == "fix_model":
+                try:
+                    self.notebook.select(3)
+                except Exception:
+                    messagebox.showinfo("模型", "请到「3. 模型与认证」页配置模型")
+            elif descriptor == "make_workspace":
+                ws = (((self.config.get("agents") or {}).get("defaults") or {}).get("workspace")) or ""
+                ws = os.path.expanduser(str(ws)) if ws else ""
+                if ws:
+                    os.makedirs(ws, exist_ok=True)
+                    messagebox.showinfo("工作区", f"已创建 {ws}")
+                else:
+                    messagebox.showinfo("工作区", "请到「2. 工作区」页设置工作区路径")
+                self._run_diagnostics()
+            elif descriptor == "check_network":
+                self._run_diagnostics()
+            elif descriptor and descriptor.startswith("config_channel:"):
+                self._one_stop_channel(descriptor.split(":", 1)[1])
+        except Exception as e:
+            messagebox.showerror("修复", str(e))
+
+    def _one_stop_channel(self, channel_key):
+        if _orch is None:
+            messagebox.showerror("一步到位", "编排模块未加载"); return
+        auth = auth_of(channel_key)
+        port = (self.config.get("gateway") or {}).get("port", 18789) if self.config else 18789
+
+        def ui(event, **data):
+            self.root.after(0, lambda: self._orch_ui(event, data))
+
+        def status_probe():
+            try:
+                return _diag._connected_channels(_diag.status_json())
+            except Exception:
+                return {}
+
+        def work():
+            try:
+                sess = _orch.OneStop(
+                    cmd_runner=run_openclaw_cmd_sync,
+                    terminal_runner=lambda inner, title: run_in_system_terminal(inner),
+                    status_probe=status_probe, ui=ui,
+                    qr_capture=(lambda h: _qr.capture(h)) if _qr else None,
+                    network_check=check_network_ok,
+                    gateway_check=lambda: check_gateway_running(port))
+                sess.run(channel_key, auth)
+            except Exception as e:
+                ui("error", reason=str(e))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _orch_ui(self, event, data):
+        ch = data.get("channel", "")
+        if event == "qr_ready":
+            self._show_qr_popup(ch, data.get("matrix"), data.get("ascii"))
+        elif event in ("qr_missing", "warn", "precheck_fail", "timeout", "error"):
+            messagebox.showwarning(f"通道 {ch}", data.get("reason", "请查看终端窗口"))
+        elif event == "connected":
+            messagebox.showinfo(f"通道 {ch}", "已连接！")
+            self._run_diagnostics()
+        elif event == "fill_token":
+            messagebox.showinfo(f"通道 {ch}", "插件安装已在终端进行。请到「4. 通道」页填写 Token 并保存，再点『保存并重启』。")
+            try:
+                self.notebook.select(4)
+            except Exception:
+                pass
+        elif event == "show_webhook":
+            messagebox.showinfo(f"通道 {ch}", "请到「4. 通道」页查看并在对方平台填入 Webhook / 服务器地址后保存。")
+            try:
+                self.notebook.select(4)
+            except Exception:
+                pass
+        elif event == "open_oauth":
+            messagebox.showinfo(f"通道 {ch}", "请在弹出的终端 / 浏览器中完成 OAuth 授权。")
+
+    def _show_qr_popup(self, channel, matrix, ascii_block=None):
+        top = tk.Toplevel(self.root)
+        top.title(f"扫码配置 {channel}")
+        _gui_label(top, text=f"请用手机扫描下方二维码完成 {channel} 登录", font=("", 11, "bold")).pack(padx=16, pady=(14, 6))
+        try:
+            if matrix and _qr:
+                _qr.render_matrix_tk(top, matrix, box=6, quiet=3).pack(padx=16, pady=8)
+            elif ascii_block:
+                t = tk.Text(top, height=20, width=44, font=("Courier", 6))
+                t.insert("1.0", ascii_block); t.config(state=tk.DISABLED)
+                t.pack(padx=16, pady=8)
+            else:
+                _gui_label(top, text="未能渲染二维码，请在终端窗口内扫码。", foreground="gray").pack(padx=16, pady=8)
+        except Exception as e:
+            _gui_label(top, text=f"二维码渲染失败：{e}\n请在终端窗口内扫码。", foreground="gray").pack(padx=16, pady=8)
+        _gui_label(top, text="扫码并在手机确认后，点「一键体检」会显示该通道已连接。", foreground="gray").pack(padx=16, pady=(0, 12))
+        _gui_button(top, text="关闭", command=top.destroy).pack(pady=(0, 12))
+
+    def _run_one_click_auto(self):
+        if _orch is None:
+            messagebox.showerror("一键智能配置", "编排模块未加载"); return
+        if not messagebox.askyesno("一键智能配置",
+                "将自动：确保 openclaw → 模型兜底(仅未配置) → 启动网关 → 为已启用通道装插件/扫码/填 Token 提示。\n过程会弹出终端与二维码窗口。是否继续？"):
+            return
+        self.config = load_config()
+        port = (self.config.get("gateway") or {}).get("port", 18789)
+
+        def ui(event, **data):
+            self.root.after(0, lambda: self._auto_ui(event, data))
+
+        def status_probe():
+            try:
+                return _diag._connected_channels(_diag.status_json())
+            except Exception:
+                return {}
+
+        def ensure_openclaw():
+            ok, _ = run_openclaw_cmd_sync("openclaw --version", 10)
+            if not ok:
+                run_in_system_terminal("npm i -g openclaw@latest && openclaw --version")
+
+        def start_gateway():
+            if not check_gateway_running(port):
+                run_in_system_terminal("bash /opt/openclaw-tool/start_openclaw_gateway.sh || openclaw gateway")
+
+        def set_model(m):
+            cfg = load_config()
+            cfg.setdefault("agents", {}).setdefault("defaults", {}).setdefault("model", {})["primary"] = m
+            save_config(cfg)
+
+        def has_credentials(k):
+            v = (self.config.get("channels") or {}).get(k) or {}
+            return any(kk != "enabled" and v.get(kk) for kk in v)
+
+        def work():
+            try:
+                _orch.run_all(self.config, self._enabled_channels_list(), auth_of,
+                              cmd_runner=run_openclaw_cmd_sync,
+                              terminal_runner=lambda inner, title: run_in_system_terminal(inner),
+                              status_probe=status_probe, ui=ui,
+                              ensure_openclaw=ensure_openclaw, start_gateway=start_gateway,
+                              set_model=set_model, has_credentials=has_credentials,
+                              network_check=check_network_ok,
+                              gateway_check=lambda: check_gateway_running(port))
+            except Exception as e:
+                ui("error", reason=str(e))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _auto_ui(self, event, data):
+        if event == "phase":
+            self._append_overview(f"\n▶ {data.get('phase')}…")
+        elif event == "info":
+            self._append_overview(f"\n  {data.get('msg')}")
+        elif event == "summary":
+            lines = "\n".join(f"  {k}: {s}" for k, s in data.get("results", []))
+            messagebox.showinfo("一键智能配置 完成", "各通道结果：\n" + lines)
+            self._run_diagnostics()
+        else:
+            self._orch_ui(event, data)  # 复用 qr_ready / connected 等
+
+    def _append_overview(self, text):
+        try:
+            self._overview_text.config(state=tk.NORMAL)
+            self._overview_text.insert(tk.END, text)
+            self._overview_text.config(state=tk.DISABLED)
+        except Exception:
             pass
 
     def _install_channel_plugins(self, selected_only=True):
@@ -2836,33 +3080,41 @@ class OpenClawConfigApp:
         self._pairing_code_vars = {}
 
         # (ch_key, 显示名, 是否有Token字段, token变量名botToken/token, Token获取URL键, 是否有群组策略)
+        # 通道显示名统一「中文(English)」双语：国产及有通用中文名的一律给中文，
+        # 纯外文品牌（Discord/Slack/Matrix 等）保留品牌原名。
         channels_list = [
             # —— 国内通道置顶 ——
-            ("feishu", "飞书 Feishu/Lark（国内）", True, "appId", "feishu", False),
-            ("openclaw-weixin", "微信 WeChat（国内·扫码登录）", False, None, "openclaw-weixin", False),
-            ("qqbot", "QQ 机器人（国内）", True, "appId", "qqbot", False),
+            ("feishu", "飞书(Feishu/Lark)", True, "appId", "feishu", False),
+            ("openclaw-weixin", "微信(Weixin)", False, None, "openclaw-weixin", False),
+            ("qqbot", "QQ机器人(QQ Bot)", True, "appId", "qqbot", False),
+            ("yuanbao", "腾讯元宝(Yuanbao)", False, None, "yuanbao", False),
             # —— 国际主流 ——
-            ("telegram", "Telegram", True, "botToken", "telegram", True),
+            ("telegram", "电报(Telegram)", True, "botToken", "telegram", True),
             ("discord", "Discord", True, "token", "discord", False),
             ("whatsapp", "WhatsApp", False, None, "whatsapp", False),
             ("slack", "Slack", True, "botToken", "slack", False),
-            ("signal", "Signal", False, None, "signal", False),
-            ("googlechat", "Google Chat", True, "serviceAccount", "googlechat", False),
+            ("signal", "信号(Signal)", False, None, "signal", False),
+            ("googlechat", "谷歌Chat(Google Chat)", True, "serviceAccount", "googlechat", False),
             ("line", "LINE", True, "channelAccessToken", "line", False),
             ("matrix", "Matrix", True, "accessToken", "matrix", False),
             ("zalo", "Zalo", True, "botToken", "zalo", False),
             ("nostr", "Nostr", True, "privateKey", "nostr", False),
-            ("twitch", "Twitch（OAuth）", False, None, "twitch", False),
-            ("sms", "短信 SMS", True, "authToken", "sms", False),
-            ("synology-chat", "Synology Chat（Webhook）", False, None, "synology-chat", False),
+            ("twitch", "Twitch(OAuth)", False, None, "twitch", False),
+            ("sms", "短信(SMS)", True, "authToken", "sms", False),
+            ("synology-chat", "群晖Chat(Synology Chat)", False, None, "synology-chat", False),
             ("nextcloud-talk", "Nextcloud Talk", True, "botSecret", "nextcloud-talk", False),
             ("clickclack", "ClickClack", True, "token", "clickclack", False),
-            ("tlon", "Tlon (Urbit)", False, None, "tlon", False),
+            ("tlon", "Tlon(Urbit)", False, None, "tlon", False),
             ("mattermost", "Mattermost", True, "botToken", "mattermost", False),
-            ("msteams", "Microsoft Teams", True, "appId", "msteams", False),
+            ("msteams", "微软Teams(Microsoft Teams)", True, "appId", "msteams", False),
             ("irc", "IRC", True, "password", "irc", False),
-            ("bluebubbles", "BlueBubbles (iMessage)", True, "serverUrl", "bluebubbles", False),
-            ("imessage", "iMessage (macOS 传统)", False, None, "imessage", False),
+            ("bluebubbles", "BlueBubbles(iMessage)", True, "serverUrl", "bluebubbles", False),
+            ("imessage", "苹果信息(iMessage)", False, None, "imessage", False),
+            # —— 补齐：openclaw 已支持、原 GUI 缺的通道（凭据方式待运行时确认，先只做启用+一步到位入口）——
+            ("webchat", "网页聊天(WebChat)", False, None, "webchat", False),
+            ("zalo-personal", "Zalo Personal", False, None, "zalo-personal", False),
+            ("voice-call", "语音通话(Voice Call)", False, None, "voice-call", False),
+            ("raft", "Raft", False, None, "raft", False),
         ]
         for ch_key, label, has_token, token_field, url_key, has_gp in channels_list:
             cfg = ch.get(ch_key) or {}

@@ -10,7 +10,9 @@ ID="${1:?usage: chatop-agent-launch <agent-id>}"
 
 RUN=/usr/local/bin/chatop-run-cli
 # OpenClaw 可视化配置器（tkinter，本项目 openclaw-tool）；取代原 agent-builder(HTML)
-OPENCLAW_CFG="python3 /opt/openclaw-tool/openclaw_config_gui.py"
+# 必须走 launch-config-gui.sh 重试壳：KasmVNC/Xvnc 无头 X 下 libX11 偶发段错误(退出码139)，
+# 冷启/高负载概率高，重试即成。直接 python3 拉起会「双击一次段错误、无反应」。
+OPENCLAW_CFG="bash /opt/openclaw-tool/launch-config-gui.sh"
 
 # 已配置 = 任一候选存在（目录，或非空文件）
 configured() {
