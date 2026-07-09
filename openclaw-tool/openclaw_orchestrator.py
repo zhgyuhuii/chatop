@@ -56,7 +56,7 @@ def _channel_entry(channel_key, catalog=None):
 
 
 def plugin_pkg_for(channel_key, catalog=None):
-    """通道的 npm 包名 —— 从 openclaw 的官方插件目录取，**绝不拼接 `@openclaw/<id>`**。
+    """通道的 npm 包名（仅供展示）—— 从 openclaw 的官方插件目录取，**绝不拼接 `@openclaw/<id>`**。
 
     企业微信/微信/元宝/Zalo ClawBot 由第三方厂商发布，包名不遵守该模式。旧的
     PLUGIN_MAP 硬编码表按模式假设手抄，恰好漏掉这四个，并凭空写出 raft/webchat/
@@ -65,6 +65,20 @@ def plugin_pkg_for(channel_key, catalog=None):
     """
     entry = _channel_entry(channel_key, catalog)
     return entry.npm_spec if entry else None
+
+
+def install_target_for(channel_key, catalog=None):
+    """装插件时传给 `openclaw plugins install` 的实参。
+
+    实测 `openclaw plugins install wecom` 会自行解析成
+    `@wecom/wecom-openclaw-plugin@2026.5.7` —— 故直接用通道 id，不依赖 npm_spec。
+    这让脆弱的 dist JS 目录解析彻底离开关键路径：解析失败只丢中文名，装不了才是致命的。
+    内置通道返回 None（无需安装）。
+    """
+    entry = _channel_entry(channel_key, catalog)
+    if not entry or entry.origin != "plugin":
+        return None
+    return entry.id
 
 
 def handoff_path(channel_key):

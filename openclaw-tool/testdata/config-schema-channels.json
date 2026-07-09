@@ -3,76 +3,2216 @@
   "channels": {
    "properties": {
     "clickclack": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "baseUrl": {
+       "type": "string"
+      },
+      "token": {
+       "type": "string"
+      },
+      "workspace": {
+       "type": "string"
+      },
+      "botUserId": {
+       "type": "string"
+      },
+      "agentId": {
+       "type": "string"
+      },
+      "replyMode": {
+       "type": "string"
+      },
+      "model": {
+       "type": "string"
+      },
+      "systemPrompt": {
+       "type": "string"
+      },
+      "timeoutSeconds": {
+       "type": "string"
+      },
+      "toolsAllow": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "reconnectMs": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "discord": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "commands": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "token": {
+       "type": "string"
+      },
+      "applicationId": {
+       "type": "string"
+      },
+      "proxy": {
+       "type": "string"
+      },
+      "gatewayInfoTimeoutMs": {
+       "type": "string"
+      },
+      "gatewayReadyTimeoutMs": {
+       "type": "string"
+      },
+      "gatewayRuntimeReadyTimeoutMs": {
+       "type": "string"
+      },
+      "allowBots": {
+       "type": "string"
+      },
+      "botLoopProtection": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "mentionAliases": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "suppressEmbeds": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "maxLinesPerMessage": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "retry": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "thread": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "dm": {
+       "type": "string"
+      },
+      "guilds": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "execApprovals": {
+       "type": "string"
+      },
+      "agentComponents": {
+       "type": "string"
+      },
+      "ui": {
+       "type": "string"
+      },
+      "slashCommand": {
+       "type": "string"
+      },
+      "threadBindings": {
+       "type": "string"
+      },
+      "intents": {
+       "type": "string"
+      },
+      "voice": {
+       "type": "string"
+      },
+      "pluralkit": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "ackReaction": {
+       "type": "string"
+      },
+      "ackReactionScope": {
+       "type": "string"
+      },
+      "activity": {
+       "type": "string"
+      },
+      "status": {
+       "type": "string"
+      },
+      "autoPresence": {
+       "type": "string"
+      },
+      "activityType": {
+       "type": "string"
+      },
+      "activityUrl": {
+       "type": "string"
+      },
+      "inboundWorker": {
+       "type": "string"
+      },
+      "eventQueue": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "feishu": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "enabled": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      },
+      "appId": {
+       "type": "string"
+      },
+      "appSecret": {
+       "type": "string"
+      },
+      "encryptKey": {
+       "type": "string"
+      },
+      "verificationToken": {
+       "type": "string"
+      },
+      "domain": {
+       "type": "string"
+      },
+      "connectionMode": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "webhookHost": {
+       "type": "string"
+      },
+      "webhookPort": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupSenderAllowFrom": {
+       "type": "string"
+      },
+      "requireMention": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "httpTimeoutMs": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "renderMode": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "tools": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "replyInThread": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "typingIndicator": {
+       "type": "string"
+      },
+      "resolveSenderNames": {
+       "type": "string"
+      },
+      "tts": {
+       "type": "string"
+      },
+      "groupSessionScope": {
+       "type": "string"
+      },
+      "topicSessionMode": {
+       "type": "string"
+      },
+      "dynamicAgentCreation": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      }
+     }
     },
     "googlechat": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "allowBots": {
+       "type": "string"
+      },
+      "botLoopProtection": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "requireMention": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "serviceAccount": {
+       "type": "string"
+      },
+      "serviceAccountRef": {
+       "type": "string"
+      },
+      "serviceAccountFile": {
+       "type": "string"
+      },
+      "audienceType": {
+       "type": "string"
+      },
+      "audience": {
+       "type": "string"
+      },
+      "appPrincipal": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "webhookUrl": {
+       "type": "string"
+      },
+      "botUser": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "dm": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "typingIndicator": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "imessage": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "cliPath": {
+       "type": "string"
+      },
+      "dbPath": {
+       "type": "string"
+      },
+      "remoteHost": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "service": {
+       "type": "string"
+      },
+      "sendTransport": {
+       "type": "string"
+      },
+      "region": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "includeAttachments": {
+       "type": "string"
+      },
+      "attachmentRoots": {
+       "type": "string"
+      },
+      "remoteAttachmentRoots": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "probeTimeoutMs": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "sendReadReceipts": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "coalesceSameSenderDms": {
+       "type": "string"
+      },
+      "catchup": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "irc": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "host": {
+       "type": "string"
+      },
+      "port": {
+       "type": "string"
+      },
+      "tls": {
+       "type": "string"
+      },
+      "nick": {
+       "type": "string"
+      },
+      "username": {
+       "type": "string"
+      },
+      "realname": {
+       "type": "string"
+      },
+      "password": {
+       "type": "string"
+      },
+      "passwordFile": {
+       "type": "string"
+      },
+      "nickserv": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "channels": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "line": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "enabled": {
+       "type": "string"
+      },
+      "channelAccessToken": {
+       "type": "string"
+      },
+      "channelSecret": {
+       "type": "string"
+      },
+      "tokenFile": {
+       "type": "string"
+      },
+      "secretFile": {
+       "type": "string"
+      },
+      "name": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "threadBindings": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      }
+     }
     },
     "matrix": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "homeserver": {
+       "type": "string"
+      },
+      "network": {
+       "type": "string"
+      },
+      "proxy": {
+       "type": "string"
+      },
+      "userId": {
+       "type": "string"
+      },
+      "accessToken": {
+       "type": "string"
+      },
+      "password": {
+       "type": "string"
+      },
+      "deviceId": {
+       "type": "string"
+      },
+      "deviceName": {
+       "type": "string"
+      },
+      "avatarUrl": {
+       "type": "string"
+      },
+      "initialSyncLimit": {
+       "type": "string"
+      },
+      "encryption": {
+       "type": "string"
+      },
+      "allowlistOnly": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "allowBots": {
+       "type": "string"
+      },
+      "botLoopProtection": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "threadReplies": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "ackReaction": {
+       "type": "string"
+      },
+      "ackReactionScope": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "threadBindings": {
+       "type": "string"
+      },
+      "startupVerification": {
+       "type": "string"
+      },
+      "startupVerificationCooldownHours": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "autoJoin": {
+       "type": "string"
+      },
+      "autoJoinAllowlist": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "dm": {
+       "type": "string"
+      },
+      "execApprovals": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "rooms": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      }
+     }
     },
     "mattermost": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "botToken": {
+       "type": "string"
+      },
+      "baseUrl": {
+       "type": "string"
+      },
+      "chatmode": {
+       "type": "string"
+      },
+      "oncharPrefixes": {
+       "type": "string"
+      },
+      "requireMention": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "commands": {
+       "type": "string"
+      },
+      "interactions": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "network": {
+       "type": "string"
+      },
+      "dmChannelRetry": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "msteams": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "enabled": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "appId": {
+       "type": "string"
+      },
+      "appPassword": {
+       "type": "string"
+      },
+      "tenantId": {
+       "type": "string"
+      },
+      "cloud": {
+       "type": "string"
+      },
+      "serviceUrl": {
+       "type": "string"
+      },
+      "authType": {
+       "type": "string"
+      },
+      "certificatePath": {
+       "type": "string"
+      },
+      "certificateThumbprint": {
+       "type": "string"
+      },
+      "useManagedIdentity": {
+       "type": "string"
+      },
+      "managedIdentityClientId": {
+       "type": "string"
+      },
+      "webhook": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "typingIndicator": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "mediaAllowHosts": {
+       "type": "string"
+      },
+      "mediaAuthAllowHosts": {
+       "type": "string"
+      },
+      "requireMention": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "replyStyle": {
+       "type": "string"
+      },
+      "teams": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "sharePointSiteId": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "welcomeCard": {
+       "type": "string"
+      },
+      "promptStarters": {
+       "type": "string"
+      },
+      "groupWelcomeCard": {
+       "type": "string"
+      },
+      "feedbackEnabled": {
+       "type": "string"
+      },
+      "feedbackReflection": {
+       "type": "string"
+      },
+      "feedbackReflectionCooldownMs": {
+       "type": "string"
+      },
+      "delegatedAuth": {
+       "type": "string"
+      },
+      "sso": {
+       "type": "string"
+      }
+     }
     },
     "nextcloud-talk": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "baseUrl": {
+       "type": "string"
+      },
+      "botSecret": {
+       "type": "string"
+      },
+      "botSecretFile": {
+       "type": "string"
+      },
+      "apiUser": {
+       "type": "string"
+      },
+      "apiPassword": {
+       "type": "string"
+      },
+      "apiPasswordFile": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "webhookPort": {
+       "type": "string"
+      },
+      "webhookHost": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "webhookPublicUrl": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "rooms": {
+       "type": "string"
+      },
+      "network": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "nostr": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "privateKey": {
+       "type": "string"
+      },
+      "relays": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "profile": {
+       "type": "string"
+      }
+     }
     },
     "qa-channel": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "baseUrl": {
+       "type": "string"
+      },
+      "botUserId": {
+       "type": "string"
+      },
+      "botDisplayName": {
+       "type": "string"
+      },
+      "pollTimeoutMs": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "qqbot": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "enabled": {
+       "type": "string"
+      },
+      "name": {
+       "type": "string"
+      },
+      "appId": {
+       "type": "string"
+      },
+      "clientSecret": {
+       "type": "string"
+      },
+      "clientSecretFile": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "systemPrompt": {
+       "type": "string"
+      },
+      "markdownSupport": {
+       "type": "string"
+      },
+      "voiceDirectUploadFormats": {
+       "type": "string"
+      },
+      "audioFormatPolicy": {
+       "type": "string"
+      },
+      "urlDirectUpload": {
+       "type": "string"
+      },
+      "upgradeUrl": {
+       "type": "string"
+      },
+      "upgradeMode": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "execApprovals": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "stt": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "signal": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "account": {
+       "type": "string"
+      },
+      "accountUuid": {
+       "type": "string"
+      },
+      "configPath": {
+       "type": "string"
+      },
+      "httpUrl": {
+       "type": "string"
+      },
+      "httpHost": {
+       "type": "string"
+      },
+      "httpPort": {
+       "type": "string"
+      },
+      "cliPath": {
+       "type": "string"
+      },
+      "autoStart": {
+       "type": "string"
+      },
+      "startupTimeoutMs": {
+       "type": "string"
+      },
+      "receiveMode": {
+       "type": "string"
+      },
+      "ignoreAttachments": {
+       "type": "string"
+      },
+      "ignoreStories": {
+       "type": "string"
+      },
+      "sendReadReceipts": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "reactionAllowlist": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "reactionLevel": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "apiMode": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "slack": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "mode": {
+       "type": "string"
+      },
+      "socketMode": {
+       "type": "string"
+      },
+      "signingSecret": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "execApprovals": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "commands": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "botToken": {
+       "type": "string"
+      },
+      "appToken": {
+       "type": "string"
+      },
+      "userToken": {
+       "type": "string"
+      },
+      "userTokenReadOnly": {
+       "type": "string"
+      },
+      "allowBots": {
+       "type": "string"
+      },
+      "botLoopProtection": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "requireMention": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "unfurlLinks": {
+       "type": "string"
+      },
+      "unfurlMedia": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "reactionAllowlist": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "replyToModeByChatType": {
+       "type": "string"
+      },
+      "thread": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "slashCommand": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "dm": {
+       "type": "string"
+      },
+      "channels": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "ackReaction": {
+       "type": "string"
+      },
+      "typingReaction": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "sms": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "accountSid": {
+       "type": "string"
+      },
+      "authToken": {
+       "type": "string"
+      },
+      "fromNumber": {
+       "type": "string"
+      },
+      "messagingServiceSid": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "publicWebhookUrl": {
+       "type": "string"
+      },
+      "dangerouslyDisableSignatureValidation": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "synology-chat": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "dangerouslyAllowInheritedWebhookPath": {
+       "type": "string"
+      }
+     }
     },
     "telegram": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "execApprovals": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "commands": {
+       "type": "string"
+      },
+      "customCommands": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "botToken": {
+       "type": "string"
+      },
+      "tokenFile": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "includeGroupHistoryContext": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "direct": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "richMessages": {
+       "type": "string"
+      },
+      "streaming": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "timeoutSeconds": {
+       "type": "string"
+      },
+      "mediaGroupFlushMs": {
+       "type": "string"
+      },
+      "pollingStallThresholdMs": {
+       "type": "string"
+      },
+      "retry": {
+       "type": "string"
+      },
+      "network": {
+       "type": "string"
+      },
+      "proxy": {
+       "type": "string"
+      },
+      "webhookUrl": {
+       "type": "string"
+      },
+      "webhookSecret": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "webhookHost": {
+       "type": "string"
+      },
+      "webhookPort": {
+       "type": "string"
+      },
+      "webhookCertPath": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      },
+      "threadBindings": {
+       "type": "string"
+      },
+      "reactionNotifications": {
+       "type": "string"
+      },
+      "reactionLevel": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "linkPreview": {
+       "type": "string"
+      },
+      "silentErrorReplies": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "ackReaction": {
+       "type": "string"
+      },
+      "errorPolicy": {
+       "type": "string"
+      },
+      "errorCooldownMs": {
+       "type": "string"
+      },
+      "apiRoot": {
+       "type": "string"
+      },
+      "trustedLocalFileRoots": {
+       "type": "string"
+      },
+      "autoTopicLabel": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "tlon": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "ship": {
+       "type": "string"
+      },
+      "url": {
+       "type": "string"
+      },
+      "code": {
+       "type": "string"
+      },
+      "network": {
+       "type": "string"
+      },
+      "groupChannels": {
+       "type": "string"
+      },
+      "dmAllowlist": {
+       "type": "string"
+      },
+      "groupInviteAllowlist": {
+       "type": "string"
+      },
+      "autoDiscoverChannels": {
+       "type": "string"
+      },
+      "showModelSignature": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "autoAcceptDmInvites": {
+       "type": "string"
+      },
+      "autoAcceptGroupInvites": {
+       "type": "string"
+      },
+      "ownerShip": {
+       "type": "string"
+      },
+      "authorization": {
+       "type": "string"
+      },
+      "defaultAuthorizedShips": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      }
+     }
     },
     "twitch": {
      "type": "object"
     },
     "whatsapp": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "enabled": {
+       "type": "string"
+      },
+      "capabilities": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "configWrites": {
+       "type": "string"
+      },
+      "sendReadReceipts": {
+       "type": "string"
+      },
+      "messagePrefix": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "selfChatMode": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "defaultTo": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "mentionPatterns": {
+       "type": "string"
+      },
+      "contextVisibility": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "dmHistoryLimit": {
+       "type": "string"
+      },
+      "dms": {
+       "type": "string"
+      },
+      "textChunkLimit": {
+       "type": "string"
+      },
+      "chunkMode": {
+       "type": "string"
+      },
+      "blockStreaming": {
+       "type": "string"
+      },
+      "blockStreamingCoalesce": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "direct": {
+       "type": "string"
+      },
+      "ackReaction": {
+       "type": "string"
+      },
+      "reactionLevel": {
+       "type": "string"
+      },
+      "debounceMs": {
+       "type": "string"
+      },
+      "replyToMode": {
+       "type": "string"
+      },
+      "heartbeat": {
+       "type": "string"
+      },
+      "healthMonitor": {
+       "type": "string"
+      },
+      "pluginHooks": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "actions": {
+       "type": "string"
+      }
+     }
     },
     "zalo": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "botToken": {
+       "type": "string"
+      },
+      "tokenFile": {
+       "type": "string"
+      },
+      "webhookUrl": {
+       "type": "string"
+      },
+      "webhookSecret": {
+       "type": "string"
+      },
+      "webhookPath": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "mediaMaxMb": {
+       "type": "string"
+      },
+      "proxy": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "zalouser": {
-     "type": "object"
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "enabled": {
+       "type": "string"
+      },
+      "markdown": {
+       "type": "string"
+      },
+      "profile": {
+       "type": "string"
+      },
+      "dangerouslyAllowNameMatching": {
+       "type": "string"
+      },
+      "dmPolicy": {
+       "type": "string"
+      },
+      "allowFrom": {
+       "type": "string"
+      },
+      "historyLimit": {
+       "type": "string"
+      },
+      "groupAllowFrom": {
+       "type": "string"
+      },
+      "groupPolicy": {
+       "type": "string"
+      },
+      "groups": {
+       "type": "string"
+      },
+      "messagePrefix": {
+       "type": "string"
+      },
+      "responsePrefix": {
+       "type": "string"
+      },
+      "accounts": {
+       "type": "string"
+      },
+      "defaultAccount": {
+       "type": "string"
+      }
+     }
     },
     "openclaw-weixin": {
      "type": "object"

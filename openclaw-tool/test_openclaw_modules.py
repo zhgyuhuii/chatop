@@ -96,6 +96,15 @@ def test_plugin_pkg_from_catalog_not_guessed():
     assert orch.plugin_pkg_for("webchat", catalog) is None    # openclaw 不提供此通道
 
 
+def test_install_target_is_channel_id_not_npm_spec():
+    """实测 `openclaw plugins install wecom` 会自行解析成带版本的包名，
+    故安装不依赖 dist JS 解析出的 npm_spec —— 目录解析失败只丢中文名，不影响装插件。"""
+    catalog = _build_from_fixtures()
+    assert orch.install_target_for("wecom", catalog) == "wecom"
+    assert orch.install_target_for("openclaw-weixin", catalog) == "openclaw-weixin"
+    assert orch.install_target_for("telegram", catalog) is None   # 内置，无需安装
+
+
 def test_build_login_script_qr_has_login_and_tee():
     s = orch.build_login_script("openclaw-weixin", "qr", None, "/tmp/x.log")
     assert "channels login --channel openclaw-weixin" in s
@@ -243,10 +252,14 @@ def test_parse_channels_list_bad_json():
     assert cat.parse_channels_list("not json") == {}
 
 
-def test_parse_schema_channels():
-    keys = cat.parse_schema_channels(_fixture("config-schema-channels.json"))
-    assert len(keys) == 25
-    assert "telegram" in keys and "qa-channel" in keys and "wecom" not in keys
+def test_parse_schema_channels_reports_field_presence_not_key_presence():
+    """键存在 != 有字段。openclaw-weixin / twitch 在 schema 里但 properties 为空。"""
+    fields = cat.parse_schema_channels(_fixture("config-schema-channels.json"))
+    assert len(fields) == 25
+    assert "wecom" not in fields
+    assert fields["telegram"] is True
+    assert fields["openclaw-weixin"] is False
+    assert fields["twitch"] is False
 
 
 # ---- openclaw_catalog: 合并 ----
@@ -258,7 +271,8 @@ def test_build_wecom_visible_with_correct_package():
     assert w.installed is False
     assert w.npm_spec.startswith("@wecom/wecom-openclaw-plugin")
     assert w.label == "WeCom（企业微信）"
-    assert w.has_schema is False   # 未装 → 无字段 → GUI 走自由键值编辑器
+    # 未装 → schema 无此键；装完实测也只多出空壳键、无 properties → 恒走自由键值编辑器
+    assert w.has_schema is False
 
 
 def test_build_rejects_channels_openclaw_does_not_offer():
@@ -284,10 +298,15 @@ def test_build_origin_axis():
 
 
 def test_build_free_kv_fallback_targets():
-    """只有这 3 个插件通道没有 schema 字段。"""
+    """需要自由键值编辑器的通道：schema 里没有、或有键但无字段。
+
+    实测（一次性容器内装 wecom 后）：openclaw 只多出一个空壳 channels.wecom 键，
+    仍无 properties。故「装完就能渲染结构化表单」不成立，降级路径是必需品。
+    """
     chans = {c.id: c for c in _build_from_fixtures()["channels"]}
-    no_schema = sorted(c.id for c in chans.values() if not c.has_schema)
-    assert no_schema == ["openclaw-zaloclawbot", "wecom", "yuanbao"]
+    no_fields = sorted(c.id for c in chans.values() if not c.has_schema)
+    assert no_fields == ["openclaw-weixin", "openclaw-zaloclawbot", "twitch", "wecom", "yuanbao"]
+    assert chans["telegram"].has_schema is True
 
 
 def test_build_label_priority_and_qr():

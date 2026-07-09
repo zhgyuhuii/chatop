@@ -5,11 +5,14 @@
 设计（对齐 docs/superpowers/specs/2026-07-09-openclaw-catalog-truth-source-design.md）：
 
   * **id 权威** = `openclaw channels list --all --json`。不在其中的 id 一律不进结果。
-    这条硬规则自动挡掉幻影通道（webchat/voice-call/raft）与内部通道（qa-channel）。
-  * **字段来源** = `openclaw config schema` 的 channels.properties（25 个内置）。
-  * **包名/中文名/QR 标记** = openclaw 自带的官方外部插件目录（dist JS，文件名带内容哈希）。
-    企业微信等 4 个通道由第三方厂商发布，包名不遵守 `@openclaw/<id>`，只能从目录取，
-    不能拼接 —— 这正是旧硬编码表漏掉企业微信/微信/元宝的原因。
+    这条硬规则自动挡掉 raft（存在于插件目录但 openclaw 不列为可用通道）、
+    qa-channel（在 schema 但 CLI 不列）以及 webchat/voice-call 等根本不存在的通道。
+  * **字段来源** = `openclaw config schema` 的 channels.properties。注意「键存在」不等于
+    「有字段」（openclaw-weixin / twitch 的 properties 为空）。
+  * **中文名 / QR 标记** = openclaw 自带的官方外部插件目录（dist JS，文件名带内容哈希）。
+    openclaw 自己就写着 selectionLabel="WeCom（企业微信）"、"WhatsApp (QR link)"。
+  * **安装** 用通道 id（`openclaw plugins install wecom` 已实证可用，openclaw 自行解析成
+    @wecom/wecom-openclaw-plugin@2026.5.7）。故 npm_spec 仅供展示，目录解析失败不影响安装。
 
 约束：本模块不 import tkinter、import 时不调 CLI（CLI 每次 8-12s 且无热缓存），
 可在宿主机 py3.6 直接单测。故用 typing.NamedTuple 而非 dataclasses（py3.7+）。
@@ -138,9 +141,9 @@ def parse_channels_list(json_text):
     """解析 `openclaw channels list --all --json`。
 
     顶层键 `chat`，每条 {accounts, installed, origin}。
-    注意 origin ∈ {configured, installable} —— 它表示**配置状态**，不是 builtin/plugin
-    这条轴（telegram 是内置通道，却也报 installable）。故此处只取状态，origin 由
-    build_catalog 从 schema 键集与插件目录交叉推导。
+    注意 origin ∈ {configured, installable, available} —— 它表示**配置状态**
+    （available = 已装未配置），不是 builtin/plugin 这条轴（telegram 是内置通道，
+    却也报 installable）。故此处只取状态，origin 由 build_catalog 从插件目录推导。
     """
     try:
         data = json.loads(json_text)
@@ -161,15 +164,22 @@ def parse_channels_list(json_text):
 
 
 def parse_schema_channels(json_text):
-    """解析 `openclaw config schema`，返回内置通道字段键集合。"""
+    """解析 `openclaw config schema`，返回 {通道 id: 是否有可渲染的字段清单}。
+
+    「键存在」不等于「有字段」：openclaw-weixin / twitch 在 schema 里，properties 却是空的；
+    装上 wecom 插件后 schema 也只多出一个空壳键（实测）。这两类都必须走自由键值编辑器，
+    否则 GUI 会渲染出一个没有任何输入框的表单。
+    """
     try:
         data = json.loads(json_text)
     except Exception:
-        return set()
+        return {}
     try:
-        return set(data["properties"]["channels"]["properties"])
+        props = data["properties"]["channels"]["properties"]
     except Exception:
-        return set()
+        return {}
+    return dict((cid, bool((spec or {}).get("properties")))
+                for cid, spec in props.items())
 
 
 def parse_models_providers(json_text):
@@ -202,7 +212,7 @@ def build_catalog(channels_json, schema_json, catalog_js, models_json="",
     （qa-channel 在 schema 里，但 CLI 不列）。
     """
     state = parse_channels_list(channels_json)
-    schema_keys = parse_schema_channels(schema_json)
+    schema_fields = parse_schema_channels(schema_json)
     model_builtin = parse_models_providers(models_json)
     plugin = parse_plugin_catalog(catalog_js)
     pchans = plugin["channels"]
@@ -225,7 +235,7 @@ def build_catalog(channels_json, schema_json, catalog_js, models_json="",
             npm_spec=npm_spec,
             auth=_ov.CHANNEL_AUTH.get(cid, "token"),
             supports_qr=supports_qr,
-            has_schema=cid in schema_keys,
+            has_schema=schema_fields.get(cid, False),
             apply_url=_ov.CHANNEL_APPLY_URLS.get(cid),
         ))
 
