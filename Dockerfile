@@ -22,8 +22,10 @@ RUN --mount=type=cache,target=/root/.npm npm install && npm run build
 # 运行镜像
 # ============================================================================
 FROM kasmweb/core-ubuntu-jammy:1.19.0
+# ARG 仅声明不消费 → 不打穿缓存。消费 ${VERSION} 的 LABEL/ENV 一律放到产品层尾部，
+# 否则改版本号会让下方所有重层（Chrome/npm 全局/Hermes 预装）全部失效，
+# 触发全量重建 + 5.3G 全量导出 → dockerd RSS 冲到 5.7G 被内核 OOM 杀掉（2026-07-09 实测）。
 ARG VERSION=1.2.0
-LABEL maintainer="chatop-ai" build_version="chatop-ai ${VERSION}"
 USER root
 
 # === filebrowser 二进制（KasmVNC 开源版无文件传输） ===
@@ -232,7 +234,8 @@ RUN set -eux; \
     chown -R 1000:1000 /opt/chatop-seed-home/.local /opt/chatop-seed-home/Desktop
 
 # === station：工位本地大屏常驻服务（venv 已在上方；此处离线只 COPY） ===
-# 供 station 心跳上报真实版本；置于产品层，避免打穿上方重层缓存
+# 供 station 心跳上报真实版本；连同 LABEL 一起置于产品层，避免打穿上方重层缓存
+LABEL maintainer="chatop-ai" build_version="chatop-ai ${VERSION}"
 ENV CHATOP_VERSION=${VERSION}
 COPY station/station/ /opt/station/station/
 COPY station/start-station.sh /usr/local/bin/start-station.sh
