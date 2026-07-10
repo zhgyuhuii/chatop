@@ -695,6 +695,9 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
 #
 # 不要在此处重建任何通道 id / 包名的手抄表。要加中文名或申请地址，去 catalog_overrides.py。
 
+# 无效通道 id 与「禁用时写什么」的规则都归 openclaw_catalog（通道真源模块，且无 tkinter 依赖、可单测）
+from openclaw_catalog import BOGUS_CHANNEL_IDS, channel_entry_when_disabled  # noqa: E402
+
 # 国内通道（在「更多」通道展开时排到最前）
 CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot", "yuanbao", "wecom")
 
@@ -3324,12 +3327,9 @@ class OpenClawConfigApp:
             ("mattermost", "Mattermost", True, "botToken", "mattermost", False),
             ("msteams", "微软Teams(Microsoft Teams)", True, "appId", "msteams", False),
             ("irc", "IRC", True, "password", "irc", False),
-            ("bluebubbles", "BlueBubbles(iMessage)", True, "serverUrl", "bluebubbles", False),
             ("imessage", "苹果信息(iMessage)", False, None, "imessage", False),
-            # —— 补齐：openclaw 已支持、原 GUI 缺的通道（凭据方式待运行时确认，先只做启用+一步到位入口）——
-            ("webchat", "网页聊天(WebChat)", False, None, "webchat", False),
-            ("zalo-personal", "Zalo Personal", False, None, "zalo-personal", False),
-            ("voice-call", "语音通话(Voice Call)", False, None, "voice-call", False),
+            # bluebubbles / webchat / zalo-personal / voice-call 已移除：openclaw 快照(CLI 真源)
+            # 里没有这些通道 id，写进配置会让 gateway 以 unknown channel id 拒绝启动。见 BOGUS_CHANNEL_IDS。
             ("raft", "Raft", False, None, "raft", False),
         ]
         for ch_key, label, has_token, token_field, url_key, has_gp in channels_list:
@@ -3784,13 +3784,22 @@ class OpenClawConfigApp:
         patch["channels"] = dict(ch_existing)
         patch["channels"]["defaults"] = ch_defaults
 
-        all_channel_keys = ("feishu", "openclaw-weixin", "qqbot", "telegram", "discord", "whatsapp", "slack", "signal", "googlechat", "line", "matrix", "zalo", "nostr", "twitch", "sms", "synology-chat", "nextcloud-talk", "clickclack", "tlon", "mattermost", "msteams", "irc", "bluebubbles", "imessage")
+        # 自愈：剔除历史配置里残留的无效通道 id（openclaw 会以 unknown channel id 拒绝启动）
+        for _bogus in BOGUS_CHANNEL_IDS:
+            patch["channels"].pop(_bogus, None)
+
+        all_channel_keys = ("feishu", "openclaw-weixin", "qqbot", "telegram", "discord", "whatsapp", "slack", "signal", "googlechat", "line", "matrix", "zalo", "nostr", "twitch", "sms", "synology-chat", "nextcloud-talk", "clickclack", "tlon", "mattermost", "msteams", "irc", "imessage")
         for ch_key in all_channel_keys:
             if f"channels.{ch_key}.enabled" not in self.vars:
                 continue
             if not self.vars[f"channels.{ch_key}.enabled"].get():
-                # 未勾选时也写入 enabled: false，使禁用状态被保存
-                patch["channels"][ch_key] = deep_merge(ch_existing.get(ch_key) or {}, {"enabled": False})
+                # 从未配过的通道不写空桩（twitch 这类 anyOf schema 会因此校验失败）；
+                # 配过的保留原字段并置 enabled=false，禁用状态照样落盘。
+                disabled_entry = channel_entry_when_disabled(ch_existing.get(ch_key))
+                if disabled_entry is None:
+                    patch["channels"].pop(ch_key, None)
+                else:
+                    patch["channels"][ch_key] = disabled_entry
                 continue
             entry = {"enabled": True}
             entry["dmPolicy"] = _policy_display_to_value(self.vars[f"channels.{ch_key}.dmPolicy"].get(), DM_POLICY_DISPLAY_TO_VALUE) or "pairing"

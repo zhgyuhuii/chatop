@@ -26,6 +26,30 @@ from typing import NamedTuple, Optional
 import catalog_overrides as _ov
 
 
+# openclaw 实际不提供的通道 id（配置器 GUI 曾误列）。真源是 `openclaw channels list --all --json`
+# 的烤入快照，已核对这四个都不在其中。它们一旦写进 openclaw.json，gateway 会以
+# "unknown channel id" 拒绝启动。故 GUI 不展示，且保存时从既有配置里剔除（自愈）。
+BOGUS_CHANNEL_IDS = ("bluebubbles", "webchat", "voice-call", "zalo-personal")
+
+
+def channel_entry_when_disabled(existing):
+    """通道未启用时该写入 openclaw.json 的内容；返回 None 表示整条不要写。
+
+    openclaw 有些通道（如 twitch）的 schema 用 anyOf：只要该通道对象存在，就必须带
+    username/accounts。写裸的 {"enabled": false} 空桩会让 gateway 启动时校验失败
+    （"must have required property 'username'"）。因此：
+
+      * 此前配过实质字段 → 保留字段并置 enabled=false（必填字段仍在，校验能过）
+      * 从未配过 → 返回 None，整条不写（openclaw 对缺席的通道不做校验）
+    """
+    existing = existing or {}
+    if not any(k != "enabled" for k in existing):
+        return None
+    out = dict(existing)
+    out["enabled"] = False
+    return out
+
+
 class ChannelEntry(NamedTuple):
     id: str
     label: str

@@ -500,3 +500,32 @@ if __name__ == "__main__":
             traceback.print_exc()
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(1 if failed else 0)
+
+
+# === 回归：openclaw gateway 启动失败（2026-07-10）===
+# 症状：openclaw-tool 保存配置后 gateway 拒启：
+#   channels.twitch: must have required property 'username' / 'accounts'
+#   channels.bluebubbles: unknown channel id
+# 根因：GUI 给「未配置」通道也写 {"enabled": false} 空桩，且通道表混入了 openclaw
+#       根本不提供的 bluebubbles。
+
+def test_disabled_never_configured_channel_is_omitted():
+    # 从未配过 → 不写空桩（否则 twitch 的 anyOf schema 必然校验失败）
+    assert cat.channel_entry_when_disabled(None) is None
+    assert cat.channel_entry_when_disabled({}) is None
+    assert cat.channel_entry_when_disabled({"enabled": True}) is None
+    assert cat.channel_entry_when_disabled({"enabled": False}) is None
+
+
+def test_disabled_previously_configured_channel_keeps_required_fields():
+    # 配过 → 保留必填字段并置 enabled=false，schema 仍能过
+    out = cat.channel_entry_when_disabled(
+        {"enabled": True, "username": "bob", "accounts": ["a"]})
+    assert out == {"enabled": False, "username": "bob", "accounts": ["a"]}
+
+
+def test_bogus_channels_are_not_real_openclaw_channels():
+    # 这四个 id 不在 openclaw CLI 快照里；写进配置会让 gateway 报 unknown channel id
+    assert "bluebubbles" in cat.BOGUS_CHANNEL_IDS
+    for bogus in ("webchat", "voice-call", "zalo-personal"):
+        assert bogus in cat.BOGUS_CHANNEL_IDS
