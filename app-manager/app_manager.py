@@ -6,7 +6,36 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
 
 CATALOG_PATH = os.environ.get("APPS_CATALOG", "/etc/chatop/apps-catalog.json")
+MIRRORS_CONF = os.environ.get("MIRRORS_CONF", "/etc/chatop/mirrors.conf")
 LOG_DIR = "/tmp/app-mgr"; PORT = int(os.environ.get("APPS_PORT", "8686"))
+
+
+def _load_mirrors(path=None):
+    """解析 mirrors.conf → dict；文件缺失返回空 dict（安装退化成默认源，绝不报错）。"""
+    path = path or MIRRORS_CONF
+    out = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                out[k.strip()] = v.strip()
+    except OSError:
+        pass
+    return out
+
+
+def _install_env(path=None):
+    """os.environ 的副本 + npm/pip 国内镜像变量，供安装子进程使用。"""
+    m = _load_mirrors(path)
+    env = dict(os.environ)
+    if m.get("NPM_REGISTRY"):        env["npm_config_registry"] = m["NPM_REGISTRY"]
+    if m.get("NPM_DISTURL"):         env["npm_config_disturl"]  = m["NPM_DISTURL"]
+    if m.get("PIP_INDEX_URL"):       env["PIP_INDEX_URL"]       = m["PIP_INDEX_URL"]
+    if m.get("PIP_EXTRA_INDEX_URL"): env["PIP_EXTRA_INDEX_URL"] = m["PIP_EXTRA_INDEX_URL"]
+    return env
 GROUPS_PATH = os.environ.get(
     "APPS_GROUPS", os.path.expanduser("~/.local/share/chatop/groups.json"))
 _EMPTY_LAYOUT = {"version": 1, "items": [], "pulled_out_system": []}
@@ -672,7 +701,8 @@ class AppManager:
             logf = os.path.join(LOG_DIR, f"{log_id}.log")
             with open(logf,"w") as lf:
                 lf.write(f"$ {cmd}\n"); lf.flush()
-                rc = subprocess.run(["bash","-lc",cmd], stdout=lf, stderr=subprocess.STDOUT).returncode
+                rc = subprocess.run(["bash","-lc",cmd], stdout=lf, stderr=subprocess.STDOUT,
+                                    env=_install_env()).returncode
             self._state[log_id] = "success" if rc==0 else "failed"
             if rc == 0:
                 # 安装/卸载成功后刷新 XFCE 桌面，让快捷方式增删立即生效

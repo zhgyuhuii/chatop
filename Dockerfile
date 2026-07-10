@@ -134,8 +134,12 @@ RUN set -eux; mkdir -p /tmp/pa; \
     done; \
     [ -n "$ok" ]; \
     tar -xzf /tmp/pa.tar.gz -C /tmp/pa/; \
-    install -m755 /tmp/pa/proot-apps /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/; \
+    install -m755 /tmp/pa/proot-apps /usr/local/bin/proot-apps-real; \
+    install -m755 /tmp/pa/proot /tmp/pa/jq /tmp/pa/ncat /usr/local/bin/; \
     rm -rf /tmp/pa /tmp/pa.tar.gz
+# proot-apps 垫片：install 短名时改写为 ghcr 国内镜像并回退（读 /etc/chatop/mirrors.conf）
+COPY app-manager/proot-apps-shim.sh /usr/local/bin/proot-apps
+RUN sed -i 's/\r$//' /usr/local/bin/proot-apps && chmod +x /usr/local/bin/proot-apps
 
 # === 用户改名 kasm-user → ${APP_USER} + home 实体迁移 ===
 ARG APP_USER=admin
@@ -162,8 +166,10 @@ ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global PATH=${HOME}/.npm-global/bin:${HOME}/.
 RUN mkdir -p /usr/local/lib/chatop /etc/chatop
 COPY app-manager/chatop-preinstall.sh /usr/local/lib/chatop/chatop-preinstall.sh
 COPY app-manager/gui-install.sh /usr/local/lib/chatop/gui-install.sh
-RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh && \
-    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh
+# GitHub 下载多域名镜像回退助手（读 /etc/chatop/mirrors.conf）
+COPY app-manager/chatop-fetch.sh /usr/local/bin/chatop-fetch
+RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch && \
+    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch
 ARG PREINSTALL_HEAVY=1
 # OpenHuman 默认不预装(解包 ~1.3GB，走应用市场按需装)；WPS 从不预装(proot-apps 市场应用)
 ARG PREINSTALL_OPENHUMAN=0
@@ -210,7 +216,10 @@ COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
 COPY app-manager/chatop_license/ /usr/local/lib/chatop/chatop_license/
 COPY app-manager/chatop_i18n/ /usr/local/lib/chatop/chatop_i18n/
 COPY app-manager/apps-catalog.json /etc/chatop/apps-catalog.json
+COPY app-manager/mirrors.conf /etc/chatop/mirrors.conf
 COPY app-manager/icons/ /usr/share/kasmvnc/www/app-icons/
+# 图标缺失时前端 onerror 回退的统一占位图
+COPY app-manager/apps-icon.svg /usr/share/kasmvnc/www/app-icons/apps-icon.svg
 COPY app-manager/start-app-manager.sh /usr/local/bin/start-app-manager.sh
 COPY app-manager/gui-uninstall.sh /usr/local/lib/chatop/gui-uninstall.sh
 COPY app-manager/chatop-run-cli.sh /usr/local/bin/chatop-run-cli
