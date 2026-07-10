@@ -153,6 +153,38 @@ def _captcha_check(cookie_value, user_input):
         return False
     return hmac.compare_digest(ans, (user_input or "").strip().lower())
 
+# === 激活宽限令牌：序列号连错 N 次后签发的临时通行证 ===
+# 让「未激活但已连错 N 次」的会话能过 /auth，但激活记录始终不落盘，重新登录仍要输序列号。
+# 与验证码同构：AUTH_TOKEN 签名 + 载荷内含过期时间，无服务端状态。tag 固定 "grace"，
+# 防止验证码 cookie 被当成宽限令牌冒用。
+GRACE_COOKIE = "chatop_grace"
+GRACE_TTL = 86400   # 与 AUTH cookie 同寿；因激活不落盘，下次登录照样要序列号
+
+def _grace_new(now=None):
+    exp = int(now if now is not None else time.time()) + GRACE_TTL
+    payload = "grace|%d" % exp
+    sig = hmac.new(AUTH_TOKEN.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(payload.encode()).decode() + "." + sig
+
+def _grace_ok(cookie_value, now=None):
+    if not cookie_value or "." not in cookie_value:
+        return False
+    b64, _, sig = cookie_value.partition(".")
+    try:
+        payload = base64.urlsafe_b64decode(b64.encode()).decode()
+    except Exception:
+        return False
+    expect = hmac.new(AUTH_TOKEN.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expect):
+        return False
+    tag, _, exp = payload.partition("|")
+    if tag != "grace":
+        return False
+    try:
+        return int(exp) >= int(now if now is not None else time.time())
+    except ValueError:
+        return False
+
 def _captcha_svg(text):
     """把验证码渲染成扭曲 SVG 字符串（干扰线 + 每字随机旋转/位移/颜色）。"""
     W, H = 130, 44
@@ -193,6 +225,29 @@ def _ratelimit_record_fail(ip, now=None):
 
 def _ratelimit_reset(ip):
     _LOGIN_FAILS.pop(ip, None)
+
+# === 序列号失败计数（独立于 IP 软限流）：连错 SERIAL_BYPASS_MAX 次后允许软放行 ===
+_SERIAL_FAILS = {}         # ip -> [count, first_ts]
+SERIAL_BYPASS_MAX = 3      # 连错 3 次即可跳过序列号（凭密码软进入，不落盘激活）
+SERIAL_WINDOW = 900        # 15 分钟窗口内累计
+
+def _serial_fails(ip, now=None):
+    now = int(now if now is not None else time.time())
+    c = _SERIAL_FAILS.get(ip)
+    if not c or now - c[1] > SERIAL_WINDOW:
+        return 0
+    return c[0]
+
+def _serial_record_fail(ip, now=None):
+    now = int(now if now is not None else time.time())
+    c = _SERIAL_FAILS.get(ip)
+    if not c or now - c[1] > SERIAL_WINDOW:
+        _SERIAL_FAILS[ip] = [1, now]
+    else:
+        c[0] += 1
+
+def _serial_reset(ip):
+    _SERIAL_FAILS.pop(ip, None)
 
 def _logo_data_uri():
     try:
@@ -798,7 +853,10 @@ class Handler(BaseHTTPRequestHandler):
         # 并直接伪造 cookie，完全绕过登录表单。/auth 是所有受保护路径的必经之地。
         # 顺带好处：授权到期会立刻把人弹回激活页，而不是等 24h cookie 自然过期。
         if self.path.split("?",1)[0].rstrip("/") == "/auth":
-            if _cookie_ok(self.headers.get("Cookie","")) and gate_passable(gate_state()[0]):
+            cookie_hdr = self.headers.get("Cookie","")
+            # 放行 = cookie 有效 且 (闸门可过 或 持宽限令牌)。宽限令牌是序列号连错 3 次后的软通行证。
+            if _cookie_ok(cookie_hdr) and (gate_passable(gate_state()[0])
+                                           or _grace_ok(_get_cookie(cookie_hdr, GRACE_COOKIE))):
                 return self._json(200, {"ok":True})
             self.send_response(302); self.send_header("Location","/login"); self.end_headers(); return
         if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog(self._req_lang()))
@@ -865,27 +923,37 @@ class Handler(BaseHTTPRequestHandler):
             state, _ = gate_state()
             need_activation = not gate_passable(state)
             pending = None
+            grace = False   # 序列号连错达阈值 → 软放行本次会话（不落盘激活）
             if need_activation:
                 # 未激活：序列号占掉验证码的位置。先 validate（不落盘），密码也过了才 commit。
                 # 顺序不能反：先验密码会让 e=1/e=3 变成密码预言机（见 gate.validate 注释）。
                 ok, code, pending = _gate.validate(serial)
                 if not ok:
-                    _ratelimit_record_fail(ip)
-                    self.send_response(302); self.send_header("Location","/login?e=%d" % code)
-                    self.end_headers(); return
+                    _serial_record_fail(ip)
+                    if _serial_fails(ip) < SERIAL_BYPASS_MAX:
+                        _ratelimit_record_fail(ip)
+                        self.send_response(302); self.send_header("Location","/login?e=%d" % code)
+                        self.end_headers(); return
+                    # 已连错 SERIAL_BYPASS_MAX 次：跳过序列号，降级为纯密码登录。
+                    # 此刻起序列号错误码不再泄露（已放弃校验），密码预言机顾虑消失。
+                    pending = None; grace = True
             elif not _captcha_check(_get_cookie(self.headers.get("Cookie",""), CAPTCHA_COOKIE), cap):
                 _ratelimit_record_fail(ip)
                 self.send_response(302); self.send_header("Location","/login?e=2"); self.end_headers(); return
             if u==AUTH_USER and AUTH_PW and hmac.compare_digest(p, AUTH_PW):
-                _ratelimit_reset(ip)
+                _ratelimit_reset(ip); _serial_reset(ip)
                 if pending is not None:
                     _gate.commit(pending)     # 序列号与密码都过了，此刻才写激活记录
-                elif _gate is not None:
+                elif _gate is not None and not grace:
                     try: _gate.touch()        # 推进 seen_max（时钟回拨检测的单调基线）
                     except Exception: pass
                 self.send_response(302); self.send_header("Location","/")
                 self.send_header("Set-Cookie",
                     "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400" % (AUTH_COOKIE, AUTH_TOKEN))
+                if grace:
+                    # 软放行：签发宽限令牌让 /auth 认本次会话。激活记录未落盘 → 下次登录仍要序列号。
+                    self.send_header("Set-Cookie",
+                        "%s=%s; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=%d" % (GRACE_COOKIE, _grace_new(), GRACE_TTL))
                 self.send_header("Set-Cookie", "%s=; Path=/; Max-Age=0" % CAPTCHA_COOKIE)  # 验证码一次性
                 self.end_headers(); return
             _ratelimit_record_fail(ip)
