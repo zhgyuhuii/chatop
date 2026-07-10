@@ -3858,8 +3858,9 @@ const ChatopApps = {
         const canOpen = installed && a.launchable;
         const card = document.createElement('div'); card.className='chatop_app_card';
         const iconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
+        const cnTag = a.badge ? `<span class="chatop_app_cntag" style="position:absolute;top:6px;left:6px;background:#d9363e;color:#fff;font-size:10px;line-height:1.4;padding:0 5px;border-radius:6px">${a.badge}</span>` : '';
         card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">
-          <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}
+          ${cnTag}<div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}
           ${canOpen?'<button class="chatop_app_open">详情</button>':''}`;
         card.querySelector('.chatop_app_name').textContent = a.name;
         if (canOpen) {

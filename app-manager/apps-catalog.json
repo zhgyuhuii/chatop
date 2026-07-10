@@ -14,7 +14,9 @@
       "detect": "code --list-extensions | grep -qi continue.continue",
       "needs": [],
       "homepage": "https://continue.dev",
-      "notes": "运行需配模型，可指向本地 Ollama"
+      "notes": "运行需配模型，可指向本地 Ollama",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "cline",
@@ -28,7 +30,9 @@
       "detect": "code --list-extensions | grep -qi saoudrizwan.claude-dev",
       "needs": [],
       "homepage": "https://cline.bot",
-      "notes": "运行需 key 或本地模型"
+      "notes": "运行需 key 或本地模型",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "claude-code",
@@ -44,7 +48,9 @@
         "node"
       ],
       "homepage": "https://www.anthropic.com",
-      "notes": "需 ANTHROPIC_API_KEY，国内 API 需代理"
+      "notes": "需 ANTHROPIC_API_KEY，国内 API 需代理",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "codex",
@@ -60,7 +66,9 @@
         "node"
       ],
       "homepage": "https://openai.com",
-      "notes": "需 OpenAI 登录/key"
+      "notes": "需 OpenAI 登录/key",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "opencode",
@@ -76,7 +84,9 @@
         "node"
       ],
       "homepage": "https://opencode.ai",
-      "notes": "可接入多种 AI 模型"
+      "notes": "可接入多种 AI 模型",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "qwen-code",
@@ -92,7 +102,9 @@
         "node"
       ],
       "homepage": "https://github.com/QwenLM",
-      "notes": "需付费/自带 key"
+      "notes": "需付费/自带 key",
+      "origin": "cn",
+      "rank": 85
     },
     {
       "id": "openclaw",
@@ -108,7 +120,9 @@
         "node"
       ],
       "homepage": "https://github.com/openclaw",
-      "notes": "前台运行 openclaw gateway"
+      "notes": "前台运行 openclaw gateway",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "reasonix",
@@ -124,7 +138,9 @@
         "node"
       ],
       "homepage": "https://github.com/esengine/reasonix",
-      "notes": "社区项目，绑 DeepSeek key"
+      "notes": "社区项目，绑 DeepSeek key",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "mimo-code",
@@ -140,7 +156,9 @@
         "node"
       ],
       "homepage": "https://github.com/XiaomiMiMo",
-      "notes": "国内友好；首次运行有交互引导；内置 MiMo Auto 免费通道(限时)"
+      "notes": "国内友好；首次运行有交互引导；内置 MiMo Auto 免费通道(限时)",
+      "origin": "cn",
+      "rank": 85
     },
     {
       "id": "aider",
@@ -154,7 +172,9 @@
       "detect": "command -v aider",
       "needs": [],
       "homepage": "https://aider.chat",
-      "notes": "Py3.10 兼容，最稳"
+      "notes": "Py3.10 兼容，最稳",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "nanobot",
@@ -168,7 +188,9 @@
       "detect": "command -v nanobot",
       "needs": [],
       "homepage": "https://github.com/nanobot-ai/nanobot",
-      "notes": "脚本入口不可达，改用 pip 安装"
+      "notes": "脚本入口不可达，改用 pip 安装",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "hermes",
@@ -182,7 +204,9 @@
       "detect": "command -v hermes",
       "needs": [],
       "homepage": "https://github.com/NousResearch/hermes-agent",
-      "notes": "镜像已预装；安装器用 uv+py3.11(免 sudo)，首次配置 API key 用 hermes setup"
+      "notes": "镜像已预装；安装器用 uv+py3.11(免 sudo)，首次配置 API key 用 hermes setup",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "rtk",
@@ -197,7 +221,9 @@
       "run": "rtk",
       "needs": [],
       "homepage": "https://github.com/rtk-ai/rtk",
-      "notes": "镜像已预装；Apache-2.0，静态 musl 二进制"
+      "notes": "镜像已预装；Apache-2.0，静态 musl 二进制",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "tokscale",
@@ -214,7 +240,9 @@
         "node"
       ],
       "homepage": "https://github.com/junhoyeo/tokscale",
-      "notes": "镜像已预装；MIT，桌面有监控图标"
+      "notes": "镜像已预装；MIT，桌面有监控图标",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "void",
@@ -230,7 +258,9 @@
       "homepage": "https://voideditor.com",
       "notes": "AppImage 解包到用户目录，持久化；装好后在桌面/开始菜单打开",
       "phase": 2,
-      "launch": "$HOME/Applications/void/squashfs-root/AppRun"
+      "launch": "$HOME/Applications/void/squashfs-root/AppRun",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "cursor",
@@ -246,7 +276,9 @@
       "homepage": "https://cursor.com",
       "notes": "闭源需登录；体积大(解包~1GB)；以 --no-sandbox 启动",
       "phase": 2,
-      "launch": "$HOME/Applications/cursor/squashfs-root/AppRun --no-sandbox"
+      "launch": "$HOME/Applications/cursor/squashfs-root/AppRun --no-sandbox",
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "sovyx",
@@ -263,7 +295,9 @@
       ],
       "homepage": "https://pypi.org/project/sovyx",
       "notes": "需 Python3.11(镜像已预装)；以 fastapi 服务运行",
-      "phase": 2
+      "phase": 2,
+      "origin": "intl",
+      "rank": 50
     },
     {
       "id": "anydesk",
@@ -278,7 +312,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run anydesk"
+      "launch": "proot-apps run anydesk",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ardour",
@@ -293,7 +329,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ardour"
+      "launch": "proot-apps run ardour",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "audacity",
@@ -308,7 +346,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run audacity"
+      "launch": "proot-apps run audacity",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "aws-workspaces",
@@ -323,7 +363,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run aws-workspaces"
+      "launch": "proot-apps run aws-workspaces",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "beekeeperstudio",
@@ -338,7 +380,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run beekeeperstudio"
+      "launch": "proot-apps run beekeeperstudio",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "bitwarden",
@@ -353,7 +397,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run bitwarden"
+      "launch": "proot-apps run bitwarden",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "blender",
@@ -368,7 +414,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run blender"
+      "launch": "proot-apps run blender",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "brave",
@@ -383,7 +431,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run brave"
+      "launch": "proot-apps run brave",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "braveorigin",
@@ -398,7 +448,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run braveorigin"
+      "launch": "proot-apps run braveorigin",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "calibre",
@@ -413,7 +465,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run calibre"
+      "launch": "proot-apps run calibre",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "celluloid",
@@ -428,7 +482,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run celluloid"
+      "launch": "proot-apps run celluloid",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "chrome",
@@ -443,7 +499,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run chrome"
+      "launch": "proot-apps run chrome",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "chromium",
@@ -458,7 +516,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run chromium"
+      "launch": "proot-apps run chromium",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "deluge",
@@ -473,7 +533,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run deluge"
+      "launch": "proot-apps run deluge",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "digikam",
@@ -488,7 +550,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run digikam"
+      "launch": "proot-apps run digikam",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "dolphin",
@@ -503,7 +567,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run dolphin"
+      "launch": "proot-apps run dolphin",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "doublecmd",
@@ -518,7 +584,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run doublecmd"
+      "launch": "proot-apps run doublecmd",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "dreamm",
@@ -533,7 +601,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run dreamm"
+      "launch": "proot-apps run dreamm",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "earth",
@@ -548,7 +618,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run earth"
+      "launch": "proot-apps run earth",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "eclipsejava",
@@ -563,7 +635,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run eclipsejava"
+      "launch": "proot-apps run eclipsejava",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "edge",
@@ -578,7 +652,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run edge"
+      "launch": "proot-apps run edge",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ferdium",
@@ -593,7 +669,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ferdium"
+      "launch": "proot-apps run ferdium",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "filezilla",
@@ -608,7 +686,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run filezilla"
+      "launch": "proot-apps run filezilla",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "firefox",
@@ -623,7 +703,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run firefox"
+      "launch": "proot-apps run firefox",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "firefox-dev",
@@ -638,7 +720,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run firefox-dev"
+      "launch": "proot-apps run firefox-dev",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "flameshot",
@@ -653,7 +737,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run flameshot"
+      "launch": "proot-apps run flameshot",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "flycast",
@@ -668,7 +754,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run flycast"
+      "launch": "proot-apps run flycast",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "freecad",
@@ -683,7 +771,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run freecad"
+      "launch": "proot-apps run freecad",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "freeciv",
@@ -698,7 +788,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run freeciv"
+      "launch": "proot-apps run freeciv",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "freedoom",
@@ -713,7 +805,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run freedoom"
+      "launch": "proot-apps run freedoom",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "geany",
@@ -728,7 +822,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run geany"
+      "launch": "proot-apps run geany",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "gimp",
@@ -743,7 +839,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run gimp"
+      "launch": "proot-apps run gimp",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "handbrake",
@@ -758,7 +856,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run handbrake"
+      "launch": "proot-apps run handbrake",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "helium",
@@ -773,7 +873,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run helium"
+      "launch": "proot-apps run helium",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "idea",
@@ -788,7 +890,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run idea"
+      "launch": "proot-apps run idea",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "inkscape",
@@ -803,7 +907,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run inkscape"
+      "launch": "proot-apps run inkscape",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "joplin",
@@ -818,7 +924,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run joplin"
+      "launch": "proot-apps run joplin",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "kdenlive",
@@ -833,7 +941,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run kdenlive"
+      "launch": "proot-apps run kdenlive",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "keepassxc",
@@ -848,7 +958,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run keepassxc"
+      "launch": "proot-apps run keepassxc",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "kicad",
@@ -863,7 +975,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run kicad"
+      "launch": "proot-apps run kicad",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "kodi",
@@ -878,7 +992,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run kodi"
+      "launch": "proot-apps run kodi",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "krita",
@@ -893,7 +1009,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run krita"
+      "launch": "proot-apps run krita",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ktorrent",
@@ -908,7 +1026,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ktorrent"
+      "launch": "proot-apps run ktorrent",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "libreoffice",
@@ -923,7 +1043,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run libreoffice"
+      "launch": "proot-apps run libreoffice",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "librewolf",
@@ -938,7 +1060,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run librewolf"
+      "launch": "proot-apps run librewolf",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "lmms",
@@ -953,7 +1077,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run lmms"
+      "launch": "proot-apps run lmms",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "logisim",
@@ -968,7 +1094,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run logisim"
+      "launch": "proot-apps run logisim",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "lollypop",
@@ -983,7 +1111,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run lollypop"
+      "launch": "proot-apps run lollypop",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "maltego",
@@ -998,7 +1128,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run maltego"
+      "launch": "proot-apps run maltego",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "mayo",
@@ -1013,7 +1145,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run mayo"
+      "launch": "proot-apps run mayo",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "melonds",
@@ -1028,7 +1162,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run melonds"
+      "launch": "proot-apps run melonds",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "moonlight",
@@ -1043,7 +1179,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run moonlight"
+      "launch": "proot-apps run moonlight",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "mumble",
@@ -1058,7 +1196,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run mumble"
+      "launch": "proot-apps run mumble",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "nextcloud",
@@ -1073,7 +1213,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run nextcloud"
+      "launch": "proot-apps run nextcloud",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "obs",
@@ -1088,7 +1230,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run obs"
+      "launch": "proot-apps run obs",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "obsidian",
@@ -1103,7 +1247,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run obsidian"
+      "launch": "proot-apps run obsidian",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "onlyoffice",
@@ -1118,7 +1264,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run onlyoffice"
+      "launch": "proot-apps run onlyoffice",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "opencloud",
@@ -1133,7 +1281,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run opencloud"
+      "launch": "proot-apps run opencloud",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "opera",
@@ -1148,7 +1298,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run opera"
+      "launch": "proot-apps run opera",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "orcaslicer",
@@ -1163,7 +1315,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run orcaslicer"
+      "launch": "proot-apps run orcaslicer",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "parsec",
@@ -1178,7 +1332,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run parsec"
+      "launch": "proot-apps run parsec",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "postman",
@@ -1193,7 +1349,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run postman"
+      "launch": "proot-apps run postman",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ppsspp",
@@ -1208,7 +1366,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ppsspp"
+      "launch": "proot-apps run ppsspp",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "pycharm",
@@ -1223,7 +1383,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run pycharm"
+      "launch": "proot-apps run pycharm",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "qbittorrent",
@@ -1238,7 +1400,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run qbittorrent"
+      "launch": "proot-apps run qbittorrent",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "remmina",
@@ -1253,7 +1417,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run remmina"
+      "launch": "proot-apps run remmina",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "retroarch",
@@ -1268,7 +1434,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run retroarch"
+      "launch": "proot-apps run retroarch",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "rustdesk",
@@ -1283,7 +1451,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run rustdesk"
+      "launch": "proot-apps run rustdesk",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ryujinx",
@@ -1298,7 +1468,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ryujinx"
+      "launch": "proot-apps run ryujinx",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "shortwave",
@@ -1313,7 +1485,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run shortwave"
+      "launch": "proot-apps run shortwave",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "shotcut",
@@ -1328,7 +1502,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run shotcut"
+      "launch": "proot-apps run shotcut",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "spotify",
@@ -1343,7 +1519,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run spotify"
+      "launch": "proot-apps run spotify",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "spotube",
@@ -1358,7 +1536,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run spotube"
+      "launch": "proot-apps run spotube",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "sqlitebrowser",
@@ -1373,7 +1553,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run sqlitebrowser"
+      "launch": "proot-apps run sqlitebrowser",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "stremio",
@@ -1388,7 +1570,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run stremio"
+      "launch": "proot-apps run stremio",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "tabby",
@@ -1403,7 +1587,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run tabby"
+      "launch": "proot-apps run tabby",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "telegram",
@@ -1418,7 +1604,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run telegram"
+      "launch": "proot-apps run telegram",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "thunderbird",
@@ -1433,7 +1621,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run thunderbird"
+      "launch": "proot-apps run thunderbird",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "torbrowser",
@@ -1448,7 +1638,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run torbrowser"
+      "launch": "proot-apps run torbrowser",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "ungoogledchromium",
@@ -1463,7 +1655,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run ungoogledchromium"
+      "launch": "proot-apps run ungoogledchromium",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "vivaldi",
@@ -1478,7 +1672,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run vivaldi"
+      "launch": "proot-apps run vivaldi",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "vlc",
@@ -1493,7 +1689,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run vlc"
+      "launch": "proot-apps run vlc",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "vscode",
@@ -1508,7 +1706,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run vscode"
+      "launch": "proot-apps run vscode",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "vscodium",
@@ -1523,7 +1723,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run vscodium"
+      "launch": "proot-apps run vscodium",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "weather",
@@ -1538,7 +1740,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run weather"
+      "launch": "proot-apps run weather",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "webcord",
@@ -1553,7 +1757,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run webcord"
+      "launch": "proot-apps run webcord",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "wechat",
@@ -1568,7 +1774,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run wechat"
+      "launch": "proot-apps run wechat",
+      "origin": "cn",
+      "rank": 70
     },
     {
       "id": "winegui",
@@ -1583,7 +1791,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run winegui"
+      "launch": "proot-apps run winegui",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "wpsoffice",
@@ -1598,7 +1808,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run wpsoffice"
+      "launch": "proot-apps run wpsoffice",
+      "origin": "cn",
+      "rank": 70
     },
     {
       "id": "yandex",
@@ -1613,7 +1825,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run yandex"
+      "launch": "proot-apps run yandex",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "zen",
@@ -1628,7 +1842,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run zen"
+      "launch": "proot-apps run zen",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "zim",
@@ -1643,7 +1859,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run zim"
+      "launch": "proot-apps run zim",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "zoom",
@@ -1658,7 +1876,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run zoom"
+      "launch": "proot-apps run zoom",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "zotero",
@@ -1673,7 +1893,9 @@
       "needs": [],
       "homepage": "",
       "notes": "PRoot 容器化 GUI 应用，免 root、装到用户目录并持久化；装好后从桌面或开始菜单打开",
-      "launch": "proot-apps run zotero"
+      "launch": "proot-apps run zotero",
+      "origin": "global",
+      "rank": 20
     },
     {
       "id": "openhuman",
@@ -1689,7 +1911,9 @@
       "homepage": "https://github.com/tinyhumansai/openhuman",
       "notes": "Tauri 桌面应用(AppImage v0.58.0)，解包到 ~/Applications 持久化；装好后从桌面/开始菜单打开",
       "phase": 2,
-      "launch": "$HOME/Applications/openhuman/squashfs-root/AppRun"
+      "launch": "$HOME/Applications/openhuman/squashfs-root/AppRun",
+      "origin": "global",
+      "rank": 30
     }
   ]
 }

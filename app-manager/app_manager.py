@@ -39,7 +39,12 @@ def _install_env(path=None):
 GROUPS_PATH = os.environ.get(
     "APPS_GROUPS", os.path.expanduser("~/.local/share/chatop/groups.json"))
 _EMPTY_LAYOUT = {"version": 1, "items": [], "pulled_out_system": []}
-PUBLIC_FIELDS = ("id","name","category","kind","icon","description","needs","homepage","notes","available")
+PUBLIC_FIELDS = ("id","name","category","kind","icon","description","needs","homepage","notes","available","origin","rank")
+
+# 语言 → 应用区域：zh_CN/zh_TW 用国内版(cn)，en/ja/ko 用国际版(intl)。默认 cn（默认语言 zh_CN）。
+_REGION_BY_LANG = {"zh_CN": "cn", "zh_TW": "cn", "en": "intl", "ja": "intl", "ko": "intl"}
+def _region_for_lang(lang):
+    return _REGION_BY_LANG.get(lang or "zh_CN", "cn")
 
 # === 文件传输（上传到桌面 / 仅下载桌面文件）配置 ===
 def _envflag(name, default="1"):
@@ -583,15 +588,38 @@ class AppManager:
         threading.Thread(target=self._worker, daemon=True).start()
     def _load(self):
         with open(self.catalog_path) as f: return json.load(f)
-    def public_catalog(self):
+    @staticmethod
+    def _resolve_app(app, lang="zh_CN"):
+        """有 variants 则按语言区域摊平并入顶层（返回新 dict，不改原对象）；否则原样返回。
+        区域缺失时回退 cn→intl→任意，保证不空。"""
+        vs = app.get("variants")
+        if not vs:
+            return app
+        region = _region_for_lang(lang)
+        chosen = vs.get(region) or vs.get("cn") or vs.get("intl") or next(iter(vs.values()))
+        merged = {k: v for k, v in app.items() if k != "variants"}
+        merged.update(chosen)
+        return merged
+    def public_catalog(self, lang="zh_CN"):
         cat = self._load()
-        out = []
+        region = _region_for_lang(lang)
+        rows = []
         for a in cat["apps"]:
-            d = {k: a[k] for k in PUBLIC_FIELDS if k in a}
+            r = self._resolve_app(a, lang)
+            d = {k: r[k] for k in PUBLIC_FIELDS if k in r}
             # 有 launch（GUI）或属 CLI 且能定位命令 = 可在桌面打开
-            d["launchable"] = bool(a.get("launch")) or bool(self._is_cli(a) and self._cli_run(a))
-            out.append(d)
-        cat["apps"] = out
+            d["launchable"] = bool(r.get("launch")) or bool(self._is_cli(r) and self._cli_run(r))
+            if r.get("origin") == "cn":
+                d["badge"] = "国产"
+            rows.append((r, d))
+        # 排序：rank 降序 → 当前区域应用优先(国产置顶/境外降权) → name 升序
+        def _key(item):
+            r = item[0]
+            return (-(r.get("rank") or 0),
+                    0 if r.get("origin", "global") == region else 1,
+                    str(r.get("name", "")))
+        rows.sort(key=_key)
+        cat["apps"] = [d for _, d in rows]
         return cat
     @staticmethod
     def _is_cli(app):
@@ -604,8 +632,8 @@ class AppManager:
             return app["run"]
         m = re.search(r"command -v\s+([^\s;|&]+)", app.get("detect", ""))
         return m.group(1) if m else None
-    def launch_cmd(self, app_id):
-        a = self._app(app_id)
+    def launch_cmd(self, app_id, lang="zh_CN"):
+        a = self._app(app_id, lang)
         if a.get("launch"):
             return a["launch"]          # GUI 应用：直接启动
         if self._is_cli(a):             # CLI 工具：在桌面终端里运行，结束后保留交互 shell
@@ -670,33 +698,30 @@ class AppManager:
             c = {a["id"]: a for a in self._load()["apps"]}.get(key)
             return c["remove"] if c and c.get("remove") else None
         return None
-    def _app(self, app_id):
+    def _app(self, app_id, lang="zh_CN"):
         for a in self._load()["apps"]:
-            if a["id"] == app_id: return a
+            if a["id"] == app_id: return self._resolve_app(a, lang)
         raise KeyError(app_id)
-    def command_for(self, app_id, action):
-        return self._app(app_id)[action]
+    def command_for(self, app_id, action, lang="zh_CN"):
+        return self._app(app_id, lang)[action]
     def _run_detect(self, cmd):
         return subprocess.run(["bash","-lc",cmd], stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL).returncode == 0
-    def status(self):
-        return {a["id"]: self._run_detect(a["detect"]) for a in self._load()["apps"]}
-    def enqueue(self, app_id, action):
-        self._app(app_id)
+    def status(self, lang="zh_CN"):
+        return {a["id"]: self._run_detect(self._resolve_app(a, lang)["detect"])
+                for a in self._load()["apps"]}
+    def enqueue(self, app_id, action, lang="zh_CN"):
         if action not in ("install","remove"): raise ValueError(action)
-        self._state[app_id] = "queued"; self._tasks.put((app_id, action)); return True
+        cmd = self.command_for(app_id, action, lang)   # 解析变体 + 校验存在（缺失抛 KeyError）
+        self._state[app_id] = "queued"; self._tasks.put((app_id, cmd)); return True
     def enqueue_cmd(self, log_id, command):
         self._state[log_id] = "queued"
-        self._tasks.put(("__cmd__", (log_id, command)))
+        self._tasks.put((log_id, command))
         return True
     def task_state(self, app_id): return self._state.get(app_id, "unknown")
     def _worker(self):
         while True:
-            app_id, action = self._tasks.get()
-            if app_id == "__cmd__":
-                log_id, cmd = action
-            else:
-                log_id, cmd = app_id, self.command_for(app_id, action)
+            log_id, cmd = self._tasks.get()   # 命令在 enqueue 时已按请求语言解析好
             self._state[log_id] = "running"
             logf = os.path.join(LOG_DIR, f"{log_id}.log")
             with open(logf,"w") as lf:
@@ -722,6 +747,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type","text/html; charset=utf-8")
         self.send_header("Content-Length",str(len(b)))
         self.end_headers(); self.wfile.write(b)
+    def _req_lang(self):
+        """按请求 cookie/Accept-Language 解析语言（真源 chatop_lang），供 catalog/status/install/launch 选变体与排序。"""
+        return resolve_lang(self.headers.get("Cookie",""), self.headers.get("Accept-Language",""))[0]
     def do_GET(self):
         # 登录页（品牌化，取代 KasmVNC 原生 basic-auth 弹窗）
         if self.path.split("?",1)[0].rstrip("/") == "/login":
@@ -773,8 +801,8 @@ class Handler(BaseHTTPRequestHandler):
             if _cookie_ok(self.headers.get("Cookie","")) and gate_passable(gate_state()[0]):
                 return self._json(200, {"ok":True})
             self.send_response(302); self.send_header("Location","/login"); self.end_headers(); return
-        if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog())
-        if self.path.startswith("/apps/status"):  return self._json(200, MGR.status())
+        if self.path.startswith("/apps/catalog"): return self._json(200, MGR.public_catalog(self._req_lang()))
+        if self.path.startswith("/apps/status"):  return self._json(200, MGR.status(self._req_lang()))
         if self.path.startswith("/apps/installed"): return self._json(200, {"installed": MGR.installed_apps()})
         if self.path.startswith("/apps/groups"):
             layout = GROUPS.reconcile(GROUPS.load(), MGR.installed_apps())
@@ -886,13 +914,13 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
             action="install" if self.path.rstrip("/").endswith("install") else "remove"
             try:
-                MGR.enqueue(body["id"], action); return self._json(202, {"id":body["id"],"state":"queued"})
+                MGR.enqueue(body["id"], action, self._req_lang()); return self._json(202, {"id":body["id"],"state":"queued"})
             except KeyError: return self._json(400, {"error":"unknown app id"})
             except (ValueError,TypeError): return self._json(400, {"error":"bad request"})
         if self.path.rstrip("/") == "/apps/launch":
             n=int(self.headers.get("Content-Length",0)); body=json.loads(self.rfile.read(n) or b"{}")
             try:
-                cmd = MGR.launch_cmd(body["id"])
+                cmd = MGR.launch_cmd(body["id"], self._req_lang())
             except (KeyError, TypeError):
                 return self._json(400, {"error":"unknown app id"})
             if not cmd:
