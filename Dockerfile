@@ -168,8 +168,15 @@ COPY app-manager/chatop-preinstall.sh /usr/local/lib/chatop/chatop-preinstall.sh
 COPY app-manager/gui-install.sh /usr/local/lib/chatop/gui-install.sh
 # GitHub 下载多域名镜像回退助手（读 /etc/chatop/mirrors.conf）
 COPY app-manager/chatop-fetch.sh /usr/local/bin/chatop-fetch
-RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch && \
-    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch
+# 官方 deb 免 root 安装助手（dpkg -x 到用户目录，供微信/WPS/QQ 等国产应用）
+COPY app-manager/chatop-deb-install.sh /usr/local/bin/chatop-deb-install
+RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install && \
+    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install
+# deb-user 桌面运行库底座：dpkg -x 不装依赖，预置 Electron/GTK 类国产应用常见运行库(阿里云 apt 源见基础镜像)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libnss3 libgbm1 libasound2 libnotify4 libxtst6 libxss1 libsecret-1-0 \
+      libgtk-3-0 libatk-bridge2.0-0 libatspi2.0-0 libcups2 fonts-wqy-microhei \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 ARG PREINSTALL_HEAVY=1
 # OpenHuman 默认不预装(解包 ~1.3GB，走应用市场按需装)；WPS 从不预装(proot-apps 市场应用)
 ARG PREINSTALL_OPENHUMAN=0

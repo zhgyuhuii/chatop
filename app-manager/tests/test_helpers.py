@@ -2,6 +2,12 @@ import os, subprocess, tempfile
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FETCH = os.path.join(HERE, "chatop-fetch.sh")
 SHIM = os.path.join(HERE, "proot-apps-shim.sh")
+DEB = os.path.join(HERE, "chatop-deb-install.sh")
+
+def test_deb_install_dryrun_no_download():
+    r = subprocess.run(["bash", DEB, "demo", "https://x/y.deb", "Demo", "--dry-run"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0 and "dpkg -x" in r.stdout
 
 _CONF = "GH_PROXIES=https://ghfast.top/ https://gh-proxy.com/\n"
 

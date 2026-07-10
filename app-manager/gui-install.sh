@@ -20,7 +20,12 @@ TMP="$(mktemp -d)/${ID}.AppImage"
 mkdir -p "$HOME/Applications" "$HOME/.local/share/applications" "$HOME/Desktop"
 
 echo "下载 $NAME ..."
-curl -fSL --progress-bar -o "$TMP" "$URL"
+# 走 chatop-fetch(GitHub 多域名镜像回退)；不可用时回退直连 curl
+if command -v chatop-fetch >/dev/null 2>&1; then
+  chatop-fetch "$URL" "$TMP"
+else
+  curl -fSL --progress-bar -o "$TMP" "$URL"
+fi
 chmod +x "$TMP"
 
 echo "解包到 $APPDIR ..."
