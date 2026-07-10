@@ -1,0 +1,6 @@
+# 察元桌面客户端产物投放目录。
+# 在 chayuan-desktop 仓构建 Lite 版后，把 AppImage 拷到这里再构建 chatop：
+#   cd /work/chayuan-desktop && ./build-desktop.sh --lite-only
+#   cp dist-lite/*.AppImage /work/chatop/vendor/chayuan-desktop-lite-x86_64.AppImage
+# 然后：WITH_CHAYUAN_DESKTOP=1 构建 chatop（见 docs/superpowers/specs/2026-07-10-chayuan-desktop-into-chatop-design.md）。
+# AppImage/deb 产物已 gitignore，不进仓库。

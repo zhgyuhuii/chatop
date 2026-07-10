@@ -11,6 +11,10 @@ novnc-src/dist/
 __pycache__/
 *.pyc
 
+# 察元桌面客户端产物（在 chayuan-desktop 仓构建后拷入，不进 git；见 docs 集成设计）
+vendor/*.AppImage
+vendor/*.deb
+
 # local dev venv (chacmd P0)
 .venv/
 *.egg-info/

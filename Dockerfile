@@ -217,6 +217,33 @@ RUN mkdir -p /usr/share/chatop && \
         print('openclaw catalog snapshot OK: %s, %d channels' % (d['meta']['openclaw_version'], n))" \
     ) || echo "WARN: openclaw catalog 快照失败，运行时将降级到静态兜底"
 
+# === 察元桌面客户端(Lite, Tauri) 可选烤入 ===
+# 产物在 chayuan-desktop 仓构建后拷到 vendor/*.AppImage(gitignore)；WITH_CHAYUAN_DESKTOP=1 才烤入。
+# 缺产物或开关=0 时该步只打印跳过，不阻断日常构建。webkit2gtk 仅在真烤入时装，不拖累默认镜像。
+# 见 docs/superpowers/specs/2026-07-10-chayuan-desktop-into-chatop-design.md
+ARG WITH_CHAYUAN_DESKTOP=0
+COPY vendor/ /opt/chatop-vendor/
+COPY assets/logo.png /usr/share/chatop/chayuan-logo.png
+RUN set -eu; \
+    APPIMG="$(ls /opt/chatop-vendor/*.AppImage 2>/dev/null | head -1 || true)"; \
+    if [ "$WITH_CHAYUAN_DESKTOP" = "1" ] && [ -n "$APPIMG" ]; then \
+      echo "烤入察元桌面客户端: $APPIMG"; \
+      apt-get update && apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*; \
+      APPDIR=/opt/chatop-seed-home/Applications/chayuan; mkdir -p "$APPDIR"; chmod +x "$APPIMG"; \
+      ( cd "$APPDIR" && "$APPIMG" --appimage-extract >/dev/null ); \
+      chmod +x "$APPDIR/squashfs-root/AppRun" 2>/dev/null || true; \
+      mkdir -p /opt/chatop-seed-home/.local/share/applications /opt/chatop-seed-home/Desktop; \
+      printf '[Desktop Entry]\nName=察元AI\nExec=/home/admin/Applications/chayuan/squashfs-root/AppRun %%U\nIcon=/usr/share/chatop/chayuan-logo.png\nType=Application\nCategories=Office;\nTerminal=false\n' \
+        > /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop; \
+      cp /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/; \
+      chmod +x /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/chatop-chayuan.desktop; \
+      chown -R admin:admin "$APPDIR" /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/chatop-chayuan.desktop; \
+      echo "察元桌面客户端烤入完成"; \
+    else \
+      echo "跳过察元桌面客户端 (WITH_CHAYUAN_DESKTOP=$WITH_CHAYUAN_DESKTOP, appimage=${APPIMG:-none})"; \
+    fi
+
 # === app-manager：后端 + catalog + 图标 + 启动脚本 + GUI/CLI 脚本 + 播种脚本 ===
 COPY app-manager/app_manager.py /usr/local/lib/chatop/app_manager.py
 # 序列号激活闸门 + 多语言（均为纯标准库）。app_manager.py 与它们同目录，脚本目录自动在 sys.path 上。
