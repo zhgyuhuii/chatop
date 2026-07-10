@@ -221,30 +221,40 @@ RUN mkdir -p /usr/share/chatop && \
     ) || echo "WARN: openclaw catalog 快照失败，运行时将降级到静态兜底"
 
 # === 察元桌面客户端(Lite, Tauri) 可选烤入 ===
-# 产物在 chayuan-desktop 仓构建后拷到 vendor/*.AppImage(gitignore)；WITH_CHAYUAN_DESKTOP=1 才烤入。
-# 缺产物或开关=0 时该步只打印跳过，不阻断日常构建。webkit2gtk 仅在真烤入时装，不拖累默认镜像。
+# 产物在 chayuan-desktop 仓 `build-desktop.sh --lite` 构建后拷到 vendor/*.deb(gitignore)；
+# WITH_CHAYUAN_DESKTOP=1 才烤入。缺产物或开关=0 时该步只打印跳过，不阻断日常构建。
+# webkit2gtk / appindicator 仅在真烤入时装，不拖累默认镜像。
+# dpkg -x 免 root 解包到用户目录：Tauri 的 resource_dir 相对可执行文件解析(exe/../lib/Chayuan)，
+# 只要保持 usr/bin + usr/lib 相对布局，sidecar(chayuan-server) 就能被找到，不必装进 /usr。
 # 见 docs/superpowers/specs/2026-07-10-chayuan-desktop-into-chatop-design.md
 ARG WITH_CHAYUAN_DESKTOP=0
-COPY vendor/ /opt/chatop-vendor/
 COPY assets/logo.png /usr/share/chatop/chayuan-logo.png
-RUN set -eu; \
-    APPIMG="$(ls /opt/chatop-vendor/*.AppImage 2>/dev/null | head -1 || true)"; \
-    if [ "$WITH_CHAYUAN_DESKTOP" = "1" ] && [ -n "$APPIMG" ]; then \
-      echo "烤入察元桌面客户端: $APPIMG"; \
-      apt-get update && apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 \
+# deb 经 BuildKit bind mount 只读挂入，dpkg -x 读它、写进本层——932MB 的 deb 本身不落任何镜像层。
+RUN --mount=type=bind,source=vendor,target=/chatop-vendor,ro set -eu; \
+    DEB="$(ls /chatop-vendor/*.deb 2>/dev/null | head -1 || true)"; \
+    if [ "$WITH_CHAYUAN_DESKTOP" = "1" ] && [ -n "$DEB" ]; then \
+      echo "烤入察元桌面客户端: $DEB"; \
+      apt-get update && apt-get install -y --no-install-recommends \
+        libwebkit2gtk-4.1-0 libayatana-appindicator3-1 \
         && apt-get clean && rm -rf /var/lib/apt/lists/*; \
-      APPDIR=/opt/chatop-seed-home/Applications/chayuan; mkdir -p "$APPDIR"; chmod +x "$APPIMG"; \
-      ( cd "$APPDIR" && "$APPIMG" --appimage-extract >/dev/null ); \
-      chmod +x "$APPDIR/squashfs-root/AppRun" 2>/dev/null || true; \
+      APPDIR=/opt/chatop/chayuan; mkdir -p "$APPDIR/root"; \
+      dpkg -x "$DEB" "$APPDIR/root"; \
+      BIN="$APPDIR/root/usr/bin/chayuan-desktop"; \
+      test -x "$BIN" || { echo "错误: deb 里没有 usr/bin/chayuan-desktop"; exit 1; }; \
+      test -x "$APPDIR/root/usr/lib/Chayuan/chayuan-server/chayuan-server" || \
+        { echo "错误: sidecar chayuan-server 缺失"; exit 1; }; \
+      printf '#!/bin/bash\n# 察元桌面客户端启动器。WebKitGTK 在 KasmVNC 软件 GL 下需禁用 DMABUF/合成器，否则白屏。\nexport WEBKIT_DISABLE_DMABUF_RENDERER=1\nexport WEBKIT_DISABLE_COMPOSITING_MODE=1\nexec /opt/chatop/chayuan/root/usr/bin/chayuan-desktop "$@"\n' \
+        > "$APPDIR/run.sh"; chmod +x "$APPDIR/run.sh"; \
+      chmod -R a+rX "$APPDIR"; \
       mkdir -p /opt/chatop-seed-home/.local/share/applications /opt/chatop-seed-home/Desktop; \
-      printf '[Desktop Entry]\nName=察元AI\nExec=/home/admin/Applications/chayuan/squashfs-root/AppRun %%U\nIcon=/usr/share/chatop/chayuan-logo.png\nType=Application\nCategories=Office;\nTerminal=false\n' \
+      printf '[Desktop Entry]\nName=察元AI\nComment=察元 AI 桌面客户端(Lite)\nExec=/opt/chatop/chayuan/run.sh %%U\nIcon=/usr/share/chatop/chayuan-logo.png\nStartupWMClass=chayuan-desktop\nType=Application\nCategories=Office;\nTerminal=false\n' \
         > /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop; \
       cp /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/; \
       chmod +x /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/chatop-chayuan.desktop; \
-      chown -R admin:admin "$APPDIR" /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/chatop-chayuan.desktop; \
-      echo "察元桌面客户端烤入完成"; \
+      chown admin:admin /opt/chatop-seed-home/.local/share/applications/chatop-chayuan.desktop /opt/chatop-seed-home/Desktop/chatop-chayuan.desktop; \
+      echo "察元桌面客户端烤入完成 (解包 $(du -sh "$APPDIR/root" | cut -f1), 装在 /opt 只读区, 仅播种图标)"; \
     else \
-      echo "跳过察元桌面客户端 (WITH_CHAYUAN_DESKTOP=$WITH_CHAYUAN_DESKTOP, appimage=${APPIMG:-none})"; \
+      echo "跳过察元桌面客户端 (WITH_CHAYUAN_DESKTOP=$WITH_CHAYUAN_DESKTOP, deb=${DEB:-none})"; \
     fi
 
 # === app-manager：后端 + catalog + 图标 + 启动脚本 + GUI/CLI 脚本 + 播种脚本 ===

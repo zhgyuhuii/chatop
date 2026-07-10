@@ -11,6 +11,8 @@ services:
         # 序列号激活密钥（64 位 hex）。不设 → 激活闸门关闭，登录页维持「用户名+密码+验证码」。
         # 只从环境读，绝不写进 .env 提交到仓库。
         CHATOP_LICENSE_HMAC_KEY: ${CHATOP_LICENSE_HMAC_KEY:-}
+        # 察元桌面客户端(Lite)：=1 且 vendor/ 有 .deb 时才烤入(+~2GB)。默认关。
+        WITH_CHAYUAN_DESKTOP: ${WITH_CHAYUAN_DESKTOP:-0}
     image: chatop-ai:${VERSION:-1.0.0}
     # 本地单镜像，FROM 公共 kasm 基底；build 后用本地 tag，别去远程 pull
     pull_policy: build
