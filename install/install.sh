@@ -3,7 +3,7 @@
 #
 #   curl -fsSL https://<你的域名>/install.sh | bash
 #   # 或指定镜像 / 端口 / 账号（非交互）：
-#   CHATOP_IMAGE=youruser/chatop-ai:latest CHATOP_PORT=6901 \
+#   CHATOP_IMAGE=chatop:latest CHATOP_PORT=6901 \
 #   CHATOP_USER=admin CHATOP_PASSWORD=xxxx curl -fsSL https://<你的域名>/install.sh | bash
 #
 # 步骤：检查/安装 docker + docker compose → 让用户设账号密码 → 生成 compose → 拉镜像 → 起容器 → 开浏览器。
@@ -11,7 +11,9 @@
 set -euo pipefail
 
 # ---- 可配置项（环境变量覆盖）----
-CHATOP_IMAGE="${CHATOP_IMAGE:-chatopai/chatop-ai:latest}"   # TODO: 换成你 Docker Hub / GHCR 的真实镜像名
+# 镜像统一为 chatop:latest（用户始终拉最新版）。若推到 Docker Hub 需带命名空间，
+# 例如 CHATOP_IMAGE=<你的用户名>/chatop:latest；自建 registry 用裸 chatop:latest 即可。
+CHATOP_IMAGE="${CHATOP_IMAGE:-chatop:latest}"
 CHATOP_PORT="${CHATOP_PORT:-6901}"
 CHATOP_DIR="${CHATOP_DIR:-$HOME/.chatop}"
 CHATOP_USER="${CHATOP_USER:-}"
