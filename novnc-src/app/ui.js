@@ -3858,7 +3858,7 @@ const ChatopApps = {
         const canOpen = installed && a.launchable;
         const card = document.createElement('div'); card.className='chatop_app_card';
         const iconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
-        card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="this.style.visibility='hidden'">
+        card.innerHTML = `<img src="${iconSrc}" loading="lazy" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">
           <div class="chatop_app_name"></div>${installed?'<span class="chatop_app_badge">已安装</span>':''}
           ${canOpen?'<button class="chatop_app_open">详情</button>':''}`;
         card.querySelector('.chatop_app_name').textContent = a.name;
@@ -3881,7 +3881,7 @@ const ChatopApps = {
     d.style.display='flex';
     const diconSrc = a.icon && a.icon.indexOf('http')===0 ? a.icon : 'app-icons/'+a.icon;
     d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
-      <img src="${diconSrc}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
+      <img src="${diconSrc}" class="chatop_app_dicon" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">
       <h3></h3><p class="chatop_app_desc"></p><p class="chatop_app_notes"></p>
       <div class="chatop_app_actions">
         ${installed && a.launchable ? '<button id="chatop_app_open_btn" class="open">在桌面打开</button>' : ''}
@@ -3920,7 +3920,7 @@ const ChatopApps = {
   groupCoverHTML(group){
     const icons = group.apps.slice(0,4).map(k => {
       const a = this.appByKey(k);
-      return `<img src="${a&&a.icon||''}" onerror="this.style.visibility='hidden'">`;
+      return `<img src="${a&&a.icon||''}" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">`;
     }).join('');
     return `<div class="chatop_group_cover n${Math.min(group.apps.length,4)}">${icons}</div>
       <div class="chatop_app_name">${group.name}</div>
@@ -3956,7 +3956,7 @@ const ChatopApps = {
   appCard(a){
     const card = document.createElement('div'); card.className='chatop_app_card';
     card.draggable = !this.selectMode; card.dataset.key = a.key;
-    card.innerHTML = `<img src="${a.icon||''}" loading="lazy" onerror="this.style.visibility='hidden'">
+    card.innerHTML = `<img src="${a.icon||''}" loading="lazy" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">
       <div class="chatop_app_name"></div><button class="chatop_app_open">详情</button>`;
     card.querySelector('.chatop_app_name').textContent = a.name;
     card.querySelector('.chatop_app_open').onclick = (e)=>{ e.stopPropagation(); this.detailInstalled(a); };
@@ -4094,7 +4094,7 @@ const ChatopApps = {
     document.getElementById('chatop_apps_grid').style.display='none';
     const d = document.getElementById('chatop_apps_detail'); d.style.display='flex';
     d.innerHTML = `<button id="chatop_apps_back">← 返回应用列表</button>
-      <img src="${a.icon||''}" class="chatop_app_dicon" onerror="this.style.visibility='hidden'">
+      <img src="${a.icon||''}" class="chatop_app_dicon" onerror="if(this.dataset.fb!=1){this.dataset.fb=1;this.src='app-icons/apps-icon.svg'}else{this.style.visibility='hidden'}">
       <h3></h3><p class="chatop_app_desc">本机已安装的系统应用（应用管理器不托管其卸载）。</p>
       <div class="chatop_app_actions">
         <button id="chatop_app_open_btn" class="open">在桌面打开</button>
