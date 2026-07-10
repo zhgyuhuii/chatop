@@ -11,9 +11,9 @@
 set -euo pipefail
 
 # ---- 可配置项（环境变量覆盖）----
-# 镜像统一为 chatop:latest（用户始终拉最新版）。若推到 Docker Hub 需带命名空间，
-# 例如 CHATOP_IMAGE=<你的用户名>/chatop:latest；自建 registry 用裸 chatop:latest 即可。
-CHATOP_IMAGE="${CHATOP_IMAGE:-chatop:latest}"
+# 官方镜像统一 latest（始终拉最新版）。默认 Docker Hub；国内拉取慢/超时可用阿里云 ACR：
+#   CHATOP_IMAGE=crpi-4i9j7th8clu2wz0j.cn-beijing.personal.cr.aliyuncs.com/cmdbird/chatop:latest
+CHATOP_IMAGE="${CHATOP_IMAGE:-cmdbird/chatop:latest}"
 CHATOP_PORT="${CHATOP_PORT:-6901}"
 CHATOP_DIR="${CHATOP_DIR:-$HOME/.chatop}"
 CHATOP_USER="${CHATOP_USER:-}"

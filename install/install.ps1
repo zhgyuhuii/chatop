@@ -14,9 +14,9 @@ $OutputEncoding = [System.Text.UTF8Encoding]::new()
 $ErrorActionPreference = "Stop"
 
 # ---- config (override via env) ----
-# Image unified to chatop:latest (users always pull the newest). For Docker Hub prefix your
-# namespace, e.g. CHATOP_IMAGE=<youruser>/chatop:latest; a self-hosted registry can use bare chatop:latest.
-$IMAGE = if ($env:CHATOP_IMAGE) { $env:CHATOP_IMAGE } else { "chatop:latest" }
+# Official image, always latest. Default Docker Hub; for China use Aliyun ACR instead:
+#   CHATOP_IMAGE=crpi-4i9j7th8clu2wz0j.cn-beijing.personal.cr.aliyuncs.com/cmdbird/chatop:latest
+$IMAGE = if ($env:CHATOP_IMAGE) { $env:CHATOP_IMAGE } else { "cmdbird/chatop:latest" }
 $PORT  = if ($env:CHATOP_PORT)  { $env:CHATOP_PORT }  else { "6901" }
 $DIR   = if ($env:CHATOP_DIR)   { $env:CHATOP_DIR }   else { Join-Path $env:USERPROFILE ".chatop" }
 $USER  = $env:CHATOP_USER
