@@ -170,8 +170,11 @@ COPY app-manager/gui-install.sh /usr/local/lib/chatop/gui-install.sh
 COPY app-manager/chatop-fetch.sh /usr/local/bin/chatop-fetch
 # 官方 deb 免 root 安装助手（dpkg -x 到用户目录，供微信/WPS/QQ 等国产应用）
 COPY app-manager/chatop-deb-install.sh /usr/local/bin/chatop-deb-install
-RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install && \
-    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install
+# 全屏逃生口（全屏窗口会盖住顶栏和底部 dock）+ 桌面默认行为加固（会话内经 xfconf-query 生效）
+COPY app-manager/chatop-unfullscreen.sh /usr/local/bin/chatop-unfullscreen
+COPY app-manager/chatop-desktop-tweak.sh /usr/local/bin/chatop-desktop-tweak
+RUN sed -i 's/\r$//' /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install /usr/local/bin/chatop-unfullscreen /usr/local/bin/chatop-desktop-tweak && \
+    chmod +x /usr/local/lib/chatop/chatop-preinstall.sh /usr/local/lib/chatop/gui-install.sh /usr/local/bin/chatop-fetch /usr/local/bin/chatop-deb-install /usr/local/bin/chatop-unfullscreen /usr/local/bin/chatop-desktop-tweak
 # deb-user 桌面运行库底座：dpkg -x 不装依赖，预置 Electron/GTK 类国产应用常见运行库(阿里云 apt 源见基础镜像)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libnss3 libgbm1 libasound2 libnotify4 libxtst6 libxss1 libsecret-1-0 \
@@ -296,10 +299,16 @@ RUN sed -i 's/\r$//' /usr/local/bin/start-station.sh && chmod +x /usr/local/bin/
     mkdir -p /opt/chatop-seed-home/.config/autostart && \
     printf '[Desktop Entry]\nType=Application\nName=察元AI工舱 大屏\nComment=工位监控大屏\nExec=/usr/local/bin/start-dashboard-window.sh\nIcon=utilities-system-monitor\nX-GNOME-Autostart-enabled=true\n' \
       > /opt/chatop-seed-home/.config/autostart/chatop-dashboard.desktop && \
-    printf '#!/bin/bash\nfor i in $(seq 1 60); do curl -fsS http://127.0.0.1:8787/dashboard/api/system >/dev/null 2>&1 && break; sleep 1; done\nexec /usr/bin/google-chrome-stable --no-sandbox --app=http://127.0.0.1:8787/dashboard --start-fullscreen --no-first-run\n' \
+    printf '#!/bin/bash\n# 大屏窗口：最大化而非全屏——全屏会被 xfwm4 抬到 dock 层之上，盖掉顶栏(菜单+任务栏)和底部 dock。\n# 独立 user-data-dir：与用户手动开的 Chrome 分进程，否则后启动的那次命令行 flag 会被静默丢弃。\nfor i in $(seq 1 60); do curl -fsS http://127.0.0.1:8787/dashboard/api/system >/dev/null 2>&1 && break; sleep 1; done\nexec /usr/bin/google-chrome-stable --no-sandbox --user-data-dir="$HOME/.config/chatop-dashboard-chrome" --app=http://127.0.0.1:8787/dashboard --start-maximized --no-first-run --no-default-browser-check\n' \
       > /usr/local/bin/start-dashboard-window.sh && \
     chmod +x /usr/local/bin/start-dashboard-window.sh && \
-    chown -R 1000:1000 /opt/chatop-seed-home/.config
+    printf '[Desktop Entry]\nType=Application\nName=chatop 桌面加固\nComment=底部 dock 常显 + F11 交给窗口管理器\nExec=/usr/local/bin/chatop-desktop-tweak\nX-GNOME-Autostart-enabled=true\nNoDisplay=true\n' \
+      > /opt/chatop-seed-home/.config/autostart/chatop-desktop-tweak.desktop && \
+    printf '[Desktop Entry]\nType=Application\nName=退出全屏\nComment=全屏窗口盖住了顶栏和任务栏时点这里\nExec=/usr/local/bin/chatop-unfullscreen --all\nIcon=view-restore\nTerminal=false\n' \
+      > /opt/chatop-seed-home/.local/share/applications/chatop-unfullscreen.desktop && \
+    cp -f /opt/chatop-seed-home/.local/share/applications/chatop-unfullscreen.desktop /opt/chatop-seed-home/Desktop/chatop-unfullscreen.desktop && \
+    chmod +x /opt/chatop-seed-home/.local/share/applications/chatop-unfullscreen.desktop /opt/chatop-seed-home/Desktop/chatop-unfullscreen.desktop && \
+    chown -R 1000:1000 /opt/chatop-seed-home/.config /opt/chatop-seed-home/.local /opt/chatop-seed-home/Desktop
 
 # === Caddy 反代配置 + 启动脚本；filebrowser 启动脚本 ===
 COPY caddy/Caddyfile /etc/caddy/Caddyfile

@@ -5,11 +5,12 @@
 # 版本哨兵保证同一版本只播一次（用户卸载某工具后不会被反复重新播种）。
 set -u
 SEED_SRC=/opt/chatop-seed-home
-WANT=5   # 升级镜像、要补播新增工具时把这个数字 +1
+WANT=6   # 升级镜像、要补播新增工具时把这个数字 +1
          # v2: 大屏 autostart + Hermes/OpenHuman 预装
          # v3: 全部内置智能体桌面图标 + 智能启动(chatop-agent-launch) + 监控大屏图标(察元AI工舱改名)
          # v4: OpenClaw 配置改用 openclaw-tool(tkinter) 桌面图标；移除失效的 agent-builder 图标
          # v5: 察元桌面客户端(Lite) 图标(仅 WITH_CHAYUAN_DESKTOP=1 构建的镜像有该 .desktop)
+         # v6: 桌面加固 autostart(chatop-desktop-tweak) + 「退出全屏」图标(chatop-unfullscreen)
 HOME="${HOME:-/home/$(id -un)}"
 SENT="$HOME/.local/share/chatop/seed-version"
 
