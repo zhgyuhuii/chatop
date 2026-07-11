@@ -562,3 +562,37 @@ def test_sanitize_keeps_other_tools_keys():
     cfg = {"tools": {"profile": "coding", "web": {"search": {"enabled": False, "provider": "perplexity"}}}}
     out = gui.sanitize_config_for_gateway(cfg)
     assert out["tools"]["profile"] == "coding"       # 只删空搜索桩，不动其它 tools 配置
+
+
+# === 综合消毒器（catalog，GUI 保存与桌面启动器复用的单一真源）===
+# 复刻 aidooo 2026-07-11 真实非法配置：伪通道 + 空桩通道 + 未配全 web 搜索 一起清
+
+def test_catalog_sanitize_removes_bogus_stub_and_websearch_together():
+    cfg = {
+        "channels": {
+            "defaults": {"x": 1},
+            "openclaw-weixin": {},          # 空桩(unknown id 也是空的)
+            "bluebubbles": {},              # 伪通道
+            "twitch": {},                   # 空桩(anyOf 必填缺失)
+            "telegram": {"enabled": True, "accounts": [{"token": "t"}]},  # 真配置→保留
+        },
+        "tools": {"web": {"search": {"enabled": False, "provider": "perplexity", "apiKey": ""}}},
+    }
+    out, removed = cat.sanitize_config_for_gateway(cfg)
+    assert set(out["channels"].keys()) == {"defaults", "telegram"}   # 三个残留删掉，真配置+defaults 留
+    assert "tools" in out and "web" not in out.get("tools", {})       # 空搜索桩删掉
+    assert set(removed) == {"channels.openclaw-weixin", "channels.bluebubbles",
+                            "channels.twitch", "tools.web.search"}
+
+
+def test_catalog_sanitize_keeps_configured_channel_untouched():
+    cfg = {"channels": {"feishu": {"enabled": True, "appId": "a", "appSecret": "s"}}}
+    out, removed = cat.sanitize_config_for_gateway(cfg)
+    assert out["channels"]["feishu"] == {"enabled": True, "appId": "a", "appSecret": "s"}
+    assert removed == []
+
+
+def test_catalog_sanitize_valid_config_is_noop():
+    cfg = {"gateway": {"mode": "local", "bind": "loopback"}, "channels": {"defaults": {}}}
+    out, removed = cat.sanitize_config_for_gateway(cfg)
+    assert removed == [] and out["gateway"]["bind"] == "loopback"

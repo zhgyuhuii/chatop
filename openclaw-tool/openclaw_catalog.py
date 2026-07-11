@@ -50,6 +50,49 @@ def channel_entry_when_disabled(existing):
     return out
 
 
+def sanitize_config_for_gateway(config):
+    """移除会让 openclaw 网关启动校验失败的「半配置」残留；就地修改并返回 (config, removed)。
+
+    幂等、无副作用、不依赖 openclaw CLI（可在桌面启动器里快速跑，无需 8~12s 调 CLI），
+    供 GUI 保存与启动器双方复用——单一真源，判据一致。处理三类（都是「没真正配过」的残留，
+    openclaw 会明确拒绝、导致整份配置非法、网关拒启）：
+
+      1) 伪通道 id（BOGUS_CHANNEL_IDS）：openclaw 快照里没有，报 "unknown channel id"。
+      2) 空桩通道：channels.<id> 只有 enabled / 无实质字段——anyOf 类(twitch)必然校验失败，
+         其余也无从工作。以 channel_entry_when_disabled 判定为 None 即空桩。channels.defaults 例外。
+      3) 未配全的 web 搜索：tools.web.search 没同时给 enabled+provider+apiKey——provider 默认
+         perplexity，未装插件即报 "web_search provider is not available"。
+
+    只删「从未配过」的残留，绝不动用户已填实质字段的通道/搜索（那些是真配置）。"""
+    removed = []
+    if not isinstance(config, dict):
+        return config, removed
+    ch = config.get("channels")
+    if isinstance(ch, dict):
+        for cid in list(ch.keys()):
+            if cid == "defaults":
+                continue
+            if cid in BOGUS_CHANNEL_IDS:
+                del ch[cid]; removed.append("channels." + cid); continue
+            entry = ch.get(cid)
+            if not isinstance(entry, dict) or channel_entry_when_disabled(entry) is None:
+                del ch[cid]; removed.append("channels." + cid)
+    tools = config.get("tools")
+    if isinstance(tools, dict):
+        web = tools.get("web")
+        if isinstance(web, dict):
+            s = web.get("search")
+            if isinstance(s, dict):
+                ok = (bool(s.get("enabled"))
+                      and str(s.get("provider") or "").strip() != ""
+                      and str(s.get("apiKey") or "").strip() != "")
+                if not ok:
+                    web.pop("search", None); removed.append("tools.web.search")
+                    if not web:
+                        tools.pop("web", None)
+    return config, removed
+
+
 class ChannelEntry(NamedTuple):
     id: str
     label: str

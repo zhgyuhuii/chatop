@@ -31,32 +31,43 @@ notify() {
     ( zenity --info --timeout=4 --title="察元AI工舱" --text="$1" >/dev/null 2>&1 & )
 }
 
-# openclaw.json 配置不全会让 `openclaw gateway` 启动被拦(exit 78)，图标表现为"打不开"。两处坑：
+# openclaw.json 配置不全/写坏会让 `openclaw gateway` 启动被拦(exit 78 或 config invalid)，
+# 图标表现为"打不开"。启动前幂等自愈三类坑（生产 2026-07-11 逐个踩过）：
 #  1) 缺 gateway.mode → openclaw 强制要求 gateway.mode=local 才放行。
-#  2) 缺 gateway.bind → 容器环境里 openclaw 自动默认 bind=auto(0.0.0.0)，而绑 0.0.0.0 又没设
-#     token/password，openclaw 拒绝启动("Refusing to bind gateway to auto without auth")。
-#     单用户云桌面里 gateway 只被容器内本地访问，绑 loopback 最安全、且回环无需 auth。
-# 启动前幂等补齐这两项（已有值则不动，尊重用户/配置器已写的配置）。
+#  2) 缺 gateway.bind → 容器里 openclaw 默认 bind=auto(0.0.0.0)，绑 0.0.0.0 又没设 token/password
+#     → 拒启("Refusing to bind gateway to auto without auth")。单用户云桌面 gateway 只被容器内
+#     本地访问，绑 loopback 最安全、回环免 auth。
+#  3) 配置里混入伪通道(bluebubbles 等)/空桩通道(twitch={})/未配全的 web 搜索(provider=perplexity
+#     未装插件) → openclaw 校验失败、整份配置非法、网关拒启。复用 openclaw-tool 的 catalog 消毒器
+#     （单一真源，与配置器保存路径同一判据），把这些「从未配过」的残留删掉；绝不动用户已填实质字段的。
+# 已有值则不动，尊重用户/配置器已写的真配置。这是防线：不管配置被谁写坏，双击图标即自愈能启。
 ensure_openclaw_gateway_config() {
   local f="$HOME/.openclaw/openclaw.json"
   [ -f "$f" ] || return 0
   command -v python3.11 >/dev/null 2>&1 || return 0
   python3.11 - "$f" <<'PY' 2>/dev/null || true
 import json,sys
+sys.path.insert(0, "/opt/openclaw-tool")
 p=sys.argv[1]
 try:
     d=json.load(open(p,encoding="utf-8"))
 except Exception:
     sys.exit(0)                       # 读不了就别动，交给配置器处理
 if not isinstance(d,dict): sys.exit(0)
+changed=[]
 g=d.get("gateway")
 if not isinstance(g,dict): g={}; d["gateway"]=g
-changed=[]
-if not g.get("mode"): g["mode"]="local"; changed.append("mode=local")
-if not g.get("bind"): g["bind"]="loopback"; changed.append("bind=loopback")
+if not g.get("mode"): g["mode"]="local"; changed.append("gateway.mode=local")
+if not g.get("bind"): g["bind"]="loopback"; changed.append("gateway.bind=loopback")
+try:                                  # 综合消毒（伪通道/空桩/未配全 web 搜索）
+    from openclaw_catalog import sanitize_config_for_gateway
+    d, removed = sanitize_config_for_gateway(d)
+    changed += ["删 "+r for r in removed]
+except Exception:
+    pass                              # 消毒器不可用就只做上面的 gateway 兜底，不阻断启动
 if changed:
     json.dump(d,open(p,"w",encoding="utf-8"),ensure_ascii=False,indent=2)
-    print("[openclaw] 补齐 gateway "+", ".join(changed))
+    print("[openclaw] 配置自愈: "+", ".join(changed))
 PY
 }
 

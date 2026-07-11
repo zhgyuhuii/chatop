@@ -696,7 +696,10 @@ def get_config_summary(config, include_channel_status=False, gateway_status=None
 # 不要在此处重建任何通道 id / 包名的手抄表。要加中文名或申请地址，去 catalog_overrides.py。
 
 # 无效通道 id 与「禁用时写什么」的规则都归 openclaw_catalog（通道真源模块，且无 tkinter 依赖、可单测）
-from openclaw_catalog import BOGUS_CHANNEL_IDS, channel_entry_when_disabled  # noqa: E402
+from openclaw_catalog import (  # noqa: E402
+    BOGUS_CHANNEL_IDS, channel_entry_when_disabled,
+    sanitize_config_for_gateway as catalog_sanitize_config_for_gateway,
+)
 
 # 国内通道（在「更多」通道展开时排到最前）
 CHINA_CHANNELS = ("feishu", "openclaw-weixin", "qqbot", "yuanbao", "wecom")
@@ -1221,31 +1224,10 @@ def load_config():
 
 
 def sanitize_config_for_gateway(config):
-    """落盘前消毒：移除会让 openclaw 网关启动校验失败的「半配置」项。
-
-    目前处理 tools.web.search：GUI 即便用户没启用搜索也会把它写成
-    {enabled:false, provider:"perplexity", apiKey:""}（provider 默认 perplexity）。
-    openclaw 会校验 provider 可用性——perplexity 插件没装即报
-    "web_search provider is not available: perplexity"，让整份配置非法、网关拒绝启动
-    （2026-07-11 生产实测暴露）。规则同 c10f88d「从未配过的通道不写空桩」：
-    只有 enabled 且 provider 与 apiKey 都填了才保留，否则删掉这段（功能关掉即可，
-    绝不留一个指向未装插件的空 provider）。就地修改并返回同一对象。"""
-    if not isinstance(config, dict):
-        return config
-    tools = config.get("tools")
-    if isinstance(tools, dict):
-        web = tools.get("web")
-        if isinstance(web, dict):
-            s = web.get("search")
-            if isinstance(s, dict):
-                ok = (bool(s.get("enabled"))
-                      and str(s.get("provider") or "").strip() != ""
-                      and str(s.get("apiKey") or "").strip() != "")
-                if not ok:
-                    web.pop("search", None)
-                    if not web:
-                        tools.pop("web", None)
-    return config
+    """落盘前消毒的薄封装：委托 openclaw_catalog 的综合消毒（伪通道/空桩/未配全 web 搜索），
+    只返回 config（丢弃 removed 列表）。真源在 openclaw_catalog，启动器复用同一函数。"""
+    cfg, _ = catalog_sanitize_config_for_gateway(config)
+    return cfg
 
 
 def save_config(config):
