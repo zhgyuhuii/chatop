@@ -23,19 +23,20 @@ SENT="$HOME/.local/share/chatop/seed-version"
 have="$(cat "$SENT" 2>/dev/null || echo 0)"
 case "$have" in ''|*[!0-9]*) have=0;; esac
 
-# 0) 自愈（恒跑，不受版本哨兵约束）：种子里非空、但卷内已是 0 字节的文件——磁盘满时 cp 写残的
+# 0) 自愈（恒跑，不受版本哨兵约束）：卷内已是 0 字节、但种子里非空的文件——磁盘满时 cp 写残的
 #    残文件（cp -an 不覆盖，修不回）。0 字节截断可能发生在播种完成后的任何时刻，与 seed 版本无关，
-#    所以必须每次开机都扫一遍，哪怕 have>=WANT。只修「存在且为空、而种子非空」的：不碰用户改过的
-#    非空文件，也不碰种子本就为空的文件。纯 shell builtin 判空、只在真需修复时才 fork cp，开销可忽略。
+#    所以必须每次开机都扫一遍，哪怕 have>=WANT。只修「卷内存在且为空、而种子非空」的：不碰用户改过
+#    的非空文件，也不碰种子本就为空的文件。
+#    关键：以「HOME 里的空文件」为遍历源（正常仅几百个，find -empty 亚秒级），而非扫种子全树（6 万+
+#    文件，纯 bash 循环要 7s+ 拖慢每次开机）。反向查种子，把恒跑成本从 ~7s 压到 ~0.3s。
 heal_ok=1
 heal_n=0
-while IFS= read -r rel; do
-  rel="${rel#./}"; dst="$HOME/$rel"
-  if [ -f "$dst" ] && [ ! -s "$dst" ]; then
-    cp -a "$SEED_SRC/$rel" "$dst" 2>/dev/null || heal_ok=0
-    if [ -s "$dst" ]; then heal_n=$((heal_n+1)); else heal_ok=0; fi   # 复查：修完仍空=没修上(磁盘还满?)
-  fi
-done < <(cd "$SEED_SRC" && find . -type f ! -empty -print 2>/dev/null)
+while IFS= read -r dst; do
+  rel="${dst#"$HOME"/}"; src="$SEED_SRC/$rel"
+  [ -f "$src" ] && [ -s "$src" ] || continue     # 种子无此文件 / 种子本就空 → 非残文件，跳过
+  cp -a "$src" "$dst" 2>/dev/null || heal_ok=0
+  if [ -s "$dst" ]; then heal_n=$((heal_n+1)); else heal_ok=0; fi   # 复查：修完仍空=没修上(磁盘还满?)
+done < <(find "$HOME" -type f -empty -print 2>/dev/null)
 [ "$heal_n" -gt 0 ] && echo "[seed] 自愈 $heal_n 个 0 字节残文件"
 [ "$heal_ok" = 1 ] || echo "[seed] 自愈未全部成功(疑似磁盘空间不足)，下次启动将重试" >&2
 
