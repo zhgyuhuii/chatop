@@ -31,9 +31,13 @@ notify() {
     ( zenity --info --timeout=4 --title="察元AI工舱" --text="$1" >/dev/null 2>&1 & )
 }
 
-# openclaw.json 存在但缺 gateway.mode（配置被写残 / onboard 未完成）会让 `openclaw gateway`
-# 启动被拦(exit 78)，图标表现为"打不开"。启动前幂等补一个默认 local 模式（已有 mode 则不动）。
-ensure_openclaw_gateway_mode() {
+# openclaw.json 配置不全会让 `openclaw gateway` 启动被拦(exit 78)，图标表现为"打不开"。两处坑：
+#  1) 缺 gateway.mode → openclaw 强制要求 gateway.mode=local 才放行。
+#  2) 缺 gateway.bind → 容器环境里 openclaw 自动默认 bind=auto(0.0.0.0)，而绑 0.0.0.0 又没设
+#     token/password，openclaw 拒绝启动("Refusing to bind gateway to auto without auth")。
+#     单用户云桌面里 gateway 只被容器内本地访问，绑 loopback 最安全、且回环无需 auth。
+# 启动前幂等补齐这两项（已有值则不动，尊重用户/配置器已写的配置）。
+ensure_openclaw_gateway_config() {
   local f="$HOME/.openclaw/openclaw.json"
   [ -f "$f" ] || return 0
   command -v python3.11 >/dev/null 2>&1 || return 0
@@ -47,18 +51,21 @@ except Exception:
 if not isinstance(d,dict): sys.exit(0)
 g=d.get("gateway")
 if not isinstance(g,dict): g={}; d["gateway"]=g
-if not g.get("mode"):
-    g["mode"]="local"
+changed=[]
+if not g.get("mode"): g["mode"]="local"; changed.append("mode=local")
+if not g.get("bind"): g["bind"]="loopback"; changed.append("bind=loopback")
+if changed:
     json.dump(d,open(p,"w",encoding="utf-8"),ensure_ascii=False,indent=2)
-    print("[openclaw] 补齐 gateway.mode=local")
+    print("[openclaw] 补齐 gateway "+", ".join(changed))
 PY
 }
 
 case "$ID" in
   openclaw)
     if configured ".openclaw/openclaw.json" ".config/openclaw/config.json"; then
-      ensure_openclaw_gateway_mode
-      exec "$RUN" openclaw gateway
+      ensure_openclaw_gateway_config
+      # --bind loopback 双保险：即便配置补齐失败/被用户改乱，也不让它在容器里退回 auth-less 的 auto
+      exec "$RUN" openclaw gateway --bind loopback
     else
       notify "OpenClaw 尚未配置，先打开可视化配置器（配置后再双击即启动网关）"
       exec $OPENCLAW_CFG
