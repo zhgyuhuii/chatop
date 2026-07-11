@@ -1,0 +1,25 @@
+# 由 new-workbay.sh 生成到 workbays/<user>/docker-compose.yml。
+# 镜像/端口/登录名/密码由同目录 .env 注入；__USER__ / __HOME__ 由脚本替换成写死值。
+# 内部 OS 用户恒为 admin、家目录恒为 /home/admin —— 卷固定挂 /home/admin，
+# LOGIN_USER 只是 Web 登录显示名，不改内部路径。
+name: chatop-__USER__          # 每个工舱独立工程名，隔离容器/网络
+services:
+  workbay:
+    image: ${CHATOP_IMAGE:?请在本工舱 .env 设置 CHATOP_IMAGE}
+    pull_policy: missing       # 本地没有才拉，避免每次 up 都联网
+    container_name: chatop-__USER__
+    environment:
+      - VNC_PW=${PASSWORD:?请在本工舱 .env 设置 PASSWORD}
+      - FILES_PW=${PASSWORD:?请在本工舱 .env 设置 PASSWORD}
+      - LOGIN_USER=${LOGIN_USER:-admin}
+      - FILES_UPLOAD=${FILES_UPLOAD:-1}
+      - FILES_DOWNLOAD=${FILES_DOWNLOAD:-1}
+      - CLIPBOARD_OUT=${CLIPBOARD_OUT:-1}
+      - CLIPBOARD_IN=${CLIPBOARD_IN:-1}
+      - CHATOP_LICENSE_HMAC_KEY=${CHATOP_LICENSE_HMAC_KEY:-}
+    ports:
+      - "${PORT:?请在本工舱 .env 设置 PORT}:7443"
+    shm_size: "1gb"
+    volumes:
+      - __HOME__:/home/admin
+    restart: unless-stopped
