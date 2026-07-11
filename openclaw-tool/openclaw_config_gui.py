@@ -1220,7 +1220,36 @@ def load_config():
         return {"_load_error": str(e)}
 
 
+def sanitize_config_for_gateway(config):
+    """落盘前消毒：移除会让 openclaw 网关启动校验失败的「半配置」项。
+
+    目前处理 tools.web.search：GUI 即便用户没启用搜索也会把它写成
+    {enabled:false, provider:"perplexity", apiKey:""}（provider 默认 perplexity）。
+    openclaw 会校验 provider 可用性——perplexity 插件没装即报
+    "web_search provider is not available: perplexity"，让整份配置非法、网关拒绝启动
+    （2026-07-11 生产实测暴露）。规则同 c10f88d「从未配过的通道不写空桩」：
+    只有 enabled 且 provider 与 apiKey 都填了才保留，否则删掉这段（功能关掉即可，
+    绝不留一个指向未装插件的空 provider）。就地修改并返回同一对象。"""
+    if not isinstance(config, dict):
+        return config
+    tools = config.get("tools")
+    if isinstance(tools, dict):
+        web = tools.get("web")
+        if isinstance(web, dict):
+            s = web.get("search")
+            if isinstance(s, dict):
+                ok = (bool(s.get("enabled"))
+                      and str(s.get("provider") or "").strip() != ""
+                      and str(s.get("apiKey") or "").strip() != "")
+                if not ok:
+                    web.pop("search", None)
+                    if not web:
+                        tools.pop("web", None)
+    return config
+
+
 def save_config(config):
+    config = sanitize_config_for_gateway(config)
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if CONFIG_FILE.exists():
         try:

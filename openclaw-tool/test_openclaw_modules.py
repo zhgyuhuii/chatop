@@ -529,3 +529,36 @@ def test_bogus_channels_are_not_real_openclaw_channels():
     assert "bluebubbles" in cat.BOGUS_CHANNEL_IDS
     for bogus in ("webchat", "voice-call", "zalo-personal"):
         assert bogus in cat.BOGUS_CHANNEL_IDS
+
+
+# === 回归：openclaw gateway 启动失败（2026-07-11）web 搜索空桩 ===
+# 症状：openclaw-tool 保存配置后 gateway 拒启：
+#   tools.web.search.provider: web_search provider is not available: perplexity
+# 根因：GUI 即便用户没启用搜索，也把 tools.web.search 写成
+#   {enabled:false, provider:"perplexity", apiKey:""}（provider 默认 perplexity）；
+#   openclaw 校验 provider 可用性，perplexity 插件没装即让整份配置非法。
+import openclaw_config_gui as gui  # noqa: E402
+
+
+def test_web_search_disabled_stub_is_dropped():
+    cfg = {"tools": {"web": {"search": {"enabled": False, "provider": "perplexity", "apiKey": ""}}}}
+    out = gui.sanitize_config_for_gateway(cfg)
+    assert "web" not in out["tools"]                 # 空桩整段删掉，不留未装插件的 provider
+
+
+def test_web_search_enabled_without_key_is_dropped():
+    cfg = {"tools": {"web": {"search": {"enabled": True, "provider": "perplexity", "apiKey": ""}}}}
+    out = gui.sanitize_config_for_gateway(cfg)
+    assert out["tools"].get("web", {}).get("search") is None
+
+
+def test_web_search_fully_configured_is_kept():
+    cfg = {"tools": {"web": {"search": {"enabled": True, "provider": "brave", "apiKey": "k"}}}}
+    out = gui.sanitize_config_for_gateway(cfg)
+    assert out["tools"]["web"]["search"] == {"enabled": True, "provider": "brave", "apiKey": "k"}
+
+
+def test_sanitize_keeps_other_tools_keys():
+    cfg = {"tools": {"profile": "coding", "web": {"search": {"enabled": False, "provider": "perplexity"}}}}
+    out = gui.sanitize_config_for_gateway(cfg)
+    assert out["tools"]["profile"] == "coding"       # 只删空搜索桩，不动其它 tools 配置
