@@ -31,9 +31,33 @@ notify() {
     ( zenity --info --timeout=4 --title="察元AI工舱" --text="$1" >/dev/null 2>&1 & )
 }
 
+# openclaw.json 存在但缺 gateway.mode（配置被写残 / onboard 未完成）会让 `openclaw gateway`
+# 启动被拦(exit 78)，图标表现为"打不开"。启动前幂等补一个默认 local 模式（已有 mode 则不动）。
+ensure_openclaw_gateway_mode() {
+  local f="$HOME/.openclaw/openclaw.json"
+  [ -f "$f" ] || return 0
+  command -v python3.11 >/dev/null 2>&1 || return 0
+  python3.11 - "$f" <<'PY' 2>/dev/null || true
+import json,sys
+p=sys.argv[1]
+try:
+    d=json.load(open(p,encoding="utf-8"))
+except Exception:
+    sys.exit(0)                       # 读不了就别动，交给配置器处理
+if not isinstance(d,dict): sys.exit(0)
+g=d.get("gateway")
+if not isinstance(g,dict): g={}; d["gateway"]=g
+if not g.get("mode"):
+    g["mode"]="local"
+    json.dump(d,open(p,"w",encoding="utf-8"),ensure_ascii=False,indent=2)
+    print("[openclaw] 补齐 gateway.mode=local")
+PY
+}
+
 case "$ID" in
   openclaw)
     if configured ".openclaw/openclaw.json" ".config/openclaw/config.json"; then
+      ensure_openclaw_gateway_mode
       exec "$RUN" openclaw gateway
     else
       notify "OpenClaw 尚未配置，先打开可视化配置器（配置后再双击即启动网关）"
