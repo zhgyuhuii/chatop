@@ -83,3 +83,15 @@ def test_serial_counter_is_per_ip():
     am._serial_record_fail("b", now=0)
     assert am._serial_fails("a", now=0) == 2
     assert am._serial_fails("b", now=0) == 1
+
+
+# ---- 前端不能拦掉空序列号提交 ----
+
+def test_serial_field_not_html_required():
+    """序列号输入框不得带 HTML `required`。
+
+    连错 3 次软放行靠的是「空/错序列号 POST 到 /login → 后端计数」。若输入框是
+    `required`，浏览器会用「请填写此字段」把空提交拦在前端，POST 永远发不出，
+    后端计数器加不到 SERIAL_BYPASS_MAX，没有序列号的用户被永久锁在门外。
+    """
+    assert "required" not in am._SERIAL_FIELD

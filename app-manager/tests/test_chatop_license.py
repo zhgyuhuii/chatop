@@ -175,8 +175,25 @@ def isolated_home(tmp_path, monkeypatch):
     monkeypatch.setattr(machine, "NODE_ID_FILE", str(tmp_path / "node-id"))
     monkeypatch.setattr(store, "ACTIVATION_FILE", str(tmp_path / "activation.json"))
     monkeypatch.setattr(gate, "KEYS_FILE", str(tmp_path / "license-keys.json"))
+    # 生产已用 gate.GATE_DISABLED=True 停用闸门；这些测试验证「闸门开启时」的机制，
+    # 故在隔离环境里强制打开（monkeypatch 用例结束自动还原）。
+    monkeypatch.setattr(gate, "GATE_DISABLED", False)
     gate.reset_cache()
     yield tmp_path
+    gate.reset_cache()
+
+
+def test_gate_disabled_by_default_in_production(monkeypatch):
+    """出厂默认：闸门总开关关闭 → 指纹 + 序列号功能停用。
+
+    2026-07-11 应产品要求停用。即便运行时给了 HMAC 密钥，总开关也压过它 →
+    hmac_keys() 恒空、state 恒 off，登录退回用户名+密码+验证码。恢复见 gate.GATE_DISABLED。
+    """
+    assert gate.GATE_DISABLED is True
+    monkeypatch.setenv("CHATOP_LICENSE_HMAC_KEY", "aa" * 32)
+    gate.reset_cache()
+    assert gate.hmac_keys() == {}
+    assert gate.state() == "off"
     gate.reset_cache()
 
 

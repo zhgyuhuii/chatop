@@ -344,7 +344,7 @@ _CAPTCHA_FIELD = """<label>__T_CAPTCHA__</label>
 
 # 未激活：序列号占掉验证码的位置。提示语指向页脚那张已有的关注二维码。
 _SERIAL_FIELD = """<label>__T_SERIAL__</label>
-<input name="serial" autocomplete="off" maxlength="40" required
+<input name="serial" autocomplete="off" maxlength="40"
  placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" style="text-transform:uppercase;letter-spacing:1px">
 <div class="actbox">
 <div class="fp_row"><span class="fp_lbl">__T_FP__</span>

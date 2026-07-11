@@ -59,11 +59,23 @@ def _parse_hex_key(text):
     return raw if raw else b""
 
 
+# === 激活闸门总开关 =========================================================
+# 2026-07-11：应产品要求暂停「机器指纹 + 序列号激活」功能。置 True 后
+# hmac_keys() 恒返回空 dict → 闸门恒为 off → 登录页退回「用户名 + 密码 +
+# 验证码」，不再生成指纹、不再要求序列号（不锁死任何用户）。
+# 以后要恢复该功能：把此值改回 False 再重新打镜像即可，其它代码一律不用动
+# （HMAC 密钥仍会由 .env → build-arg 烤进镜像内 /opt/chatop/license-keys.json）。
+GATE_DISABLED = True
+# ===========================================================================
+
+
 def hmac_keys():
     """→ {key_id: bytes}。空 dict 表示未配置 → 闸门关闭。
 
     优先级：环境变量 CHATOP_LICENSE_HMAC_KEY > /opt/chatop/license-keys.json。
     """
+    if GATE_DISABLED:          # 总开关：功能停用中，恒当作「未配置密钥」→ 闸门 off
+        return {}
     if _keys_cache["loaded"]:
         return _keys_cache["keys"]
 
