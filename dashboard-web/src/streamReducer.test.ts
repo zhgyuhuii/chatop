@@ -20,4 +20,9 @@ describe('applyEvent', () => {
     s = applyEvent(s, ev('succeeded', 'j1', { tokens: 7 }))
     expect(s.jobs['j1'].tokens).toBe(12)
   })
+  it('忽略无 job_id 的事件（配置中心 flow 事件走同一 SSE，不该建幽灵任务）', () => {
+    const flowEv = { type: 'flow:qr_ready', channel: 'wecom' } as unknown as StreamEvent
+    const s = applyEvent(initialStream(), flowEv)
+    expect(Object.keys(s.jobs)).toHaveLength(0)
+  })
 })

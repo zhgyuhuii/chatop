@@ -1,12 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useEventStream, usePoll } from './api'
 import AgentWall, { type Agent } from './components/AgentWall'
 import DispatchBox from './components/DispatchBox'
 import SystemPanel, { type Sys } from './components/SystemPanel'
 import TaskList, { type Task } from './components/TaskList'
 import TopBar from './components/TopBar'
+import ConfigCenter from './config/ConfigCenter'
+
+// 极简 hash 路由：#/config → 配置中心，否则大屏。桌面「智能体配置」图标打开 #/config。
+function useHashRoute(): string {
+  const [hash, setHash] = useState(() => window.location.hash)
+  useEffect(() => {
+    const on = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', on)
+    return () => window.removeEventListener('hashchange', on)
+  }, [])
+  return hash
+}
 
 export default function App() {
+  const route = useHashRoute()
+  if (route.startsWith('#/config')) return <ConfigCenter />
+  return <Dashboard />
+}
+
+function Dashboard() {
   const agents = usePoll<Agent[]>('/agents', 10000, [])
   const tasks = usePoll<Task[]>('/tasks', 5000, [])
   const sys = usePoll<Sys>('/system', 5000, {})

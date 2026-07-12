@@ -1,0 +1,430 @@
+{
+ "models": [
+  {
+   "key": "deepseek/deepseek-chat"
+  },
+  {
+   "key": "deepseek/deepseek-reasoner"
+  },
+  {
+   "key": "deepseek/deepseek-v4-flash"
+  },
+  {
+   "key": "deepseek/deepseek-v4-pro"
+  },
+  {
+   "key": "anthropic/claude-fable-5"
+  },
+  {
+   "key": "anthropic/claude-haiku-4-5"
+  },
+  {
+   "key": "anthropic/claude-haiku-4-5-20251001"
+  },
+  {
+   "key": "anthropic/claude-opus-4-6"
+  },
+  {
+   "key": "anthropic/claude-opus-4-7"
+  },
+  {
+   "key": "anthropic/claude-opus-4-8"
+  },
+  {
+   "key": "anthropic/claude-sonnet-4-6"
+  },
+  {
+   "key": "byteplus/glm-4-7-251222"
+  },
+  {
+   "key": "byteplus/kimi-k2-5-260127"
+  },
+  {
+   "key": "byteplus/seed-1-8-251228"
+  },
+  {
+   "key": "byteplus-plan/ark-code-latest"
+  },
+  {
+   "key": "byteplus-plan/doubao-seed-code"
+  },
+  {
+   "key": "byteplus-plan/glm-4.7"
+  },
+  {
+   "key": "byteplus-plan/kimi-k2-thinking"
+  },
+  {
+   "key": "byteplus-plan/kimi-k2.5"
+  },
+  {
+   "key": "claude-cli/claude-opus-4-6"
+  },
+  {
+   "key": "claude-cli/claude-opus-4-7"
+  },
+  {
+   "key": "claude-cli/claude-opus-4-8"
+  },
+  {
+   "key": "claude-cli/claude-sonnet-4-6"
+  },
+  {
+   "key": "cohere/command-a-03-2025"
+  },
+  {
+   "key": "fireworks/accounts/fireworks/models/kimi-k2p6"
+  },
+  {
+   "key": "fireworks/accounts/fireworks/routers/kimi-k2p5-turbo"
+  },
+  {
+   "key": "github-copilot/claude-opus-4.6"
+  },
+  {
+   "key": "github-copilot/claude-opus-4.7"
+  },
+  {
+   "key": "github-copilot/claude-opus-4.8"
+  },
+  {
+   "key": "github-copilot/claude-sonnet-4.6"
+  },
+  {
+   "key": "github-copilot/gemini-2.5-pro"
+  },
+  {
+   "key": "github-copilot/gemini-3-flash"
+  },
+  {
+   "key": "github-copilot/gemini-3.1-pro"
+  },
+  {
+   "key": "github-copilot/goldeneye"
+  },
+  {
+   "key": "github-copilot/gpt-5.3-codex"
+  },
+  {
+   "key": "github-copilot/gpt-5.4"
+  },
+  {
+   "key": "github-copilot/gpt-5.4-mini"
+  },
+  {
+   "key": "github-copilot/gpt-5.4-nano"
+  },
+  {
+   "key": "github-copilot/gpt-5.5"
+  },
+  {
+   "key": "github-copilot/raptor-mini"
+  },
+  {
+   "key": "mistral/codestral-latest"
+  },
+  {
+   "key": "mistral/devstral-medium-latest"
+  },
+  {
+   "key": "mistral/magistral-small"
+  },
+  {
+   "key": "mistral/mistral-large-latest"
+  },
+  {
+   "key": "mistral/mistral-medium-2508"
+  },
+  {
+   "key": "mistral/mistral-medium-3-5"
+  },
+  {
+   "key": "mistral/mistral-small-latest"
+  },
+  {
+   "key": "mistral/pixtral-large-latest"
+  },
+  {
+   "key": "moonshot/kimi-k2-thinking"
+  },
+  {
+   "key": "moonshot/kimi-k2-thinking-turbo"
+  },
+  {
+   "key": "moonshot/kimi-k2-turbo"
+  },
+  {
+   "key": "moonshot/kimi-k2.5"
+  },
+  {
+   "key": "moonshot/kimi-k2.6"
+  },
+  {
+   "key": "moonshot/kimi-k2.7-code"
+  },
+  {
+   "key": "novita/deepseek/deepseek-r1-0528"
+  },
+  {
+   "key": "novita/deepseek/deepseek-v3-0324"
+  },
+  {
+   "key": "novita/minimax/minimax-m2.7"
+  },
+  {
+   "key": "novita/moonshotai/kimi-k2.5"
+  },
+  {
+   "key": "novita/qwen/qwen3-235b-a22b-fp8"
+  },
+  {
+   "key": "novita/zai-org/glm-5"
+  },
+  {
+   "key": "nvidia/minimaxai/minimax-m2.5"
+  },
+  {
+   "key": "nvidia/minimaxai/minimax-m2.7"
+  },
+  {
+   "key": "nvidia/moonshotai/kimi-k2.5"
+  },
+  {
+   "key": "nvidia/nemotron-3-super-120b-a12b"
+  },
+  {
+   "key": "nvidia/nemotron-3-ultra-550b-a55b"
+  },
+  {
+   "key": "nvidia/z-ai/glm-5.1"
+  },
+  {
+   "key": "nvidia/z-ai/glm5"
+  },
+  {
+   "key": "ollama-cloud/glm-5.1:cloud"
+  },
+  {
+   "key": "ollama-cloud/kimi-k2.5:cloud"
+  },
+  {
+   "key": "ollama-cloud/minimax-m2.7:cloud"
+  },
+  {
+   "key": "tencent-tokenhub/hy3-preview"
+  },
+  {
+   "key": "together/deepseek-ai/DeepSeek-V4-Pro"
+  },
+  {
+   "key": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  },
+  {
+   "key": "together/moonshotai/Kimi-K2.6"
+  },
+  {
+   "key": "together/Qwen/Qwen2.5-7B-Instruct-Turbo"
+  },
+  {
+   "key": "together/zai-org/GLM-5.1"
+  },
+  {
+   "key": "venice/claude-opus-4-6"
+  },
+  {
+   "key": "venice/claude-sonnet-4-6"
+  },
+  {
+   "key": "venice/deepseek-v3.2"
+  },
+  {
+   "key": "venice/gemini-3-1-pro-preview"
+  },
+  {
+   "key": "venice/gemini-3-flash-preview"
+  },
+  {
+   "key": "venice/gemini-3-pro-preview"
+  },
+  {
+   "key": "venice/google-gemma-3-27b-it"
+  },
+  {
+   "key": "venice/grok-41-fast"
+  },
+  {
+   "key": "venice/hermes-3-llama-3.1-405b"
+  },
+  {
+   "key": "venice/kimi-k2-5"
+  },
+  {
+   "key": "venice/kimi-k2-thinking"
+  },
+  {
+   "key": "venice/llama-3.2-3b"
+  },
+  {
+   "key": "venice/llama-3.3-70b"
+  },
+  {
+   "key": "venice/minimax-m21"
+  },
+  {
+   "key": "venice/minimax-m25"
+  },
+  {
+   "key": "venice/mistral-31-24b"
+  },
+  {
+   "key": "venice/nvidia-nemotron-3-nano-30b-a3b"
+  },
+  {
+   "key": "venice/olafangensan-glm-4.7-flash-heretic"
+  },
+  {
+   "key": "venice/openai-gpt-4o-2024-11-20"
+  },
+  {
+   "key": "venice/openai-gpt-4o-mini-2024-07-18"
+  },
+  {
+   "key": "venice/openai-gpt-52"
+  },
+  {
+   "key": "venice/openai-gpt-52-codex"
+  },
+  {
+   "key": "venice/openai-gpt-53-codex"
+  },
+  {
+   "key": "venice/openai-gpt-54"
+  },
+  {
+   "key": "venice/openai-gpt-oss-120b"
+  },
+  {
+   "key": "venice/qwen3-235b-a22b-instruct-2507"
+  },
+  {
+   "key": "venice/qwen3-235b-a22b-thinking-2507"
+  },
+  {
+   "key": "venice/qwen3-4b"
+  },
+  {
+   "key": "venice/qwen3-5-35b-a3b"
+  },
+  {
+   "key": "venice/qwen3-coder-480b-a35b-instruct"
+  },
+  {
+   "key": "venice/qwen3-coder-480b-a35b-instruct-turbo"
+  },
+  {
+   "key": "venice/qwen3-next-80b"
+  },
+  {
+   "key": "venice/qwen3-vl-235b-a22b"
+  },
+  {
+   "key": "venice/venice-uncensored"
+  },
+  {
+   "key": "venice/zai-org-glm-4.6"
+  },
+  {
+   "key": "venice/zai-org-glm-4.7"
+  },
+  {
+   "key": "venice/zai-org-glm-4.7-flash"
+  },
+  {
+   "key": "venice/zai-org-glm-5"
+  },
+  {
+   "key": "volcengine/deepseek-v3-2-251201"
+  },
+  {
+   "key": "volcengine/doubao-seed-1-8-251228"
+  },
+  {
+   "key": "volcengine/doubao-seed-code-preview-251028"
+  },
+  {
+   "key": "volcengine/glm-4-7-251222"
+  },
+  {
+   "key": "volcengine/kimi-k2-5-260127"
+  },
+  {
+   "key": "volcengine-plan/ark-code-latest"
+  },
+  {
+   "key": "volcengine-plan/doubao-seed-code"
+  },
+  {
+   "key": "volcengine-plan/doubao-seed-code-preview-251028"
+  },
+  {
+   "key": "volcengine-plan/glm-4.7"
+  },
+  {
+   "key": "volcengine-plan/kimi-k2-thinking"
+  },
+  {
+   "key": "volcengine-plan/kimi-k2.5"
+  },
+  {
+   "key": "xiaomi/mimo-v2-flash"
+  },
+  {
+   "key": "xiaomi/mimo-v2-omni"
+  },
+  {
+   "key": "xiaomi/mimo-v2-pro"
+  },
+  {
+   "key": "zai/glm-4.5"
+  },
+  {
+   "key": "zai/glm-4.5-air"
+  },
+  {
+   "key": "zai/glm-4.5-flash"
+  },
+  {
+   "key": "zai/glm-4.5v"
+  },
+  {
+   "key": "zai/glm-4.6"
+  },
+  {
+   "key": "zai/glm-4.6v"
+  },
+  {
+   "key": "zai/glm-4.7"
+  },
+  {
+   "key": "zai/glm-4.7-flash"
+  },
+  {
+   "key": "zai/glm-4.7-flashx"
+  },
+  {
+   "key": "zai/glm-5"
+  },
+  {
+   "key": "zai/glm-5-turbo"
+  },
+  {
+   "key": "zai/glm-5.1"
+  },
+  {
+   "key": "zai/glm-5.2"
+  },
+  {
+   "key": "zai/glm-5v-turbo"
+  }
+ ]
+}

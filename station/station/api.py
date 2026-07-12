@@ -109,6 +109,13 @@ def create_app(store: TaskStore, hub: EventHub, dispatcher: Dispatcher,
         return StreamingResponse(stream_events(hub), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache"})
 
+    # 智能体统一配置中心路由（引擎缺失时内部降级为 503，不影响其它路由）。
+    try:
+        from .agentcfg_api import register_agentcfg_routes
+        register_agentcfg_routes(app, hub, home=home)
+    except Exception:  # pragma: no cover - 导入期异常也不应拖垮大屏
+        pass
+
     wd = web_dir or config.WEB_DIR
     if wd.is_dir():  # 前端产物存在才挂（后端单测不需要）
         app.mount("/dashboard", StaticFiles(directory=str(wd), html=True), name="web")

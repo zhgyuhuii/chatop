@@ -293,9 +293,12 @@ RUN set -eux; \
     gen rtk           "RTK 省Token"      rtk.png               "chatop-agent-launch rtk"; \
     gen tokscale      "tokscale 用量监控" tokscale.png          "chatop-agent-launch tokscale"; \
     gen dashboard     "智能体监控大屏"    dashboard-monitor.png "/usr/local/bin/start-dashboard-window.sh"; \
-    cp -f "/opt/openclaw-tool/OpenClaw配置.desktop" "$APPS/chatop-openclaw-config.desktop"; \
-    chmod +x "$APPS/chatop-openclaw-config.desktop"; \
-    cp -f "$APPS/chatop-openclaw-config.desktop" "$DESK/chatop-openclaw-config.desktop"; \
+    : '「智能体配置」桌面图标指向 Web 配置中心（start-config-window.sh；station 未就绪回退 tkinter）'; \
+    gen agent-config  "智能体配置"        openclaw.png          "/usr/local/bin/start-config-window.sh"; \
+    : 'tkinter 经典配置器保留为兜底入口（不再是主入口）'; \
+    cp -f "/opt/openclaw-tool/OpenClaw配置.desktop" "$APPS/chatop-openclaw-config-classic.desktop"; \
+    sed -i 's/^Name=.*/Name=OpenClaw 配置（经典）/; s/^Name\[zh_CN\]=.*/Name[zh_CN]=OpenClaw 配置（经典）/' "$APPS/chatop-openclaw-config-classic.desktop"; \
+    chmod +x "$APPS/chatop-openclaw-config-classic.desktop"; \
     chown -R 1000:1000 /opt/chatop-seed-home/.local /opt/chatop-seed-home/Desktop
 
 # === station：工位本地大屏常驻服务（venv 已在上方；此处离线只 COPY） ===
@@ -305,6 +308,9 @@ ENV CHATOP_VERSION=${VERSION}
 COPY station/station/ /opt/station/station/
 COPY station/start-station.sh /usr/local/bin/start-station.sh
 COPY --from=dashweb /src/dist/ /opt/station/station/web/
+# 智能体统一配置中心引擎库（纯 stdlib，无需装依赖；station 经 PYTHONPATH 导入，
+# 复用 /opt/openclaw-tool 的纯模块）。缺失时 agentcfg 路由降级 503，不影响大屏。
+COPY agent-config/agentconfig/ /opt/agent-config/agentconfig/
 RUN sed -i 's/\r$//' /usr/local/bin/start-station.sh && chmod +x /usr/local/bin/start-station.sh && \
     mkdir -p /opt/chatop-seed-home/.config/autostart && \
     printf '[Desktop Entry]\nType=Application\nName=察元AI工舱 大屏\nComment=工位监控大屏\nExec=/usr/local/bin/start-dashboard-window.sh\nIcon=utilities-system-monitor\nX-GNOME-Autostart-enabled=true\n' \
@@ -312,6 +318,9 @@ RUN sed -i 's/\r$//' /usr/local/bin/start-station.sh && chmod +x /usr/local/bin/
     printf '#!/bin/bash\n# 大屏窗口：最大化而非全屏——全屏会被 xfwm4 抬到 dock 层之上，盖掉顶栏(菜单+任务栏)和底部 dock。\n# 独立 user-data-dir：与用户手动开的 Chrome 分进程，否则后启动的那次命令行 flag 会被静默丢弃。\nfor i in $(seq 1 60); do curl -fsS http://127.0.0.1:8787/dashboard/api/system >/dev/null 2>&1 && break; sleep 1; done\nexec /usr/bin/google-chrome-stable --no-sandbox --user-data-dir="$HOME/.config/chatop-dashboard-chrome" --app=http://127.0.0.1:8787/dashboard --start-maximized --no-first-run --no-default-browser-check\n' \
       > /usr/local/bin/start-dashboard-window.sh && \
     chmod +x /usr/local/bin/start-dashboard-window.sh && \
+    printf '#!/bin/bash\n# 智能体配置中心窗口：打开 station 大屏的 #/config 路由（同一前端，hash 路由切页）。\n# station 未就绪时回退拉起 tkinter 经典配置器，保证「配置」入口永不打不开。\nfor i in $(seq 1 30); do curl -fsS http://127.0.0.1:8787/dashboard/api/system >/dev/null 2>&1 && { exec /usr/bin/google-chrome-stable --no-sandbox --user-data-dir="$HOME/.config/chatop-config-chrome" --app="http://127.0.0.1:8787/dashboard/#/config" --start-maximized --no-first-run --no-default-browser-check; }; sleep 1; done\nexec bash /opt/openclaw-tool/launch-config-gui.sh\n' \
+      > /usr/local/bin/start-config-window.sh && \
+    chmod +x /usr/local/bin/start-config-window.sh && \
     printf '[Desktop Entry]\nType=Application\nName=chatop 桌面加固\nComment=底部 dock 常显 + F11 交给窗口管理器\nExec=/usr/local/bin/chatop-desktop-tweak\nX-GNOME-Autostart-enabled=true\nNoDisplay=true\n' \
       > /opt/chatop-seed-home/.config/autostart/chatop-desktop-tweak.desktop && \
     printf '[Desktop Entry]\nType=Application\nName=退出全屏\nComment=全屏窗口盖住了顶栏和任务栏时点这里\nExec=/usr/local/bin/chatop-unfullscreen --all\nIcon=view-restore\nTerminal=false\n' \
