@@ -5,7 +5,9 @@
 # 版本哨兵保证同一版本只播一次（用户卸载某工具后不会被反复重新播种）。
 set -u
 SEED_SRC=/opt/chatop-seed-home
-WANT=8   # 升级镜像、要补播新增工具时把这个数字 +1
+WANT=9   # 升级镜像、要补播新增工具时把这个数字 +1
+         # v9: 「智能体配置」Web 配置中心桌面图标(chatop-agent-config→start-config-window)；
+         #     OpenClaw 经典配置器降级为兜底(chatop-openclaw-config-classic)——智能体统一配置中心
          # v2: 大屏 autostart + Hermes/OpenHuman 预装
          # v3: 全部内置智能体桌面图标 + 智能启动(chatop-agent-launch) + 监控大屏图标(察元AI工舱改名)
          # v4: OpenClaw 配置改用 openclaw-tool(tkinter) 桌面图标；移除失效的 agent-builder 图标
@@ -73,9 +75,13 @@ for d in "$SEED_SRC/.local/share/applications" "$SEED_SRC/Desktop" "$SEED_SRC/.c
   cp -f "$d"/chatop-*.desktop "$HOME/$rel/" 2>/dev/null || true
 done
 chmod +x "$HOME/.local/share/applications"/chatop-*.desktop "$HOME/Desktop"/chatop-*.desktop 2>/dev/null || true
-# 3) 清理已废弃的 chatop 托管图标（agent-builder 已被 openclaw-tool 取代）；仅删 chatop 自管项，不碰用户自建
+# 3) 清理已废弃的 chatop 托管图标；仅删 chatop 自管项，不碰用户自建。
+#    - agent-builder 已被 openclaw-tool 取代
+#    - openclaw-config 已被「智能体配置」Web 配置中心取代(经典配置器改名 openclaw-config-classic)
 rm -f "$HOME/.local/share/applications/chatop-agent-builder.desktop" \
-      "$HOME/Desktop/chatop-agent-builder.desktop" 2>/dev/null || true
+      "$HOME/Desktop/chatop-agent-builder.desktop" \
+      "$HOME/.local/share/applications/chatop-openclaw-config.desktop" \
+      "$HOME/Desktop/chatop-openclaw-config.desktop" 2>/dev/null || true
 rm -rf "$HOME/Applications/agent-builder" 2>/dev/null || true
 # 落哨兵的判据：自愈干净(没有补不上的残文件) 且 磁盘充足。二者皆真=这一版确实播全了。
 # 磁盘满时截断文件补不上→heal_ok=0；或可用空间不足→ample_disk 假：两种情况都不写哨兵，下次重试。
