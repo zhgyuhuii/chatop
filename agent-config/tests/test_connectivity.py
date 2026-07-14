@@ -52,3 +52,35 @@ def test_slack_probe_ok(monkeypatch):
                         lambda *a, **k: (200, {"ok": True, "team": "T"}, None))
     d = probes.check("slack", {"botToken": "xoxb"})
     assert d.level == LEVEL_OK
+
+
+def test_feishu_probe_ok(monkeypatch):
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a, **k: (200, {"code": 0, "tenant_access_token": "t", "expire": 7200}, None))
+    d = probes.check("feishu", {"appId": "cli_x", "appSecret": "s"})
+    assert d.level == LEVEL_OK
+
+
+def test_feishu_probe_bad(monkeypatch):
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a, **k: (200, {"code": 10003, "msg": "invalid app_secret"}, None))
+    d = probes.check("feishu", {"appId": "cli_x", "appSecret": "bad"})
+    assert d.level == LEVEL_ERROR and "invalid app_secret" in d.message
+
+
+def test_feishu_probe_missing():
+    assert probes.check("feishu", {"appId": "x"}).level == LEVEL_WARN
+
+
+def test_line_probe_ok(monkeypatch):
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a, **k: (200, {"userId": "U", "basicId": "@bot", "displayName": "n"}, None))
+    d = probes.check("line", {"channelAccessToken": "tok"})
+    assert d.level == LEVEL_OK
+
+
+def test_qqbot_probe_ok(monkeypatch):
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a, **k: (200, {"access_token": "a", "expires_in": "7200"}, None))
+    d = probes.check("qqbot", {"appId": "1", "clientSecret": "s"})
+    assert d.level == LEVEL_OK

@@ -93,12 +93,56 @@ def _probe_slack(cfg: dict) -> Diagnostic:
     return Diagnostic(id="conn:slack:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
 
 
+def _probe_feishu(cfg: dict) -> Diagnostic:
+    aid = _first(cfg, "appId", "app_id")
+    sec = _first(cfg, "appSecret", "app_secret")
+    if not aid or not sec:
+        return Diagnostic(id="conn:feishu:empty", level=LEVEL_WARN, message="请先填写 App ID 和 App Secret。")
+    st, obj, err = _http_json(
+        "POST", "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+        data={"app_id": aid, "app_secret": sec})
+    if obj and obj.get("code") == 0:
+        return Diagnostic(id="conn:feishu:ok", level=LEVEL_OK, message="飞书凭据校验成功。")
+    msg = (obj or {}).get("msg") or err or "校验失败"
+    return Diagnostic(id="conn:feishu:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
+def _probe_line(cfg: dict) -> Diagnostic:
+    tok = _first(cfg, "channelAccessToken", "channel_access_token", "token")
+    if not tok:
+        return Diagnostic(id="conn:line:empty", level=LEVEL_WARN, message="请先填写 Channel Access Token。")
+    st, obj, err = _http_json("GET", "https://api.line.me/v2/bot/info",
+                              headers={"Authorization": f"Bearer {tok}"})
+    if st == 200 and obj and (obj.get("userId") or obj.get("basicId")):
+        return Diagnostic(id="conn:line:ok", level=LEVEL_OK,
+                          message=f"连接成功：{obj.get('displayName') or obj.get('basicId')}")
+    msg = (obj or {}).get("message") or err or "校验失败"
+    return Diagnostic(id="conn:line:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
+def _probe_qqbot(cfg: dict) -> Diagnostic:
+    aid = _first(cfg, "appId", "app_id", "botAppId")
+    sec = _first(cfg, "clientSecret", "client_secret", "appSecret", "secret")
+    if not aid or not sec:
+        return Diagnostic(id="conn:qqbot:empty", level=LEVEL_WARN, message="请先填写 AppID 和 Secret。")
+    st, obj, err = _http_json(
+        "POST", "https://bots.qq.com/app/getAppAccessToken",
+        data={"appId": aid, "clientSecret": sec})
+    if obj and obj.get("access_token"):
+        return Diagnostic(id="conn:qqbot:ok", level=LEVEL_OK, message="QQ 机器人凭据校验成功。")
+    msg = (obj or {}).get("message") or (obj or {}).get("msg") or err or "校验失败"
+    return Diagnostic(id="conn:qqbot:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
 CHANNEL_PROBES: dict = {}  # cid -> callable(cfg)->Diagnostic；后续任务注册
 
 CHANNEL_PROBES.update({
     "telegram": _probe_telegram,
     "discord": _probe_discord,
     "slack": _probe_slack,
+    "feishu": _probe_feishu,
+    "line": _probe_line,
+    "qqbot": _probe_qqbot,
 })
 
 
