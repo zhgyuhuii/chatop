@@ -7,6 +7,7 @@ import { useConfigEvents } from './useConfigEvents'
 import ModelPanel from './ModelPanel'
 import ChannelPanel from './ChannelPanel'
 import AssistantChat from './AssistantChat'
+import GroupRenderer from './GroupRenderer'
 
 // 智能体统一配置中心。openclaw / hermes 一期；claude-code 等仅在总览显示状态。
 export default function ConfigCenter() {
@@ -59,6 +60,11 @@ export default function ConfigCenter() {
         )}
 
         <ModelPanel agentId={agentId} desc={desc} onSaved={() => { reloadDesc(); reloadAgents() }} />
+
+        {desc?.groups
+          .filter(g => g.id !== 'channels' && g.id !== 'model' && g.fields.some(f => f.kind !== 'model'))
+          .map(g => <GroupRenderer key={g.id} agentId={agentId} group={g}
+                                   onSaved={() => { reloadDesc(); reloadAgents() }} />)}
 
         {channelGroup && channelGroup.channels.length > 0 && (
           <ChannelPanel agentId={agentId} channels={channelGroup.channels} flowEvents={flowEvents} />

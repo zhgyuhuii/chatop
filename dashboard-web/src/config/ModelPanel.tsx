@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { apply, fetchModels, type Descriptor, type ModelInfo } from './configApi'
+import { readPrimaryModel } from './modelPrimary'
 
 // 策展厂商（与引擎 catalog_overrides.MODEL_PROVIDERS 对齐的常用子集；下拉够用即可）。
 const PROVIDERS = [
@@ -21,8 +22,7 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
-  const current = desc?.groups.find(g => g.id === 'model')
-    ?.fields.find(f => f.key.endsWith('model.primary'))?.value as string | undefined
+  const current = readPrimaryModel(agentId, desc)
 
   const load = async () => {
     setBusy(true); setMsg('')
