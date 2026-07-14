@@ -49,7 +49,57 @@ def _fallback_probe(channel: str, cfg: dict) -> Diagnostic:
                       message="已填写配置（该通道无在线校验端点，实际连通以网关运行为准）。")
 
 
+def _first(cfg: dict, *keys):
+    for k in keys:
+        v = cfg.get(k)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return ""
+
+
+def _probe_telegram(cfg: dict) -> Diagnostic:
+    tok = _first(cfg, "botToken", "token", "bot_token")
+    if not tok:
+        return Diagnostic(id="conn:telegram:empty", level=LEVEL_WARN, message="请先填写 Bot Token。")
+    st, obj, err = _http_json("GET", f"https://api.telegram.org/bot{tok}/getMe")
+    if obj and obj.get("ok") is True:
+        uname = (obj.get("result") or {}).get("username", "")
+        return Diagnostic(id="conn:telegram:ok", level=LEVEL_OK, message=f"连接成功，Bot：@{uname}")
+    msg = (obj or {}).get("description") or err or "校验失败"
+    return Diagnostic(id="conn:telegram:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
+def _probe_discord(cfg: dict) -> Diagnostic:
+    tok = _first(cfg, "botToken", "token", "bot_token")
+    if not tok:
+        return Diagnostic(id="conn:discord:empty", level=LEVEL_WARN, message="请先填写 Bot Token。")
+    st, obj, err = _http_json("GET", "https://discord.com/api/v10/users/@me",
+                              headers={"Authorization": f"Bot {tok}"})
+    if st == 200 and obj and obj.get("username"):
+        return Diagnostic(id="conn:discord:ok", level=LEVEL_OK, message=f"连接成功，Bot：{obj['username']}")
+    msg = (obj or {}).get("message") or err or "校验失败"
+    return Diagnostic(id="conn:discord:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
+def _probe_slack(cfg: dict) -> Diagnostic:
+    tok = _first(cfg, "botToken", "token", "bot_token", "botOAuthToken")
+    if not tok:
+        return Diagnostic(id="conn:slack:empty", level=LEVEL_WARN, message="请先填写 Bot Token。")
+    st, obj, err = _http_json("POST", "https://slack.com/api/auth.test",
+                              headers={"Authorization": f"Bearer {tok}"})
+    if obj and obj.get("ok") is True:
+        return Diagnostic(id="conn:slack:ok", level=LEVEL_OK, message="连接成功。")
+    msg = (obj or {}).get("error") or err or "校验失败"
+    return Diagnostic(id="conn:slack:fail", level=LEVEL_ERROR, message=f"连接失败：{msg}")
+
+
 CHANNEL_PROBES: dict = {}  # cid -> callable(cfg)->Diagnostic；后续任务注册
+
+CHANNEL_PROBES.update({
+    "telegram": _probe_telegram,
+    "discord": _probe_discord,
+    "slack": _probe_slack,
+})
 
 
 def check(channel: str, channel_cfg: dict) -> Diagnostic:
