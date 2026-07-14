@@ -58,6 +58,26 @@ def test_apply_rejects_bad_signature_before_touching_current(tmp_path):
     assert not (sd / "station" / "current").exists()
 
 
+def test_apply_rejects_symlink_traversal(tmp_path):
+    import os
+    key = b"k" * 32
+    sd = tmp_path / "services"
+    # 造一个含逃逸软链成员的 tar
+    tar = tmp_path / "station-9.9.9.tar.gz"
+    with tarfile.open(tar, "w:gz") as tf:
+        info = tarfile.TarInfo("evil")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "../../escape"      # 逃逸到 dest 之外
+        tf.addfile(info)
+    sha = hashlib.sha256(tar.read_bytes()).hexdigest()
+    sig = hmac.new(key, sha.encode(), hashlib.sha256).hexdigest()
+    man = {"name": "station", "version": "9.9.9", "sha256": sha, "sig": sig,
+           "min_base": "1.5.0", "needs_venv": False}
+    with pytest.raises(updater.BundleError):
+        updater.apply(tar, man, services_dir=sd, hmac_keys={"1": key},
+                      health_check=lambda: True)
+
+
 def test_rollback_points_current_to_previous(tmp_path):
     key = b"k" * 32
     sd = tmp_path / "services"

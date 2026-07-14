@@ -1,10 +1,8 @@
 """服务 bundle apply/rollback：验签→解包→原子软链切换→健康门→失败回滚。纯 stdlib。"""
 from __future__ import annotations
 
-import json
 import os
 import tarfile
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
@@ -93,10 +91,8 @@ def _rmtree(p: Path) -> None:
 
 
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
-    """防目录穿越：拒绝含 .. 或绝对路径的成员。"""
-    base = dest.resolve()
-    for m in tf.getmembers():
-        target = (dest / m.name).resolve()
-        if not str(target).startswith(str(base)):
-            raise BundleError(f"unsafe path in bundle: {m.name}")
-    tf.extractall(dest)
+    """用 stdlib data 过滤器防目录穿越/软链逃逸/绝对路径；不依赖宿主发行版默认值。"""
+    try:
+        tf.extractall(dest, filter="data")
+    except tarfile.FilterError as e:
+        raise BundleError(f"unsafe bundle member: {e}")
