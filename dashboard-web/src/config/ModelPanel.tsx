@@ -1,20 +1,18 @@
-import { useState } from 'react'
-import { apply, fetchModels, type Descriptor, type ModelInfo } from './configApi'
+import { useEffect, useState } from 'react'
+import {
+  apply, fetchModels, fetchProviders,
+  type Descriptor, type ModelInfo, type ProviderInfo,
+} from './configApi'
 import { readPrimaryModel } from './modelPrimary'
-
-// 策展厂商（与引擎 catalog_overrides.MODEL_PROVIDERS 对齐的常用子集；下拉够用即可）。
-const PROVIDERS = [
-  ['ollama', 'Ollama（本地，无需 Key）'], ['deepseek', 'DeepSeek 深度求索'],
-  ['zai', '智谱 GLM'], ['moonshot', '月之暗面 Kimi'], ['volcengine', '火山方舟（豆包）'],
-  ['openai', 'OpenAI'], ['anthropic', 'Anthropic Claude'], ['mistral', 'Mistral'],
-  ['groq', 'Groq'], ['openrouter', 'OpenRouter'], ['cohere', 'Cohere'],
-] as const
 
 export default function ModelPanel({ agentId, desc, onSaved }: {
   agentId: string; desc: Descriptor | null; onSaved: () => void
 }) {
-  const [provider, setProvider] = useState('deepseek')
+  const [providers, setProviders] = useState<ProviderInfo[]>([])
+  const [provider, setProvider] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [baseUrl, setBaseUrl] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [reason, setReason] = useState('')
   const [source, setSource] = useState('')
@@ -23,11 +21,22 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
   const [msg, setMsg] = useState('')
 
   const current = readPrimaryModel(agentId, desc)
+  const selected = providers.find(p => p.id === provider)
+  const isOauth = selected?.auth_kind === 'oauth'
+  const showBaseUrl = provider === 'ollama' || showAdvanced
+
+  useEffect(() => {
+    fetchProviders(agentId).then(setProviders).catch(() => {})
+  }, [agentId])
+
+  useEffect(() => {
+    if (!provider && providers[0]) setProvider(providers[0].id)
+  }, [providers, provider])
 
   const load = async () => {
     setBusy(true); setMsg('')
     try {
-      const r = await fetchModels(agentId, provider, apiKey)
+      const r = await fetchModels(agentId, provider, apiKey, baseUrl || undefined)
       setModels(r.models); setSource(r.source); setReason(r.reason)
       if (r.models[0]) setPrimary(r.models[0].key)
     } catch { setReason('请求失败') } finally { setBusy(false) }
@@ -55,14 +64,32 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <select value={provider} onChange={e => setProvider(e.target.value)}>
-          {PROVIDERS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          {providers.map(p => <option key={p.id} value={p.id}>{p.label || p.id}</option>)}
         </select>
-        {provider !== 'ollama' && (
+        {isOauth ? (
+          <span style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+            {selected?.apply_url && (
+              <a href={selected.apply_url} target="_blank" rel="noreferrer">前往授权 ↗</a>
+            )}
+            <span className="muted">授权后回来点获取模型</span>
+          </span>
+        ) : provider !== 'ollama' && (
           <input type="password" placeholder="API Key" value={apiKey}
                  onChange={e => setApiKey(e.target.value)} style={{ width: 220 }} />
         )}
         <button disabled={busy} onClick={load}>获取模型</button>
       </div>
+      {!isOauth && provider !== 'ollama' && (
+        <label style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
+          <input type="checkbox" checked={showAdvanced}
+                 onChange={e => setShowAdvanced(e.target.checked)} />
+          高级
+        </label>
+      )}
+      {showBaseUrl && (
+        <input placeholder="自定义端点 (base_url)，留空用默认" value={baseUrl}
+               onChange={e => setBaseUrl(e.target.value)} style={{ width: 320, fontSize: 12 }} />
+      )}
       {reason && <div className="muted" style={{ fontSize: 12,
         color: source === 'snapshot' ? 'var(--warn)' : undefined }}>{reason}</div>}
       {models.length > 0 && (
