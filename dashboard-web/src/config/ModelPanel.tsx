@@ -3,7 +3,7 @@ import {
   apply, fetchModels, fetchProviders,
   type Descriptor, type ModelInfo, type ProviderInfo,
 } from './configApi'
-import { readPrimaryModel } from './modelPrimary'
+import { readPrimaryModel, readFallbacks } from './modelPrimary'
 
 // openclaw 写 agents.defaults.model.{primary,fallbacks}；hermes 只写裸 model 字段（无备选）。
 export function buildModelPatch(agentId: string, primary: string, fallbacks: string[]) {
@@ -41,6 +41,10 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
   useEffect(() => {
     if (!provider && providers[0]) setProvider(providers[0].id)
   }, [providers, provider])
+
+  useEffect(() => {
+    setFallbacks(readFallbacks(agentId, desc))
+  }, [agentId, desc])
 
   useEffect(() => {
     setFallbacks(prev => prev.filter(k => k !== primary))

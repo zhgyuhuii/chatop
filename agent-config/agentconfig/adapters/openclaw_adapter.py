@@ -99,7 +99,8 @@ class OpenClawAdapter:
             value=primary))
         model_group.fields.append(FieldSpec(
             key="agents.defaults.model.fallbacks", label="备选模型", kind=FIELD_MODEL,
-            help="主模型不可用时按序尝试，可多选。"))
+            help="主模型不可用时按序尝试，可多选。",
+            value=self._current_fallbacks(cfg)))
         groups.append(model_group)
 
         # 通道组
@@ -133,6 +134,11 @@ class OpenClawAdapter:
     def _current_model(self, cfg: dict) -> str:
         return (((cfg.get("agents") or {}).get("defaults") or {})
                 .get("model") or {}).get("primary", "") or ""
+
+    def _current_fallbacks(self, cfg: dict) -> list:
+        fb = (((cfg.get("agents") or {}).get("defaults") or {})
+              .get("model") or {}).get("fallbacks")
+        return list(fb) if isinstance(fb, list) else []
 
     # ---------- status ----------
     def status(self) -> AgentStatus:

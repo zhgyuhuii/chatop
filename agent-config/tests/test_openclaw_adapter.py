@@ -26,6 +26,17 @@ def test_describe_lists_channels(home):
     assert "wecom" in ids and "telegram" in ids and "openclaw-weixin" in ids
 
 
+def test_describe_backfills_fallbacks(home):
+    a = OpenClawAdapter(home=home)
+    a.apply({"agents": {"defaults": {"model": {
+        "primary": "deepseek/deepseek-chat",
+        "fallbacks": ["a/x", "a/y"]}}}})
+    d = a.describe()
+    mg = next(g for g in d.groups if g.id == "model")
+    fb = next(f for f in mg.fields if f.key == "agents.defaults.model.fallbacks")
+    assert fb.value == ["a/x", "a/y"]
+
+
 def test_auth_flow_kinds(home):
     a = OpenClawAdapter(home=home)
     assert a.auth_flow("openclaw-weixin").kind == types.AUTH_QR
