@@ -249,6 +249,60 @@ def parse_schema_channels(json_text):
                 for cid, spec in props.items())
 
 
+import re as _re_fields
+
+_SECRET_NAME_RE = _re_fields.compile(
+    r"(token|secret|key|password|apikey|appsecret|corpsecret)", _re_fields.I)
+
+
+def _is_secret_name(name):
+    return bool(_SECRET_NAME_RE.search(name or ""))
+
+
+def _schema_kind(name, fspec):
+    fspec = fspec or {}
+    if fspec.get("enum"):
+        return "select"
+    if fspec.get("type") == "boolean":
+        return "bool"
+    if _is_secret_name(name):
+        return "secret"
+    return "text"
+
+
+def parse_channel_fields(json_text):
+    """解析 `openclaw config schema`，返回 {通道id: [字段dict]}。
+    字段dict = {key(点路径), name, label, kind, secret, advanced, help, default, options}。
+    advanced 先按 secret 反推（secret=主字段）；策展层可再提升，见 merge_field_overrides。
+    空 properties 的通道返回 []（调用方走 free_kv）。"""
+    try:
+        data = json.loads(json_text)
+    except Exception:
+        return {}
+    try:
+        chans = data["properties"]["channels"]["properties"]
+    except Exception:
+        return {}
+    out = {}
+    for cid, spec in chans.items():
+        props = ((spec or {}).get("properties")) or {}
+        fields = []
+        for fname, fspec in props.items():
+            fspec = fspec or {}
+            secret = _is_secret_name(fname)
+            fields.append({
+                "key": "channels.%s.%s" % (cid, fname),
+                "name": fname, "label": fname,
+                "kind": _schema_kind(fname, fspec),
+                "secret": secret, "advanced": not secret,
+                "help": fspec.get("description") or "",
+                "default": fspec.get("default"),
+                "options": list(fspec.get("enum") or []),
+            })
+        out[cid] = fields
+    return out
+
+
 def parse_models_providers(json_text):
     """解析 `openclaw models list --all --json`，返回**无需安装即可用**的 provider 前缀集。
 
