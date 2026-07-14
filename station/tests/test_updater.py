@@ -88,3 +88,36 @@ def test_rollback_points_current_to_previous(tmp_path):
     updater.rollback("station", services_dir=sd)
     cur = sd / "station" / "current"
     assert (cur / "v.txt").read_text() == "a"
+
+
+def test_rollback_uses_history_not_lexical_order(tmp_path):
+    # 词法排序下 "1.10.0" < "1.9.0"，若 rollback 按字典序挑选会选错；
+    # 真实历史栈应该记住 apply 1.10.0 之前的版本是 1.9.0。
+    key = b"k" * 32
+    sd = tmp_path / "services"
+    for ver, txt in [("1.9.0", "nine"), ("1.10.0", "ten")]:
+        tar, man = _bundle(tmp_path, "station", ver, key, txt)
+        updater.apply(tar, man, services_dir=sd, hmac_keys={"1": key},
+                      health_check=lambda: True)
+    res = updater.rollback("station", services_dir=sd)
+    assert res.ok is True
+    cur = sd / "station" / "current"
+    assert (cur / "v.txt").read_text() == "nine"
+
+
+def test_rollback_twice_does_not_pingpong(tmp_path):
+    key = b"k" * 32
+    sd = tmp_path / "services"
+    for ver, txt in [("1.6.0", "a"), ("1.7.0", "b")]:
+        tar, man = _bundle(tmp_path, "station", ver, key, txt)
+        updater.apply(tar, man, services_dir=sd, hmac_keys={"1": key},
+                      health_check=lambda: True)
+    res1 = updater.rollback("station", services_dir=sd)
+    assert res1.ok is True
+    cur = sd / "station" / "current"
+    assert (cur / "v.txt").read_text() == "a"
+    # 历史栈已耗尽，不应该乒乓地跳回 1.7.0
+    res2 = updater.rollback("station", services_dir=sd)
+    assert res2.ok is False
+    assert "no previous version" in res2.detail
+    assert (cur / "v.txt").read_text() == "a"

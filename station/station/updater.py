@@ -20,11 +20,40 @@ class ApplyResult:
     detail: str = ""
 
 
+def _vkey(v: str):
+    """数字版本键：把 "1.10.0" 排在 "1.9.0" 之后，而不是按字典序排到前面。"""
+    import re
+    return tuple(int(x) for x in re.findall(r"\d+", v)) or (0,)
+
+
 def _versions(name_dir: Path) -> list[str]:
     if not name_dir.is_dir():
         return []
-    return sorted(p.name for p in name_dir.iterdir()
-                  if p.is_dir() and p.name != "current" and not p.name.endswith(".tmp"))
+    return sorted((p.name for p in name_dir.iterdir()
+                   if p.is_dir() and p.name != "current" and not p.name.endswith(".tmp")),
+                  key=_vkey)
+
+
+def _history_file(name_dir: Path) -> Path:
+    return name_dir / ".history"
+
+
+def _history_read(name_dir: Path) -> list[str] | None:
+    """返回历史栈内容；`.history` 文件不存在时返回 None（区别于"存在但为空"）。"""
+    hf = _history_file(name_dir)
+    if not hf.exists():
+        return None
+    return [ln.strip() for ln in hf.read_text().splitlines() if ln.strip()]
+
+
+def _history_write(name_dir: Path, stack: list[str]) -> None:
+    _history_file(name_dir).write_text("\n".join(stack) + ("\n" if stack else ""))
+
+
+def _history_push(name_dir: Path, version: str) -> None:
+    stack = _history_read(name_dir) or []
+    stack.append(version)
+    _history_write(name_dir, stack)
 
 
 def _point_current(name_dir: Path, version: str) -> None:
@@ -67,6 +96,10 @@ def apply(tar_path: Path, manifest: Mapping, *, services_dir: Path,
 
     _point_current(name_dir, version)
     if health_check():
+        # 只在健康门通过的真实切换上，才把被替下的版本压入历史栈——
+        # 失败自愈回滚那条路径不应该污染历史（否则会记出一条从未真正生效过的版本）。
+        if prev is not None and prev != version:
+            _history_push(name_dir, prev)
         return ApplyResult(True, name, version, "applied")
     # 健康门不过 → 回滚
     if prev is not None:
@@ -75,14 +108,28 @@ def apply(tar_path: Path, manifest: Mapping, *, services_dir: Path,
 
 
 def rollback(name: str, *, services_dir: Path) -> ApplyResult:
-    """把 current 指回上一个版本（按版本名排序的倒数第二个）。"""
+    """把 current 指回真实的上一个版本：优先弹历史栈，栈不存在时退回启发式。"""
     name_dir = services_dir / name
-    vers = _versions(name_dir)
     cur = _current_target(name_dir)
+    history = _history_read(name_dir)
+    if history is not None:
+        # 历史栈存在（哪怕已耗尽为空）：只用它，不再退回启发式，避免耗尽后乒乓跳回。
+        remaining = list(history)
+        while remaining:
+            candidate = remaining.pop()
+            if candidate != cur and (name_dir / candidate).is_dir():
+                _history_write(name_dir, remaining)
+                _point_current(name_dir, candidate)
+                return ApplyResult(True, name, candidate, "rolled back")
+        _history_write(name_dir, remaining)
+        return ApplyResult(False, name, cur or "", "no previous version")
+
+    # 历史栈从未建立过（例如老数据/首次调用）：退回启发式——按数字版本号取最高的「另一个」版本。
+    vers = _versions(name_dir)
     candidates = [v for v in vers if v != cur]
     if not candidates:
         return ApplyResult(False, name, cur or "", "no previous version")
-    target = candidates[-1]
+    target = max(candidates, key=_vkey)
     _point_current(name_dir, target)
     return ApplyResult(True, name, target, "rolled back")
 
