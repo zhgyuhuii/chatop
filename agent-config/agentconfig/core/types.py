@@ -49,6 +49,7 @@ class FieldSpec:
     apply_url: Optional[str] = None                     # 「去哪申请凭据」
     placeholder: str = ""
     value: Any = None                                   # 当前值（secret 时为脱敏视图）
+    advanced: bool = False                              # 高级字段——默认折叠，非主字段
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -132,6 +133,7 @@ class AuthFlowDescriptor:
     webhook_url: Optional[str] = None
     cmd: Optional[list[str]] = None                # qr/code 的 openclaw 子命令
     hint: str = ""
+    free_kv: bool = False                          # schema 空壳通道——前端走自由键值编辑
 
     def to_dict(self) -> dict:
         return asdict(self)

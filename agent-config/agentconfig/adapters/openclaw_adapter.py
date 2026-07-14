@@ -257,7 +257,7 @@ class OpenClawAdapter:
             cmd = ["openclaw"] + orch.build_login_cmd(target)
             hint = "点「开始扫码」后用手机扫描二维码完成登录。"
         elif kind == AUTH_TOKEN:
-            fields = _token_fields(target)
+            fields = self._token_fields(target)
             hint = "填写下方凭据后保存；部分通道保存后还需在对话里输入配对码。"
         elif kind == AUTH_WEBHOOK:
             port = 18789
@@ -268,10 +268,29 @@ class OpenClawAdapter:
         elif kind == AUTH_BUILTIN:
             hint = "内置通道，启用即可，无需外部凭据。"
 
+        free_kv = (kind == AUTH_TOKEN and not fields)
+
         return AuthFlowDescriptor(
             kind=kind, target=target, label=label, fields=fields,
             apply_url=apply_url, tutorial_id=tutorial_id, webhook_url=webhook_url,
-            cmd=cmd, hint=hint)
+            cmd=cmd, hint=hint, free_kv=free_kv)
+
+    def _token_fields(self, channel: str) -> list:
+        ov = _load("catalog_overrides")
+        try:
+            raw = (self._catalog().get("channel_fields") or {}).get(channel) or []
+        except Exception:
+            raw = []
+        merged = ov.merge_field_overrides(channel, [dict(f) for f in raw])
+        specs = []
+        for f in merged:
+            specs.append(FieldSpec(
+                key=f["key"], label=f.get("label") or f.get("name") or f["key"],
+                kind=f.get("kind") or FIELD_TEXT, secret=bool(f.get("secret")),
+                advanced=bool(f.get("advanced")), help=f.get("help") or "",
+                options=list(f.get("options") or []), apply_url=f.get("apply_url"),
+                placeholder="" if f.get("default") is None else str(f.get("default"))))
+        return specs
 
     def run_flow(self, target: str, inputs: dict, emit) -> None:
         """扫码长任务（自包含、有界、事件驱动）。
@@ -431,31 +450,3 @@ def _deep_merge(base, override):
     return out
 
 
-# 各通道 Token 表单字段（openclaw schema 空壳的走自由键值；此处给常见通道的显式字段）。
-_TOKEN_FIELDS = {
-    "telegram": [("channels.telegram.botToken", "Bot Token", True)],
-    "discord": [("channels.discord.token", "Bot Token", True)],
-    "slack": [("channels.slack.botToken", "Bot Token (xoxb-)", True),
-              ("channels.slack.appToken", "App Token (xapp-)", True)],
-    "feishu": [("channels.feishu.appId", "App ID (cli_)", False),
-               ("channels.feishu.appSecret", "App Secret", True)],
-    "wecom": [("channels.wecom.corpId", "企业 ID (CorpID)", False),
-              ("channels.wecom.agentId", "应用 AgentId", False),
-              ("channels.wecom.secret", "应用 Secret", True)],
-    "line": [("channels.line.channelAccessToken", "Channel Access Token", True),
-             ("channels.line.channelSecret", "Channel Secret", True)],
-    "qqbot": [("channels.qqbot.appId", "App ID", False),
-              ("channels.qqbot.token", "Token", True),
-              ("channels.qqbot.appSecret", "App Secret", True)],
-}
-
-
-def _token_fields(channel: str) -> list[FieldSpec]:
-    specs = _TOKEN_FIELDS.get(channel)
-    if not specs:
-        return [FieldSpec(key=f"channels.{channel}.token", label="Token/凭据",
-                         kind=FIELD_SECRET, secret=True,
-                         help="该通道字段未在 openclaw schema 中显式定义，可填主凭据。")]
-    return [FieldSpec(key=k, label=lbl,
-                      kind=FIELD_SECRET if sec else FIELD_TEXT, secret=sec)
-            for k, lbl, sec in specs]

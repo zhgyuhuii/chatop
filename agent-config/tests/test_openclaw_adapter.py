@@ -32,9 +32,11 @@ def test_auth_flow_kinds(home):
     assert a.auth_flow("whatsapp").kind == types.AUTH_QR
     tg = a.auth_flow("telegram")
     assert tg.kind == types.AUTH_TOKEN and tg.fields
+    # wecom 在 testdata schema 里是空壳（channels.wecom 为 null），无显式字段可解析——
+    # 走 free_kv（此前手写 _TOKEN_FIELDS 硬编码了 3 个字段，schema 驱动后如实反映真源）。
     wecom = a.auth_flow("wecom")
     assert wecom.kind == types.AUTH_TOKEN
-    assert {f.label for f in wecom.fields} >= {"企业 ID (CorpID)", "应用 Secret"}
+    assert wecom.fields == [] and wecom.free_kv is True
     # builtin
     assert a.auth_flow("imessage").kind == types.AUTH_BUILTIN
 
@@ -148,3 +150,25 @@ def test_run_flow_noop_for_token(home):
     events = []
     a.run_flow("telegram", {}, lambda e: events.append(e.to_dict()))
     assert events and events[0]["type"] == "flow_noop"
+
+
+def test_auth_flow_fields_from_schema_with_primary(home):
+    a = OpenClawAdapter(home=home)
+    af = a.auth_flow("telegram")
+    keys = [f.key for f in af.fields]
+    assert "channels.telegram.botToken" in keys
+    bt = next(f for f in af.fields if f.key == "channels.telegram.botToken")
+    assert bt.secret is True and bt.advanced is False and bt.label == "Bot Token"
+    assert sum(1 for f in af.fields if f.advanced) >= 10
+
+
+def test_auth_flow_multifield_channel(home):
+    a = OpenClawAdapter(home=home)
+    af = a.auth_flow("matrix")
+    assert "channels.matrix.accessToken" in {f.key for f in af.fields}
+
+
+def test_auth_flow_empty_schema_is_free_kv(home):
+    a = OpenClawAdapter(home=home)
+    af = a.auth_flow("twitch")
+    assert af.free_kv is True and af.fields == []
