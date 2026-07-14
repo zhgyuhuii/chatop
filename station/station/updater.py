@@ -96,3 +96,24 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
         tf.extractall(dest, filter="data")
     except tarfile.FilterError as e:
         raise BundleError(f"unsafe bundle member: {e}")
+
+
+def http_health_check(url: str = "http://127.0.0.1:8787/dashboard/api/system",
+                      timeout: float = 30.0, interval: float = 1.0) -> Callable[[], bool]:
+    """返回一个轮询就绪端点的健康检查闭包（供 apply 注入）。纯 stdlib urllib。"""
+    import time
+    import urllib.request
+
+    def check() -> bool:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                with urllib.request.urlopen(url, timeout=3) as resp:
+                    if resp.status == 200:
+                        return True
+            except Exception:
+                pass
+            time.sleep(interval)
+        return False
+
+    return check
