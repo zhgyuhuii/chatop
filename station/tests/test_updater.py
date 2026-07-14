@@ -90,6 +90,38 @@ def test_rollback_points_current_to_previous(tmp_path):
     assert (cur / "v.txt").read_text() == "a"
 
 
+def test_apply_same_version_is_idempotent_noop(tmp_path, monkeypatch):
+    key = b"k" * 32
+    sd = tmp_path / "services"
+    tar, man = _bundle(tmp_path, "station", "1.6.0", key, "sixzero")
+    # 用计数替身包一层 _safe_extractall：证明第二次 apply 同一版本时完全不
+    # 触碰解包/替换那套非原子操作，而是直接短路返回。
+    calls = []
+    orig_extract = updater._safe_extractall
+
+    def _counting_extract(tf, dest):
+        calls.append(dest)
+        return orig_extract(tf, dest)
+
+    monkeypatch.setattr(updater, "_safe_extractall", _counting_extract)
+
+    res1 = updater.apply(tar, man, services_dir=sd, hmac_keys={"1": key},
+                         health_check=lambda: True)
+    assert res1.ok is True
+    assert len(calls) == 1
+
+    res2 = updater.apply(tar, man, services_dir=sd, hmac_keys={"1": key},
+                         health_check=lambda: True)
+    assert res2.ok is True
+    assert res2.detail == "already current"
+    assert len(calls) == 1  # 幂等短路：第二次不应该再走解包/替换
+
+    cur = sd / "station" / "current"
+    assert (cur / "v.txt").read_text() == "sixzero"
+    name_dir = sd / "station"
+    assert [p.name for p in name_dir.iterdir() if p.name.endswith(".tmp")] == []
+
+
 def test_rollback_uses_history_not_lexical_order(tmp_path):
     # 词法排序下 "1.10.0" < "1.9.0"，若 rollback 按字典序挑选会选错；
     # 真实历史栈应该记住 apply 1.10.0 之前的版本是 1.9.0。

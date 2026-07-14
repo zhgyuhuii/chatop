@@ -83,6 +83,13 @@ def apply(tar_path: Path, manifest: Mapping, *, services_dir: Path,
     name_dir.mkdir(parents=True, exist_ok=True)
     prev = _current_target(name_dir)
 
+    # 幂等短路：目标版本已经是 current 且物理目录还在，直接复检健康门返回，
+    # 不要再走 rmtree→replace 那套非原子换版——那个窗口期 final 会短暂消失。
+    final_existing = name_dir / version
+    if prev == version and final_existing.is_dir():
+        ok = health_check()
+        return ApplyResult(ok, name, version, "already current" if ok else "health check failed")
+
     staging = name_dir / f"{version}.tmp"
     if staging.exists():
         _rmtree(staging)
