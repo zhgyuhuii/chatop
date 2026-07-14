@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react'
 import {
   apply, authFlow, getTutorial, startAuthFlow, interactionFor, interactionLabel,
-  type ChannelSummary, type AuthFlow, type Tutorial,
+  type ChannelSummary, type AuthFlow, type FieldSpec, type Tutorial,
 } from './configApi'
 import QrCanvas from './QrCanvas'
+import FieldRenderer from './FieldRenderer'
 import type { ConfigEvent } from './useConfigEvents'
+
+// 空 schema 通道的自由键值补丁：{k,v}[] -> { channels: { <id>: { enabled: true, ...kv } } }
+export function freeKvToPatch(channel: string, rows: { k: string; v: string }[]) {
+  const inner: Record<string, unknown> = { enabled: true }
+  for (const { k, v } of rows) if (k) inner[k] = v
+  return { channels: { [channel]: inner } }
+}
+
+// 字段拆分：主要字段直接展示，advanced 字段折叠到「更多设置」。
+export function splitFields<T extends { advanced?: boolean }>(fields: T[]) {
+  return { primary: fields.filter(f => !f.advanced), advanced: fields.filter(f => f.advanced) }
+}
 
 export default function ChannelPanel({ agentId, channels, flowEvents }: {
   agentId: string; channels: ChannelSummary[]; flowEvents: ConfigEvent[]
@@ -76,9 +89,13 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
           </div>
           {flow.hint && <div className="muted" style={{ fontSize: 12 }}>{flow.hint}</div>}
 
-          {/* 动态认证交互：按 kind 出不同界面 */}
-          <AuthInteraction kind={flow.kind} flow={flow} inputs={inputs} setInputs={setInputs}
-                           qr={qr} status={status} onScan={startScan} onSave={enableAndSave} />
+          {/* 动态认证交互：按 kind 出不同界面；空 schema 通道走自由键值编辑器 */}
+          {flow.free_kv ? (
+            <FreeKvEditor agentId={agentId} channel={active} onSaved={setMsg} />
+          ) : (
+            <AuthInteraction kind={flow.kind} flow={flow} inputs={inputs} setInputs={setInputs}
+                             qr={qr} status={status} onScan={startScan} onSave={enableAndSave} />
+          )}
 
           {flow.apply_url && (
             <a href={flow.apply_url} target="_blank" rel="noreferrer"
@@ -144,18 +161,51 @@ function AuthInteraction({ kind, flow, inputs, setInputs, qr, status, onScan, on
       </div>
     )
   }
-  // fill-token / enter-code：字段表单
+  // fill-token / enter-code：字段表单。主要字段直接展示，advanced 字段折叠。
+  const { primary, advanced } = splitFields(flow.fields)
+  const renderField = (f: FieldSpec) => (
+    <FieldRenderer key={f.key} field={f} value={inputs[f.key] ?? ''}
+                   onChange={v => setInputs({ ...inputs, [f.key]: String(v ?? '') })} />
+  )
   return (
     <div style={{ display: 'grid', gap: 6 }}>
-      {flow.fields.map(f => (
-        <label key={f.key} style={{ display: 'grid', gap: 2 }}>
-          <span style={{ fontSize: 12 }}>{f.label}</span>
-          <input type={f.secret ? 'password' : 'text'} placeholder={f.placeholder}
-                 value={inputs[f.key] || ''}
-                 onChange={e => setInputs({ ...inputs, [f.key]: e.target.value })} />
-        </label>
-      ))}
+      {primary.map(renderField)}
+      {advanced.length > 0 && (
+        <details>
+          <summary style={{ cursor: 'pointer' }}>更多设置（{advanced.length}）</summary>
+          <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+            {advanced.map(renderField)}
+          </div>
+        </details>
+      )}
       <button onClick={onSave}>保存配置</button>
+    </div>
+  )
+}
+
+// 空 schema 通道（free_kv）：用户自行添加任意 key/value 字段。
+function FreeKvEditor({ agentId, channel, onSaved }: {
+  agentId: string; channel: string; onSaved: (message: string) => void
+}) {
+  const [rows, setRows] = useState<{ k: string; v: string }[]>([{ k: '', v: '' }])
+  const updateRow = (i: number, patch: Partial<{ k: string; v: string }>) =>
+    setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  const save = async () => {
+    const r = await apply(agentId, freeKvToPatch(channel, rows))
+    onSaved(r.ok ? '已保存' + (r.removed.length ? `（清理：${r.removed.join(', ')}）` : '') : '保存失败')
+  }
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      {rows.map((row, i) => (
+        <div key={i} style={{ display: 'flex', gap: 6 }}>
+          <input placeholder="字段名" value={row.k}
+                 onChange={e => updateRow(i, { k: e.target.value })} />
+          <input placeholder="值" value={row.v}
+                 onChange={e => updateRow(i, { v: e.target.value })} />
+        </div>
+      ))}
+      <button onClick={() => setRows([...rows, { k: '', v: '' }])}>+ 添加字段</button>
+      <button onClick={save}>保存配置</button>
     </div>
   )
 }
