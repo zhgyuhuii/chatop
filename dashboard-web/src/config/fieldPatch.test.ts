@@ -13,4 +13,11 @@ describe('fieldPatch', () => {
       .toEqual({ api_key: 'sk-1', auto_approve: true })
     expect(buildGroupPatch(fields, { api_key: '' })).toEqual({})
   })
+  it('buildGroupPatch coerces number-kind fields, skips empty/NaN', () => {
+    const fields = [{ key: 'gateway.port', kind: 'number' }] as never[]
+    expect(buildGroupPatch(fields, { 'gateway.port': '18789' }))
+      .toEqual({ gateway: { port: 18789 } })
+    expect(buildGroupPatch(fields, { 'gateway.port': '' })).toEqual({})
+    expect(buildGroupPatch(fields, { 'gateway.port': 'abc' })).toEqual({})
+  })
 })

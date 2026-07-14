@@ -7,7 +7,8 @@ SCHEMA = json.dumps({"properties": {"channels": {"properties": {
     "telegram": {"properties": {
         "botToken": {"type": "string", "description": "机器人 Token"},
         "silent": {"type": "boolean", "default": False},
-        "mode": {"type": "string", "enum": ["poll", "webhook"]}}},
+        "mode": {"type": "string", "enum": ["poll", "webhook"]},
+        "port": {"type": "integer", "default": 18789}}},
     "twitch": {"properties": {}},
 }}}})
 
@@ -19,6 +20,7 @@ def test_parse_channel_fields_maps_types_and_secret():
     assert tg["botToken"]["help"] == "机器人 Token"
     assert tg["silent"]["kind"] == "bool"
     assert tg["mode"]["kind"] == "select" and tg["mode"]["options"] == ["poll", "webhook"]
+    assert tg["port"]["kind"] == "number"
     assert fields["twitch"] == []
 
 def test_parse_channel_fields_bad_json():

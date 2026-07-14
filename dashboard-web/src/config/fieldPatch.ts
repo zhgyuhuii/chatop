@@ -12,6 +12,12 @@ export function buildGroupPatch(fields: FieldLike[], values: Record<string, unkn
   for (const f of fields) {
     const v = values[f.key]
     if (f.kind === 'bool') { if (v !== undefined) setDotted(patch, f.key, !!v) }
+    else if (f.kind === 'number') {
+      if (v !== undefined && v !== '') {
+        const n = Number(v)
+        if (!Number.isNaN(n)) setDotted(patch, f.key, n)
+      }
+    }
     else if (v !== undefined && v !== '') setDotted(patch, f.key, v)
   }
   return patch

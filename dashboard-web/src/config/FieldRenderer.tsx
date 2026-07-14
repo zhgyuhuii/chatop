@@ -15,6 +15,13 @@ export default function FieldRenderer({ field, value, onChange }: {
         {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </label>)
+  if (field.kind === 'number') return (
+    <label style={{ display: 'grid', gap: 2, fontSize: 12 }}>
+      <span>{field.label}</span>
+      <input type="number" placeholder={field.placeholder || ''}
+             value={(value as string) || ''} onChange={e => onChange(e.target.value)} />
+      {field.help && <span className="muted" style={{ fontSize: 11 }}>{field.help}</span>}
+    </label>)
   return (
     <label style={{ display: 'grid', gap: 2, fontSize: 12 }}>
       <span>{field.label}</span>

@@ -19,6 +19,7 @@ FIELD_SECRET = "secret"       # 密钥类，前端 type=password，脱敏回显
 FIELD_SELECT = "select"
 FIELD_BOOL = "bool"
 FIELD_MODEL = "model"         # 模型选择器（配合 models 服务的下拉）
+FIELD_NUMBER = "number"       # 数值类（integer/number schema），保存时数值化，不落盘为字符串
 
 # 认证流程种类 —— 前端据此决定「就地出什么交互」
 AUTH_QR = "qr"                # 扫码（微信/企业微信/WhatsApp）

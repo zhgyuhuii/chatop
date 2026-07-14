@@ -265,6 +265,8 @@ def _schema_kind(name, fspec):
         return "select"
     if fspec.get("type") == "boolean":
         return "bool"
+    if fspec.get("type") in ("integer", "number"):
+        return "number"
     if _is_secret_name(name):
         return "secret"
     return "text"

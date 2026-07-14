@@ -18,8 +18,8 @@ from ..core.types import (AgentDescriptor, AgentStatus, ApplyResult,
                           AuthFlowDescriptor, Diagnostic, Event, FieldSpec,
                           Group)
 from ..core.types import (AUTH_BUILTIN, AUTH_TOKEN, FIELD_BOOL, FIELD_MODEL,
-                          FIELD_SECRET, FIELD_SELECT, FIELD_TEXT, LEVEL_ERROR,
-                          LEVEL_OK, LEVEL_WARN)
+                          FIELD_NUMBER, FIELD_SECRET, FIELD_SELECT, FIELD_TEXT,
+                          LEVEL_ERROR, LEVEL_OK, LEVEL_WARN)
 
 # 烤入字段表：(key, 中文名, kind, secret, help, options, apply_url)
 _FIELDS = [
@@ -28,7 +28,7 @@ _FIELDS = [
      "https://hermes-agent.nousresearch.com/"),
     ("model", "模型", FIELD_MODEL, False,
      "Hermes 使用的模型；可从「模型」页拉取清单。", [], None),
-    ("temperature", "采样温度", FIELD_TEXT, False,
+    ("temperature", "采样温度", FIELD_NUMBER, False,
      "0–2，越大越发散。默认 0.7。", [], None),
     ("auto_approve", "自动批准工具调用", FIELD_BOOL, False,
      "开启后 Hermes 执行工具无需逐次确认（谨慎）。", [], None),
