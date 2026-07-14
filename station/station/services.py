@@ -18,7 +18,8 @@ def resolve(name: str) -> Path:
     cur = SERVICES_DIR / name / "current"
     try:
         if cur.is_dir():  # is_dir() 对悬空软链返回 False
-            return cur.resolve()
+            return cur  # 返回符号链接本身（活链），不要 resolve() 解引用成固定物理路径，
+            # 否则进程启动时挂载的 StaticFiles 之类会锁死首次解出的版本，后续热更换链不生效
     except OSError:
         pass
     return FACTORY_DIR / name
