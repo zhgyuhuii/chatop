@@ -6,8 +6,8 @@ const BASE = '/dashboard/api/agent-config'
 export type AuthKind = 'qr' | 'token' | 'code' | 'webhook' | 'oauth' | 'builtin'
 
 export interface FieldSpec {
-  key: string; label: string; kind: string; secret: boolean; help: string
-  options: string[]; apply_url: string | null; placeholder: string; value: unknown
+  key: string; label: string; kind: string; secret?: boolean; advanced?: boolean; help?: string
+  options?: string[]; apply_url?: string | null; placeholder?: string; value?: unknown
 }
 export interface ChannelSummary {
   id: string; label: string; auth: AuthKind; enabled: boolean; installed: boolean
@@ -22,7 +22,7 @@ export interface AgentStatus {
 export interface AuthFlow {
   kind: AuthKind; target: string; label: string; fields: FieldSpec[]
   apply_url: string | null; tutorial_id: string | null; webhook_url: string | null
-  cmd: string[] | null; hint: string
+  cmd: string[] | null; hint: string; free_kv?: boolean
 }
 export interface ModelInfo { key: string; label: string; source: 'live' | 'snapshot' }
 export interface ModelsResult { ok: boolean; source: string; models: ModelInfo[]; reason: string }
