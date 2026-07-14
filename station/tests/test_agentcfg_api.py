@@ -136,3 +136,14 @@ async def test_health_endpoint(tmp_path):
         r = await c.post(P + "/openclaw/health")
         assert r.status_code == 200
         assert isinstance(r.json(), list)
+
+
+async def test_providers_endpoint(tmp_path):
+    app = _app(tmp_path)
+    async with _client(app) as c:
+        r = await c.get(P + "/openclaw/providers")
+        assert r.status_code == 200
+        ids = {p["id"] for p in r.json()["providers"]}
+        assert {"deepseek", "github-copilot"} <= ids
+        dv = next(p for p in r.json()["providers"] if p["id"] == "deepseek")
+        assert dv["has_live"] is True and dv["auth_kind"] == "key"

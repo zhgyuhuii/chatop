@@ -101,6 +101,11 @@ def register_agentcfg_routes(app: FastAPI, hub: EventHub,
         _require_engine()
         return _providers.verify_and_list(req.provider, req.api_key, req.base_url)
 
+    @app.get(P + "/{agent_id}/providers")
+    def cfg_providers(agent_id: str) -> dict:
+        _require_engine()
+        return {"providers": _providers.list_providers()}
+
     @app.get(P + "/{agent_id}/auth-flow")
     def cfg_auth_flow(agent_id: str, channel: str) -> dict:
         return _adapter(agent_id).auth_flow(channel).to_dict()
