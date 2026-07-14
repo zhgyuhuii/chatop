@@ -144,3 +144,30 @@ def verify_and_list(provider: str, api_key: str = "", base_url: Optional[str] = 
 def _result(ok: bool, source: str, models: list[ModelInfo], reason: str) -> dict:
     return {"ok": ok, "source": source,
             "models": [m.to_dict() for m in models], "reason": reason}
+
+
+def _load_curated():
+    """读 openclaw-tool 的 MODEL_PROVIDERS 策展表（复用单一真源，不重抄）。"""
+    try:
+        from ..adapters import _openclaw_tool as _tool
+        ov = _tool.load("catalog_overrides")
+        return list(ov.MODEL_PROVIDERS)
+    except Exception:
+        return []
+
+
+def list_providers() -> list:
+    """合并策展 provider（label/auth/apply_url）与实时端点表（has_live）。"""
+    out = []
+    seen = set()
+    for pid, label, auth, env_var, apply_url in _load_curated():
+        seen.add(pid)
+        out.append({"id": pid, "label": label,
+                    "auth_kind": "oauth" if auth == "oauth" else "key",
+                    "has_live": pid in _ENDPOINTS, "apply_url": apply_url,
+                    "env_var": env_var})
+    for pid in _ENDPOINTS:
+        if pid not in seen:
+            out.append({"id": pid, "label": pid, "auth_kind": "key",
+                        "has_live": True, "apply_url": None, "env_var": None})
+    return out

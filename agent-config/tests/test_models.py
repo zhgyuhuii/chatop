@@ -44,3 +44,13 @@ def test_ollama_uses_tags_endpoint():
 def test_unknown_provider_returns_snapshot():
     r = providers.verify_and_list("xiaomi", "", opener=lambda *a, **k: (200, b"{}"))
     assert r["source"] == types.SRC_SNAPSHOT
+
+
+def test_list_providers_merges_curated_and_live():
+    provs = providers.list_providers()
+    by = {p["id"]: p for p in provs}
+    assert "deepseek" in by and by["deepseek"]["has_live"] is True
+    assert by["deepseek"]["auth_kind"] == "key"
+    assert "github-copilot" in by and by["github-copilot"]["auth_kind"] == "oauth"
+    assert by["byteplus"]["has_live"] is False
+    assert "label" in by["deepseek"] and "apply_url" in by["deepseek"]
