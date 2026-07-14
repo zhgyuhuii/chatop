@@ -183,3 +183,19 @@ def test_auth_flow_empty_schema_is_free_kv(home):
     a = OpenClawAdapter(home=home)
     af = a.auth_flow("twitch")
     assert af.free_kv is True and af.fields == []
+
+
+def test_check_connectivity_reads_channel_cfg(home, monkeypatch):
+    from agentconfig.connectivity import probes
+    a = OpenClawAdapter(home=home)
+    a.apply({"channels": {"telegram": {"enabled": True, "botToken": "123:abc"}}})
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a2, **k: (200, {"ok": True, "result": {"username": "b"}}, None))
+    d = a.check_connectivity("telegram")
+    assert d.level == types.LEVEL_OK
+
+
+def test_check_connectivity_unconfigured_channel_warns(home):
+    a = OpenClawAdapter(home=home)
+    d = a.check_connectivity("telegram")
+    assert d.level == types.LEVEL_WARN  # 没配 → probe 判 empty

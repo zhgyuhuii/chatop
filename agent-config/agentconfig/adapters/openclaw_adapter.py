@@ -359,6 +359,13 @@ class OpenClawAdapter:
         subprocess.Popen(["bash", "-lc", script], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # ---------- 连通性 ----------
+    def check_connectivity(self, channel: str):
+        from ..connectivity import probes
+        cfg = self.read_config(redact=False)
+        ch_cfg = (cfg.get("channels") or {}).get(channel) or {}
+        return probes.check(channel, ch_cfg)
+
     # ---------- 体检 ----------
     def health_check(self) -> list[Diagnostic]:
         diags: list[Diagnostic] = []
