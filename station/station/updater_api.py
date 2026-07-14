@@ -58,6 +58,23 @@ def _active_version(name: str) -> str:
     return "factory"
 
 
+def _factory_dir() -> Path:
+    """调用期从 env 读出厂目录，跟 _services_dir() 对称，避免 import 期钉死。"""
+    return Path(os.environ.get("CHATOP_FACTORY_DIR", str(services.FACTORY_DIR)))
+
+
+def _resolve_path(name: str) -> Path:
+    """镜像 services.resolve()，但服务区/出厂目录都在调用期读 env——
+    跟 _active_version() 用同一份 _services_dir()，避免 runtime 覆盖下两者分家。"""
+    cur = _services_dir() / name / "current"
+    try:
+        if cur.is_dir():
+            return cur
+    except OSError:
+        pass
+    return _factory_dir() / name
+
+
 def create_router() -> APIRouter:
     r = APIRouter(prefix="/dashboard/api/updater")
 
@@ -65,7 +82,7 @@ def create_router() -> APIRouter:
     def versions():
         return {"services": [
             {"name": n, "active": _active_version(n),
-             "path": str(services.resolve(n))}
+             "path": str(_resolve_path(n))}
             for n in _SERVICE_NAMES
         ]}
 

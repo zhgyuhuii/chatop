@@ -14,8 +14,14 @@ def _client(tmp_path):
 
 
 def test_versions_endpoint_lists_services(tmp_path, monkeypatch):
-    monkeypatch.setenv("CHATOP_SERVICES_DIR", str(tmp_path / "services"))
+    services_dir = tmp_path / "services"
+    monkeypatch.setenv("CHATOP_SERVICES_DIR", str(services_dir))
     monkeypatch.setenv("CHATOP_FACTORY_DIR", str(tmp_path / "factory"))
+    # station 有一个活的 current 软链 -> path 必须按调用期的 CHATOP_SERVICES_DIR
+    # 解析，而不是 services.py 里 import 期钉死的默认目录，否则 path/active 会分家。
+    ver_dir = services_dir / "station" / "1.6.0"
+    ver_dir.mkdir(parents=True)
+    (services_dir / "station" / "current").symlink_to("1.6.0")
     c = _client(tmp_path)
     r = c.get("/dashboard/api/updater/versions")
     assert r.status_code == 200
@@ -23,6 +29,9 @@ def test_versions_endpoint_lists_services(tmp_path, monkeypatch):
     assert "services" in body
     names = {s["name"] for s in body["services"]}
     assert {"station", "agent-config", "dashboard-web", "openclaw-tool"} <= names
+    station = next(s for s in body["services"] if s["name"] == "station")
+    assert station["active"] == "1.6.0"
+    assert str(services_dir) in station["path"]
 
 
 import hashlib, hmac, json, tarfile
