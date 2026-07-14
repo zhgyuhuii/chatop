@@ -10,3 +10,10 @@ PORT = int(os.environ.get("STATION_PORT", "8787"))
 CATALOG_PATH = Path(os.environ.get("APPS_CATALOG", "/etc/chatop/apps-catalog.json"))
 NICKNAME = os.environ.get("STATION_NICKNAME", os.environ.get("HOSTNAME", "workstation"))
 WEB_DIR = Path(__file__).parent / "web"
+
+from . import services  # noqa: E402  放文件末尾避免循环 import
+
+
+def web_dir():
+    """dashboard-web 生效 dist 目录：卷内 current/dist，缺失回退 factory/dashboard-web/dist。"""
+    return services.resolve("dashboard-web") / "dist"
