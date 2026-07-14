@@ -26,6 +26,7 @@ export interface AuthFlow {
 }
 export interface ModelInfo { key: string; label: string; source: 'live' | 'snapshot' }
 export interface ModelsResult { ok: boolean; source: string; models: ModelInfo[]; reason: string }
+export interface ProviderInfo { id: string; label: string; auth_kind: string; has_live: boolean; apply_url?: string | null }
 export interface Tutorial {
   id: string; label: string; auth: string; steps: string[]
   credential_fields: string[]; apply_url: string | null; docs_url: string
@@ -72,8 +73,10 @@ export const describe = (id: string) => getJson<Descriptor>(`/${id}/describe`)
 export const getConfig = (id: string) => getJson<Record<string, unknown>>(`/${id}/config`)
 export const apply = (id: string, patch: unknown) =>
   postJson<{ ok: boolean; removed: string[]; message: string }>(`/${id}/apply`, { patch })
-export const fetchModels = (id: string, provider: string, apiKey: string) =>
-  postJson<ModelsResult>(`/${id}/models`, { provider, api_key: apiKey })
+export const fetchProviders = (id: string) =>
+  getJson<{ providers: ProviderInfo[] }>(`/${id}/providers`).then(r => r.providers)
+export const fetchModels = (id: string, provider: string, apiKey: string, baseUrl?: string) =>
+  postJson<ModelsResult>(`/${id}/models`, { provider, api_key: apiKey, base_url: baseUrl || undefined })
 export const authFlow = (id: string, channel: string) =>
   getJson<AuthFlow>(`/${id}/auth-flow?channel=${encodeURIComponent(channel)}`)
 export const startAuthFlow = (id: string, channel: string, inputs: Record<string, unknown> = {}) =>
