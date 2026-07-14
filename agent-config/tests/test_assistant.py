@@ -60,3 +60,9 @@ def test_llm_unavailable_degrades():
             raise LLMUnavailable("down")
     r = planner.respond("接入企业微信", llm=Boom())
     assert r["mode"] == "intent_degraded" and r.get("channel") == "wecom"
+
+
+def test_provider_alias_has_no_ghost_qwen():
+    from agentconfig.assistant import planner
+    vals = set(planner._PROVIDER_ALIASES.values())
+    assert "qwen" not in vals

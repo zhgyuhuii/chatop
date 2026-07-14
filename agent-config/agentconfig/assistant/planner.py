@@ -32,7 +32,7 @@ _PROVIDER_ALIASES = {
     "gpt": "openai", "claude": "anthropic", "anthropic": "anthropic",
     "kimi": "moonshot", "月之暗面": "moonshot", "moonshot": "moonshot",
     "智谱": "zai", "glm": "zai", "zai": "zai", "豆包": "volcengine",
-    "火山": "volcengine", "通义": "qwen", "千问": "qwen", "ollama": "ollama",
+    "火山": "volcengine", "ollama": "ollama",
     "mistral": "mistral", "groq": "groq", "cohere": "cohere",
 }
 
