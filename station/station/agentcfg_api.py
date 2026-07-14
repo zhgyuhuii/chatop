@@ -147,6 +147,13 @@ def register_agentcfg_routes(app: FastAPI, hub: EventHub,
     def cfg_health(agent_id: str) -> list[dict]:
         return [d.to_dict() for d in _adapter(agent_id).health_check()]
 
+    @app.post(P + "/{agent_id}/connectivity/{channel}")
+    def cfg_connectivity(agent_id: str, channel: str) -> dict:
+        adapter = _adapter(agent_id)
+        if not hasattr(adapter, "check_connectivity"):
+            raise HTTPException(400, f"{agent_id} 不支持连通性校验")
+        return adapter.check_connectivity(channel).to_dict()
+
     @app.post(P + "/assistant")
     def cfg_assistant(req: AssistantReq) -> dict:
         _require_engine()

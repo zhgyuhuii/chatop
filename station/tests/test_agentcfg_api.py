@@ -147,3 +147,18 @@ async def test_providers_endpoint(tmp_path):
         assert {"deepseek", "github-copilot"} <= ids
         dv = next(p for p in r.json()["providers"] if p["id"] == "deepseek")
         assert dv["has_live"] is True and dv["auth_kind"] == "key"
+
+
+async def test_connectivity_endpoint(tmp_path, monkeypatch):
+    app = _app(tmp_path)
+    from agentconfig.connectivity import probes
+    monkeypatch.setattr(probes, "_http_json",
+                        lambda *a, **k: (200, {"ok": True, "result": {"username": "b"}}, None))
+    async with _client(app) as c:
+        await c.post(P + "/openclaw/apply", json={
+            "patch": {"channels": {"telegram": {"enabled": True, "botToken": "123:abc"}}}})
+        r = await c.post(P + "/openclaw/connectivity/telegram")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["level"] == "ok"
+        assert "message" in body and "id" in body
