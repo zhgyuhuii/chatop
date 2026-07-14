@@ -313,6 +313,14 @@ COPY --from=dashweb /src/dist/ /opt/station/station/web/
 # 智能体统一配置中心引擎库（纯 stdlib，无需装依赖；station 经 PYTHONPATH 导入，
 # 复用 /opt/openclaw-tool 的纯模块）。缺失时 agentcfg 路由降级 503，不影响大屏。
 COPY agent-config/agentconfig/ /opt/agent-config/agentconfig/
+# === 出厂服务 bundle（首启播种源 + 兜底；不重打镜像热更从这里 seed 到卷 ~/.chatop/services）===
+COPY station/station/          /opt/chatop/factory/station/station/
+COPY --from=dashweb /src/dist/ /opt/chatop/factory/dashboard-web/dist/
+COPY agent-config/agentconfig/ /opt/chatop/factory/agent-config/agentconfig/
+COPY openclaw-tool/            /opt/chatop/factory/openclaw-tool/
+COPY VERSION                   /opt/chatop/factory/VERSION
+COPY app-manager/chatop-seed-services.sh /usr/local/bin/chatop-seed-services.sh
+RUN sed -i 's/\r$//' /usr/local/bin/chatop-seed-services.sh && chmod +x /usr/local/bin/chatop-seed-services.sh
 RUN sed -i 's/\r$//' /usr/local/bin/start-station.sh /usr/local/bin/start-config-window.sh && \
     chmod +x /usr/local/bin/start-station.sh /usr/local/bin/start-config-window.sh && \
     mkdir -p /opt/chatop-seed-home/.config/autostart && \
@@ -365,7 +373,7 @@ RUN printf '%s\n' \
   > /usr/local/bin/start-filebrowser.sh && chmod +x /usr/local/bin/start-filebrowser.sh
 
 # === custom_startup（常驻，末尾 wait；否则被 KASM_PROCS 判死无限重启拖垮 VNC） ===
-RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/start-station.sh >/tmp/station.log 2>&1 &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/chatop-seed-services.sh >/tmp/seed-services.log 2>&1\n( while true; do /usr/local/bin/start-station.sh >/tmp/station.log 2>&1; sleep 1; done ) &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 
 # === 注入定制前端 dist（放最后：前端迭代只重跑这层）+ 品牌图标/splash 覆盖 ===
