@@ -17,10 +17,22 @@ OPEN_COMMANDS: dict[str, list[str] | None] = {
     "openhuman": None,
 }
 
+def _openclaw_dir() -> str:
+    """openclaw-tool 生效目录：跟随 start-station.sh 导出的 OPENCLAW_TOOL_DIR
+    （热更后指向卷内 resolve() 出的当前版本），未设置时回落镜像出厂路径。"""
+    return os.environ.get("OPENCLAW_TOOL_DIR", "/opt/openclaw-tool")
+
+
+def _openclaw_config_cmd() -> list[str]:
+    return ["python3.11", f"{_openclaw_dir()}/openclaw_config_gui.py"]
+
+
 # 打开配置界面：openclaw → openclaw-tool 可视化配置器(tkinter)；hermes → hermes setup；
 # claude/codex 配置在其 CLI 内；openhuman 配置在应用内
-CONFIG_COMMANDS: dict[str, list[str] | None] = {
-    "openclaw": ["python3.11", "/opt/openclaw-tool/openclaw_config_gui.py"],
+# openclaw 的值是个可调用对象而非固定 list：必须在调用期（而非 import 期）读
+# OPENCLAW_TOOL_DIR，否则热更换了 openclaw-tool 版本后配置器还是打开旧目录的脚本。
+CONFIG_COMMANDS: dict[str, list[str] | None | Callable[[], list[str]]] = {
+    "openclaw": _openclaw_config_cmd,
     "hermes": ["chatop-run-cli", "hermes", "setup"],
     "claude-code": ["chatop-run-cli", "claude"],
     "codex": ["chatop-run-cli", "codex", "login"],
@@ -46,6 +58,8 @@ def _run(table: dict, agent_id: str, spawn: Callable, post: Callable) -> dict:
     if agent_id not in table:
         raise KeyError(f"no action for agent {agent_id}")
     cmd = table[agent_id]
+    if callable(cmd):
+        cmd = cmd()
     if cmd is None:
         post("/apps/launch", {"id": agent_id})
     else:
