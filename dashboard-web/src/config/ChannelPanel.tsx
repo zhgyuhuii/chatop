@@ -20,8 +20,8 @@ export function splitFields<T extends { advanced?: boolean }>(fields: T[]) {
   return { primary: fields.filter(f => !f.advanced), advanced: fields.filter(f => f.advanced) }
 }
 
-export default function ChannelPanel({ agentId, channels, flowEvents }: {
-  agentId: string; channels: ChannelSummary[]; flowEvents: ConfigEvent[]
+export default function ChannelPanel({ agentId, channels, flowEvents, activeChannel }: {
+  agentId: string; channels: ChannelSummary[]; flowEvents: ConfigEvent[]; activeChannel?: string
 }) {
   const [active, setActive] = useState<string>('')
   const [flow, setFlow] = useState<AuthFlow | null>(null)
@@ -39,6 +39,15 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
     const [f, t] = await Promise.all([authFlow(agentId, ch.id), getTutorial(agentId, ch.id)])
     setFlow(f); setTut(t)
   }
+
+  // 助手动作（open_auth_flow）deep-link 指定通道：仅在传入值变化时展开/选中该通道，
+  // 不在每次渲染重复触发，避免覆盖用户手动点选的 active。
+  useEffect(() => {
+    if (!activeChannel) return
+    const ch = channels.find(c => c.id === activeChannel)
+    if (ch) open(ch)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChannel])
 
   // 监听 SSE：抓到本通道二维码矩阵就渲染。
   useEffect(() => {

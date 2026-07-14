@@ -14,8 +14,8 @@ export function buildModelPatch(agentId: string, primary: string, fallbacks: str
   return { agents: { defaults: { model } } }
 }
 
-export default function ModelPanel({ agentId, desc, onSaved }: {
-  agentId: string; desc: Descriptor | null; onSaved: () => void
+export default function ModelPanel({ agentId, desc, onSaved, initialProvider }: {
+  agentId: string; desc: Descriptor | null; onSaved: () => void; initialProvider?: string
 }) {
   const [providers, setProviders] = useState<ProviderInfo[]>([])
   const [provider, setProvider] = useState('')
@@ -42,6 +42,11 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
   useEffect(() => {
     if (!provider && providers[0]) setProvider(providers[0].id)
   }, [providers, provider])
+
+  // 助手动作（open_model_panel）deep-link 指定厂商时切换选中，仅在传入值变化时触发。
+  useEffect(() => {
+    if (initialProvider) setProvider(initialProvider)
+  }, [initialProvider])
 
   useEffect(() => {
     setFallbacks(readFallbacks(agentId, desc))

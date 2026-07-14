@@ -10,12 +10,22 @@ import AssistantChat from './AssistantChat'
 import GroupRenderer from './GroupRenderer'
 import { t } from '../i18n'
 
+// 助手动作 → UI 目标态的纯归约函数。open_auth_flow 带 channel 时归约为 { channel }，
+// open_model_panel 带 provider 时归约为 { provider }，其余（未知 action / 缺目标）归约为 {}。
+export function actionToTarget(a: { type: string; channel?: string; provider?: string }) {
+  if (a.type === 'open_auth_flow' && a.channel) return { channel: a.channel }
+  if (a.type === 'open_model_panel' && a.provider) return { provider: a.provider }
+  return {}
+}
+
 // 智能体统一配置中心。openclaw / hermes 一期；claude-code 等仅在总览显示状态。
 export default function ConfigCenter() {
   const [agents, setAgents] = useState<AgentStatus[]>([])
   const [agentId, setAgentId] = useState('openclaw')
   const [desc, setDesc] = useState<Descriptor | null>(null)
   const [diags, setDiags] = useState<Diagnostic[]>([])
+  const [activeChannel, setActiveChannel] = useState<string>()
+  const [activeProvider, setActiveProvider] = useState<string>()
   const flowEvents = useConfigEvents()
 
   const reloadAgents = () => getAgents().then(setAgents).catch(() => {})
@@ -60,7 +70,8 @@ export default function ConfigCenter() {
           </div>
         )}
 
-        <ModelPanel agentId={agentId} desc={desc} onSaved={() => { reloadDesc(); reloadAgents() }} />
+        <ModelPanel agentId={agentId} desc={desc} initialProvider={activeProvider}
+                    onSaved={() => { reloadDesc(); reloadAgents() }} />
 
         {desc?.groups
           .filter(g => g.id !== 'channels' && g.id !== 'model' && g.fields.some(f => f.kind !== 'model'))
@@ -68,7 +79,8 @@ export default function ConfigCenter() {
                                    onSaved={() => { reloadDesc(); reloadAgents() }} />)}
 
         {channelGroup && channelGroup.channels.length > 0 && (
-          <ChannelPanel agentId={agentId} channels={channelGroup.channels} flowEvents={flowEvents} />
+          <ChannelPanel agentId={agentId} channels={channelGroup.channels} flowEvents={flowEvents}
+                        activeChannel={activeChannel} />
         )}
         {agentId === 'openclaw' && channelGroup && channelGroup.channels.length === 0 && (
           <div className="panel muted" style={{ fontSize: 12 }}>
@@ -78,7 +90,12 @@ export default function ConfigCenter() {
       </div>
 
       <AssistantChat agentId={agentId}
-        onAction={a => { if (a.channel || a.provider) reloadDesc() }} />
+        onAction={a => {
+          const tgt = actionToTarget(a)
+          if (tgt.channel) setActiveChannel(tgt.channel)
+          if (tgt.provider) setActiveProvider(tgt.provider)
+          if (tgt.channel || tgt.provider) reloadDesc()
+        }} />
     </div>
   )
 }
