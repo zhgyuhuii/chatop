@@ -83,6 +83,10 @@ def test_apply_endpoint_applies_bundle(tmp_path, monkeypatch):
     monkeypatch.setenv("CHATOP_FACTORY_DIR", str(tmp_path / "factory"))
     monkeypatch.setenv("CHATOP_UPDATER_INBOX", str(tmp_path / "inbox"))
     monkeypatch.setenv("CHATOP_LICENSE_KEYS_FILE", str(tmp_path / "keys.json"))
+    # agent-config 是 reload 服务，/apply 成功后会写 pending-restart 标记；
+    # 指到 tmp_path 避免碰真实 $HOME/.chatop，且 CHATOP_RESTART_ENABLE 不设，
+    # 不会触发对 pytest 自身进程的 SIGTERM。
+    monkeypatch.setenv("CHATOP_RESTART_MARKER", str(tmp_path / "pending-restart"))
     (tmp_path / "keys.json").write_text(json.dumps(
         {"active_key_id": 1, "hmac_keys": {"1": key.hex()}}))
     _make_inbox_bundle(tmp_path / "inbox", "agent-config", "1.6.0", key)
@@ -92,6 +96,41 @@ def test_apply_endpoint_applies_bundle(tmp_path, monkeypatch):
     assert r.status_code == 200 and r.json()["ok"] is True
     cur = tmp_path / "services" / "agent-config" / "current"
     assert (cur / "v.txt").read_text() == "1.6.0"
+
+
+def test_apply_reload_service_triggers_restart(tmp_path, monkeypatch):
+    from station import updater_api
+    key = b"k" * 32
+    _apply_env(tmp_path, monkeypatch, key)
+    monkeypatch.setenv("CHATOP_RESTART_MARKER", str(tmp_path / "pending-restart"))
+    calls = []
+    monkeypatch.setattr(updater_api, "_request_restart", lambda s: calls.append(s))
+    _make_inbox_bundle(tmp_path / "inbox", "agent-config", "1.6.0", key)
+    c = _client(tmp_path)
+    r = c.post("/dashboard/api/updater/apply",
+               json={"name": "agent-config", "version": "1.6.0", "health": "skip"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert calls == ["agent-config"]
+    assert "重启" in body["detail"]
+
+
+def test_apply_dashboard_web_no_restart(tmp_path, monkeypatch):
+    from station import updater_api
+    key = b"k" * 32
+    _apply_env(tmp_path, monkeypatch, key)
+    monkeypatch.setenv("CHATOP_RESTART_MARKER", str(tmp_path / "pending-restart"))
+    calls = []
+    monkeypatch.setattr(updater_api, "_request_restart", lambda s: calls.append(s))
+    _make_inbox_bundle(tmp_path / "inbox", "dashboard-web", "1.6.0", key)
+    c = _client(tmp_path)
+    r = c.post("/dashboard/api/updater/apply",
+               json={"name": "dashboard-web", "version": "1.6.0", "health": "skip"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert calls == []
 
 
 def _apply_env(tmp_path, monkeypatch, key):

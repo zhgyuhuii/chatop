@@ -5,6 +5,8 @@ import json
 import logging
 import os
 import re
+import signal
+import threading
 from pathlib import Path
 
 from fastapi import APIRouter, Body, HTTPException
@@ -16,7 +18,28 @@ _log = logging.getLogger(__name__)
 
 _SERVICE_NAMES = ["station", "agent-config", "dashboard-web", "openclaw-tool"]
 
+# 这些服务被 import 进 station 常驻进程里，热更后需要重启 station 才能加载新代码；
+# dashboard-web 是静态资源，走软链实时生效，不在此列。
+_RELOAD_SERVICES = {"station", "agent-config", "openclaw-tool"}
+
 _VERSION_RE = re.compile(r"^[\w.-]+$")
+
+
+def _restart_marker() -> Path:
+    return Path(os.environ.get("CHATOP_RESTART_MARKER", str(services.HOME / ".chatop/pending-restart")))
+
+
+def _request_restart(service: str) -> None:
+    """写 pending-restart 标记，并（仅当 CHATOP_RESTART_ENABLE=1）延迟给自身发 SIGTERM，
+    交由外层 supervisor(start-station.sh) 用新 current 重起 station。默认不发信号，测试环境安全。"""
+    m = _restart_marker()
+    try:
+        m.parent.mkdir(parents=True, exist_ok=True)
+        m.write_text(service)
+    except OSError as e:
+        _log.warning("写 restart 标记失败 %s: %s", m, e)
+    if os.environ.get("CHATOP_RESTART_ENABLE") == "1":
+        threading.Timer(1.0, lambda: os.kill(os.getpid(), signal.SIGTERM)).start()
 
 
 def _validate(name: str, version: str = "") -> None:
@@ -119,13 +142,20 @@ def create_router() -> APIRouter:
             raise HTTPException(400, f"manifest 解析失败: {e}")
         if manifest.get("name") != name or manifest.get("version") != version:
             raise HTTPException(400, "manifest 的 name/version 与请求不一致")
-        health = updater.http_health_check() if body.get("health") != "skip" else (lambda: True)
+        # reload 服务（station/agent-config/openclaw-tool）走进程内轮询体检没有意义——
+        # 真正的就绪校验是重启后由 start-station.sh 的外部健康门负责；这里直接放行。
+        health = (lambda: True) if (body.get("health") == "skip" or name in _RELOAD_SERVICES) \
+            else updater.http_health_check()
         try:
             res = updater.apply(tar_path, manifest, services_dir=_services_dir(),
                                 hmac_keys=_hmac_keys(), health_check=health)
         except BundleError as e:
             raise HTTPException(400, f"bundle verify failed: {e}")
-        return {"ok": res.ok, "name": res.name, "version": res.version, "detail": res.detail}
+        detail = res.detail
+        if res.ok and name in _RELOAD_SERVICES:
+            _request_restart(name)
+            detail = f"{detail}；station 重启中以加载新版本"
+        return {"ok": res.ok, "name": res.name, "version": res.version, "detail": detail}
 
     @r.post("/rollback")
     def rollback_bundle(body: dict = Body(...)):
