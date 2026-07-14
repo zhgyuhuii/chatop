@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  apply, authFlow, getTutorial, startAuthFlow, interactionFor, interactionLabel,
-  type ChannelSummary, type AuthFlow, type FieldSpec, type Tutorial,
+  apply, authFlow, getTutorial, startAuthFlow, checkConnectivity, interactionFor, interactionLabel,
+  type ChannelSummary, type AuthFlow, type FieldSpec, type Tutorial, type Diagnostic,
 } from './configApi'
 import QrCanvas from './QrCanvas'
 import FieldRenderer from './FieldRenderer'
@@ -29,6 +29,8 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
   const [qr, setQr] = useState<number[][] | null>(null)
   const [status, setStatus] = useState('')
   const [msg, setMsg] = useState('')
+  const [conn, setConn] = useState<Record<string, Diagnostic>>({})
+  const [testingConn, setTestingConn] = useState('')
 
   const open = async (ch: ChannelSummary) => {
     setActive(ch.id); setFlow(null); setTut(null); setQr(null); setStatus(''); setMsg('')
@@ -67,6 +69,16 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
     await startAuthFlow(agentId, active)
   }
 
+  const testConnectivity = async (channel: string) => {
+    setTestingConn(channel)
+    try {
+      const d = await checkConnectivity(agentId, channel)
+      setConn({ ...conn, [channel]: d })
+    } finally {
+      setTestingConn('')
+    }
+  }
+
   return (
     <div className="panel" style={{ display: 'grid', gap: 8 }}>
       <b>通道</b>
@@ -83,11 +95,23 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
 
       {flow && (
         <div className="panel" style={{ background: 'var(--panel-2)', display: 'grid', gap: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <b>{flow.label}</b>
             <span className="muted" style={{ fontSize: 12 }}>{interactionLabel(flow.kind)}</span>
           </div>
           {flow.hint && <div className="muted" style={{ fontSize: 12 }}>{flow.hint}</div>}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => testConnectivity(active)} disabled={testingConn === active}>
+              {testingConn === active ? '测试中…' : '测连通'}
+            </button>
+            {conn[active] && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <span className={'dot ' + (conn[active].level === 'ok' ? 'ok' : conn[active].level === 'warn' ? 'warn' : 'err')} />
+                <span className="muted">{conn[active].message}</span>
+              </span>
+            )}
+          </div>
 
           {/* 动态认证交互：按 kind 出不同界面；空 schema 通道走自由键值编辑器 */}
           {flow.free_kv ? (

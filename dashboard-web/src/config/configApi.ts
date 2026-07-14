@@ -84,5 +84,7 @@ export const startAuthFlow = (id: string, channel: string, inputs: Record<string
 export const getTutorial = (id: string, channel: string) =>
   getJson<Tutorial>(`/${id}/tutorial?channel=${encodeURIComponent(channel)}`)
 export const health = (id: string) => postJson<Diagnostic[]>(`/${id}/health`)
+export const checkConnectivity = (id: string, channel: string) =>
+  postJson<Diagnostic>(`/${id}/connectivity/${channel}`, {})
 export const askAssistant = (message: string, agent = 'openclaw', useLlm = true) =>
   postJson<AssistantReply>('/assistant', { message, agent, use_llm: useLlm })
