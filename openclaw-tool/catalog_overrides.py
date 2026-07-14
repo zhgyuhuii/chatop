@@ -115,3 +115,44 @@ SEARCH_APPLY_URLS = {
     "firecrawl": "https://www.firecrawl.dev/app/api-keys",
     "searxng": None,
 }
+
+# 通道字段策展覆盖：{通道id: {字段key: {label?, help?, apply_url?, order?}}}
+# 有条目 = 该字段提升为「主字段」（默认显示）；只补展示信息，不造字段（真源永远是 schema）。
+CHANNEL_FIELD_OVERRIDES = {
+    "telegram": {"channels.telegram.botToken": {
+        "label": "Bot Token", "help": "Telegram 找 @BotFather 创建机器人获取。",
+        "apply_url": "https://t.me/BotFather", "order": 0}},
+    "discord": {"channels.discord.token": {
+        "label": "Bot Token", "apply_url": "https://discord.com/developers/applications", "order": 0}},
+    "slack": {"channels.slack.botToken": {"label": "Bot Token (xoxb-)", "order": 0},
+              "channels.slack.appToken": {"label": "App Token (xapp-)", "order": 1},
+              "channels.slack.signingSecret": {"label": "Signing Secret", "order": 2}},
+    "feishu": {"channels.feishu.appId": {"label": "App ID (cli_)", "order": 0},
+               "channels.feishu.appSecret": {"label": "App Secret", "order": 1}},
+    "line": {"channels.line.channelAccessToken": {"label": "Channel Access Token", "order": 0},
+             "channels.line.channelSecret": {"label": "Channel Secret", "order": 1}},
+    "qqbot": {"channels.qqbot.appId": {"label": "App ID", "order": 0},
+              "channels.qqbot.token": {"label": "Token", "order": 1},
+              "channels.qqbot.appSecret": {"label": "App Secret", "order": 2}},
+    "matrix": {"channels.matrix.homeserver": {"label": "Homeserver 地址", "order": 0},
+               "channels.matrix.accessToken": {"label": "Access Token", "order": 1}},
+}
+
+
+def merge_field_overrides(cid, fields):
+    """叠策展信息到 schema 字段：补 label/help/apply_url；有策展条目或 secret=主字段(advanced=False)；
+    按 (advanced, order, name) 排序（主字段在前）。就地改 fields 内元素。"""
+    ovr = CHANNEL_FIELD_OVERRIDES.get(cid) or {}
+    for f in fields:
+        o = ovr.get(f.get("key")) or {}
+        if o.get("label"):
+            f["label"] = o["label"]
+        if o.get("help"):
+            f["help"] = o["help"]
+        if o.get("apply_url"):
+            f["apply_url"] = o["apply_url"]
+        f["advanced"] = not (f.get("secret") or f.get("key") in ovr)
+    fields.sort(key=lambda f: (f.get("advanced", True),
+                               ovr.get(f.get("key"), {}).get("order", 999),
+                               f.get("name", "")))
+    return fields
