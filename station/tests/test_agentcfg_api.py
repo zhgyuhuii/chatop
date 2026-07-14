@@ -81,8 +81,13 @@ async def test_auth_flow(tmp_path):
     async with _client(app) as c:
         r = await c.get(P + "/openclaw/auth-flow", params={"channel": "openclaw-weixin"})
         assert r.json()["kind"] == "qr"
+        # wecom 的 openclaw schema 为空壳（无字段）→ 走 free_kv 自由键值编辑器
         r2 = await c.get(P + "/openclaw/auth-flow", params={"channel": "wecom"})
-        assert r2.json()["kind"] == "token" and r2.json()["fields"]
+        assert r2.json()["kind"] == "token" and r2.json()["free_kv"] is True
+        # telegram 有真实 schema 字段（botToken 等）→ fields 非空
+        r3 = await c.get(P + "/openclaw/auth-flow", params={"channel": "telegram"})
+        assert r3.json()["fields"] and any(
+            f["key"] == "channels.telegram.botToken" for f in r3.json()["fields"])
 
 
 async def test_models_endpoint_falls_back(tmp_path):
