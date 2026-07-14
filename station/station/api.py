@@ -116,7 +116,9 @@ def create_app(store: TaskStore, hub: EventHub, dispatcher: Dispatcher,
     except Exception:  # pragma: no cover - 导入期异常也不应拖垮大屏
         pass
 
-    wd = web_dir or config.WEB_DIR
+    wd = web_dir or config.web_dir()
+    from .updater_api import create_router as _updater_router
+    app.include_router(_updater_router())
     if wd.is_dir():  # 前端产物存在才挂（后端单测不需要）
         app.mount("/dashboard", StaticFiles(directory=str(wd), html=True), name="web")
     return app
