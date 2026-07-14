@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, Body, HTTPException
@@ -10,7 +12,18 @@ from fastapi import APIRouter, Body, HTTPException
 from . import services, updater
 from .bundle import BundleError
 
+_log = logging.getLogger(__name__)
+
 _SERVICE_NAMES = ["station", "agent-config", "dashboard-web", "openclaw-tool"]
+
+_VERSION_RE = re.compile(r"^[\w.-]+$")
+
+
+def _validate(name: str, version: str = "") -> None:
+    if name not in _SERVICE_NAMES:
+        raise HTTPException(400, f"未知服务: {name!r}")
+    if version and (".." in version or not _VERSION_RE.match(version)):
+        raise HTTPException(400, f"非法版本号: {version!r}")
 
 
 def _services_dir() -> Path:
@@ -28,11 +41,13 @@ def _hmac_keys() -> dict:
     try:
         cfg = json.loads(path.read_text())
         return {str(k): bytes.fromhex(v) for k, v in (cfg.get("hmac_keys") or {}).items()}
-    except Exception:
+    except Exception as e:
+        _log.warning("读取许可密钥文件失败 %s: %s（回落 license gate）", path, e)
         try:
             from chatop_license.gate import hmac_keys as _lg
             return _lg()
-        except Exception:
+        except Exception as e2:
+            _log.warning("回落 license gate 也失败: %s", e2)
             return {}
 
 
@@ -58,11 +73,17 @@ def create_router() -> APIRouter:
     def apply_bundle(body: dict = Body(...)):
         name = str(body.get("name", ""))
         version = str(body.get("version", ""))
+        _validate(name, version)
         man_path = _inbox() / f"{name}-{version}.json"
         tar_path = _inbox() / f"{name}-{version}.tar.gz"
         if not man_path.exists() or not tar_path.exists():
             raise HTTPException(404, f"bundle {name}-{version} not found in inbox")
-        manifest = json.loads(man_path.read_text())
+        try:
+            manifest = json.loads(man_path.read_text())
+        except (OSError, ValueError) as e:
+            raise HTTPException(400, f"manifest 解析失败: {e}")
+        if manifest.get("name") != name or manifest.get("version") != version:
+            raise HTTPException(400, "manifest 的 name/version 与请求不一致")
         health = updater.http_health_check() if body.get("health") != "skip" else (lambda: True)
         try:
             res = updater.apply(tar_path, manifest, services_dir=_services_dir(),
@@ -74,6 +95,7 @@ def create_router() -> APIRouter:
     @r.post("/rollback")
     def rollback_bundle(body: dict = Body(...)):
         name = str(body.get("name", ""))
+        _validate(name)
         res = updater.rollback(name, services_dir=_services_dir())
         return {"ok": res.ok, "name": res.name, "version": res.version, "detail": res.detail}
 

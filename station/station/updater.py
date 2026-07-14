@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import os
 import tarfile
+import time
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
@@ -100,10 +102,11 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
 
 def http_health_check(url: str = "http://127.0.0.1:8787/dashboard/api/system",
                       timeout: float = 30.0, interval: float = 1.0) -> Callable[[], bool]:
-    """返回一个轮询就绪端点的健康检查闭包（供 apply 注入）。纯 stdlib urllib。"""
-    import time
-    import urllib.request
+    """返回一个轮询就绪端点的健康检查闭包（供 apply 注入）。纯 stdlib urllib。
 
+    注：仅探测 station 自身存活；按服务参数化就绪探测 + 重启后重载由 supervisor
+    集成（后续阶段）负责。
+    """
     def check() -> bool:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
