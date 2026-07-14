@@ -31,6 +31,9 @@ services:
       # 留空 = 关闭热更验签来源之一；要启用 /apply 必须设为厂商 bundle 签名密钥，
       # 且必须与 tools/build-bundle.sh 打包时用的 hex 密钥一致。切勿把真实密钥提交进 git。
       CHATOP_BUNDLE_HMAC_KEY: "${CHATOP_BUNDLE_HMAC_KEY:-}"
+      # 热更后自愈重启：/apply 切换 reload 类服务后自动重启 station 加载新版本；
+      # start-station 健康门在新版本 30s 内不就绪时自动回滚。
+      CHATOP_RESTART_ENABLE: "1"
     volumes:
       - chatop-home:/home/admin       # 家目录：智能体配置/密钥/工作区/已装应用
 
