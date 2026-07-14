@@ -31,4 +31,31 @@ fi
 
 # station 源可能在卷内 current/station（bundle 内层 station/），也可能出厂 /opt/station/station
 if [ -d "$STATION_DIR/station" ]; then cd "$STATION_DIR"; else cd /opt/station; fi
-exec /opt/station-venv/bin/python -m station
+
+MARKER="${CHATOP_RESTART_MARKER:-$HOME/.chatop/pending-restart}"
+HEALTH_URL="http://127.0.0.1:${STATION_PORT}/dashboard/api/system"
+HEALTH_TIMEOUT="${STATION_HEALTH_TIMEOUT:-30}"
+
+/opt/station-venv/bin/python -m station &
+STATION_PID=$!
+
+healthy=0
+for _ in $(seq 1 "$HEALTH_TIMEOUT"); do
+  if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then healthy=1; break; fi
+  kill -0 "$STATION_PID" 2>/dev/null || break   # 进程已退出，别再空等
+  sleep 1
+done
+
+if [ "$healthy" = "1" ]; then
+  rm -f "$MARKER"          # 本次启动/更新健康，清 pending 标记
+  wait "$STATION_PID"      # 常驻；退出后由外层 supervisor 循环重起
+else
+  if [ -s "$MARKER" ]; then
+    svc="$(cat "$MARKER" 2>/dev/null)"
+    rm -f "$MARKER"
+    echo "station 未在 ${HEALTH_TIMEOUT}s 内就绪，回滚服务 [$svc] 后重启" >&2
+    /opt/station-venv/bin/python -m station rollback "$svc" >/tmp/station-rollback.log 2>&1 || true
+  fi
+  kill "$STATION_PID" 2>/dev/null || true
+  exit 1                   # 交给外层 supervisor 用回滚后的 current 重起
+fi
