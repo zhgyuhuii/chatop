@@ -4,6 +4,7 @@ import {
   type Descriptor, type ModelInfo, type ProviderInfo,
 } from './configApi'
 import { readPrimaryModel, readFallbacks } from './modelPrimary'
+import { t } from '../i18n'
 
 // openclaw 写 agents.defaults.model.{primary,fallbacks}；hermes 只写裸 model 字段（无备选）。
 export function buildModelPatch(agentId: string, primary: string, fallbacks: string[]) {
@@ -56,7 +57,7 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
       const r = await fetchModels(agentId, provider, apiKey, baseUrl || undefined)
       setModels(r.models); setSource(r.source); setReason(r.reason)
       if (r.models[0]) setPrimary(r.models[0].key)
-    } catch { setReason('请求失败') } finally { setBusy(false) }
+    } catch { setReason(t('Request failed')) } finally { setBusy(false) }
   }
 
   const save = async () => {
@@ -65,16 +66,16 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
     try {
       const patch = buildModelPatch(agentId, primary, fallbacks)
       const r = await apply(agentId, patch)
-      setMsg(r.ok ? '已保存主模型：' + primary : '保存失败')
+      setMsg(r.ok ? t('Primary model saved: {model}', { model: primary }) : t('Save failed'))
       onSaved()
     } finally { setBusy(false) }
   }
 
   return (
     <div className="panel" style={{ display: 'grid', gap: 8 }}>
-      <b>模型</b>
+      <b>{t('Model')}</b>
       <div className="muted" style={{ fontSize: 12 }}>
-        当前主模型：{current || '未设置'}
+        {t('Current primary model:')}{current || t('Not set')}
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <select value={provider} onChange={e => setProvider(e.target.value)}>
@@ -83,25 +84,25 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
         {isOauth ? (
           <span style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
             {selected?.apply_url && (
-              <a href={selected.apply_url} target="_blank" rel="noreferrer">前往授权 ↗</a>
+              <a href={selected.apply_url} target="_blank" rel="noreferrer">{t('Go authorize ↗')}</a>
             )}
-            <span className="muted">授权后回来点获取模型</span>
+            <span className="muted">{t('Return here after authorizing, then fetch models')}</span>
           </span>
         ) : provider !== 'ollama' && (
           <input type="password" placeholder="API Key" value={apiKey}
                  onChange={e => setApiKey(e.target.value)} style={{ width: 220 }} />
         )}
-        <button disabled={busy} onClick={load}>获取模型</button>
+        <button disabled={busy} onClick={load}>{t('Fetch models')}</button>
       </div>
       {!isOauth && provider !== 'ollama' && (
         <label style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
           <input type="checkbox" checked={showAdvanced}
                  onChange={e => setShowAdvanced(e.target.checked)} />
-          高级
+          {t('Advanced')}
         </label>
       )}
       {showBaseUrl && (
-        <input placeholder="自定义端点 (base_url)，留空用默认" value={baseUrl}
+        <input placeholder={t('Custom endpoint (base_url), leave blank for default')} value={baseUrl}
                onChange={e => setBaseUrl(e.target.value)} style={{ width: 320, fontSize: 12 }} />
       )}
       {reason && <div className="muted" style={{ fontSize: 12,
@@ -109,17 +110,17 @@ export default function ModelPanel({ agentId, desc, onSaved }: {
       {models.length > 0 && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span className="muted" style={{ fontSize: 12 }}>
-            主模型（{source === 'live' ? '实时' : '快照'}）：
+            {t('Primary model ({source}):', { source: source === 'live' ? t('Live') : t('Snapshot') })}
           </span>
           <select value={primary} onChange={e => setPrimary(e.target.value)} style={{ minWidth: 240 }}>
             {models.map(m => <option key={m.key} value={m.key}>{m.key}</option>)}
           </select>
-          <button disabled={busy || !primary} onClick={save}>设为主模型</button>
+          <button disabled={busy || !primary} onClick={save}>{t('Set as primary')}</button>
         </div>
       )}
       {models.length > 0 && agentId !== 'hermes' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>备选模型（可多选）：</span>
+          <span className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t('Fallback models (multi-select):')}</span>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', maxWidth: 420 }}>
             {models.filter(m => m.key !== primary).map(m => (
               <label key={m.key} style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}>

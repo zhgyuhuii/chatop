@@ -6,6 +6,7 @@ import {
 import QrCanvas from './QrCanvas'
 import FieldRenderer from './FieldRenderer'
 import type { ConfigEvent } from './useConfigEvents'
+import { t as tr } from '../i18n'
 
 // 空 schema 通道的自由键值补丁：{k,v}[] -> { channels: { <id>: { enabled: true, ...kv } } }
 export function freeKvToPatch(channel: string, rows: { k: string; v: string }[]) {
@@ -45,9 +46,9 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
     for (const ev of flowEvents) {
       if (ev.channel && ev.channel !== active) continue
       if (ev.type === 'flow:qr_ready' && ev.matrix) setQr(ev.matrix)
-      if (ev.type === 'flow:qr_missing') setStatus(ev.reason || '未抓到二维码，请在终端窗口扫码')
-      if (ev.type === 'flow:connected') setStatus('已连接')
-      if (ev.type === 'flow:error') setStatus('扫码启动失败：' + (ev.reason || '未知错误'))
+      if (ev.type === 'flow:qr_missing') setStatus(ev.reason || tr('QR not captured yet, please scan in the terminal window'))
+      if (ev.type === 'flow:connected') setStatus(tr('Connected'))
+      if (ev.type === 'flow:error') setStatus(tr('Scan failed to start: {reason}', { reason: ev.reason || tr('Unknown error') }))
     }
   }, [flowEvents, active])
 
@@ -61,11 +62,13 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
       if (v) setDotted(nested, f.key, v)
     }
     const r = await apply(agentId, flow?.fields.length ? nested : patch)
-    setMsg(r.ok ? '已保存' + (r.removed.length ? `（清理：${r.removed.join(', ')}）` : '') : '保存失败')
+    setMsg(r.ok
+      ? (r.removed.length ? tr('Saved (cleaned up: {removed})', { removed: r.removed.join(', ') }) : tr('Saved'))
+      : tr('Save failed'))
   }
 
   const startScan = async () => {
-    setStatus('正在启动扫码…'); setQr(null)
+    setStatus(tr('Starting scan…')); setQr(null)
     await startAuthFlow(agentId, active)
   }
 
@@ -81,7 +84,7 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
 
   return (
     <div className="panel" style={{ display: 'grid', gap: 8 }}>
-      <b>通道</b>
+      <b>{tr('Channels')}</b>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 6 }}>
         {channels.map(ch => (
           <button key={ch.id} onClick={() => open(ch)}
@@ -103,7 +106,7 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => testConnectivity(active)} disabled={testingConn === active}>
-              {testingConn === active ? '测试中…' : '测连通'}
+              {testingConn === active ? tr('Testing…') : tr('Test connectivity')}
             </button>
             {conn[active] && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
@@ -123,23 +126,23 @@ export default function ChannelPanel({ agentId, channels, flowEvents }: {
 
           {flow.apply_url && (
             <a href={flow.apply_url} target="_blank" rel="noreferrer"
-               style={{ color: 'var(--accent)', fontSize: 12 }}>去申请凭据 / 开发者后台 ↗</a>
+               style={{ color: 'var(--accent)', fontSize: 12 }}>{tr('Apply for credentials / developer console ↗')}</a>
           )}
           {msg && <div style={{ fontSize: 12, color: 'var(--ok)' }}>{msg}</div>}
 
           {tut && (
             <details>
-              <summary style={{ cursor: 'pointer' }}>图文教程（{tut.steps.length} 步）</summary>
+              <summary style={{ cursor: 'pointer' }}>{tr('Tutorial ({n} steps)', { n: tut.steps.length })}</summary>
               <ol style={{ margin: '6px 0', paddingLeft: 18 }}>
                 {tut.steps.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
               </ol>
               {tut.troubleshooting?.length > 0 && (
                 <div className="muted" style={{ fontSize: 12 }}>
-                  排错：{tut.troubleshooting.map((s, i) => <div key={i}>· {s}</div>)}
+                  {tr('Troubleshooting:')}{tut.troubleshooting.map((s, i) => <div key={i}>· {s}</div>)}
                 </div>
               )}
               {tut.docs_url && <a href={tut.docs_url} target="_blank" rel="noreferrer"
-                style={{ color: 'var(--accent)', fontSize: 12 }}>官方文档 ↗</a>}
+                style={{ color: 'var(--accent)', fontSize: 12 }}>{tr('Official docs ↗')}</a>}
             </details>
           )}
         </div>
@@ -158,13 +161,13 @@ function AuthInteraction({ kind, flow, inputs, setInputs, qr, status, onScan, on
     return (
       <div style={{ display: 'grid', gap: 8, justifyItems: 'start' }}>
         {qr ? <QrCanvas matrix={qr} /> :
-          <button onClick={onScan}>开始扫码</button>}
+          <button onClick={onScan}>{tr('Start scanning')}</button>}
         {status && <div className="muted" style={{ fontSize: 12 }}>{status}</div>}
       </div>
     )
   }
   if (it === 'enable-only') {
-    return <button onClick={onSave}>启用并保存</button>
+    return <button onClick={onSave}>{tr('Enable and save')}</button>
   }
   if (it === 'show-webhook') {
     return (
@@ -172,7 +175,7 @@ function AuthInteraction({ kind, flow, inputs, setInputs, qr, status, onScan, on
         <code style={{ background: 'var(--panel)', padding: 6, borderRadius: 6 }}>
           {flow.webhook_url}
         </code>
-        <button onClick={onSave}>启用并保存</button>
+        <button onClick={onSave}>{tr('Enable and save')}</button>
       </div>
     )
   }
@@ -180,8 +183,8 @@ function AuthInteraction({ kind, flow, inputs, setInputs, qr, status, onScan, on
     return (
       <div style={{ display: 'grid', gap: 6 }}>
         {flow.apply_url && <a href={flow.apply_url} target="_blank" rel="noreferrer">
-          <button>前往授权 ↗</button></a>}
-        <button onClick={onSave}>启用并保存</button>
+          <button>{tr('Go authorize ↗')}</button></a>}
+        <button onClick={onSave}>{tr('Enable and save')}</button>
       </div>
     )
   }
@@ -196,13 +199,13 @@ function AuthInteraction({ kind, flow, inputs, setInputs, qr, status, onScan, on
       {primary.map(renderField)}
       {advanced.length > 0 && (
         <details>
-          <summary style={{ cursor: 'pointer' }}>更多设置（{advanced.length}）</summary>
+          <summary style={{ cursor: 'pointer' }}>{tr('More settings ({n})', { n: advanced.length })}</summary>
           <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
             {advanced.map(renderField)}
           </div>
         </details>
       )}
-      <button onClick={onSave}>保存配置</button>
+      <button onClick={onSave}>{tr('Save configuration')}</button>
     </div>
   )
 }
@@ -216,20 +219,22 @@ function FreeKvEditor({ agentId, channel, onSaved }: {
     setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
   const save = async () => {
     const r = await apply(agentId, freeKvToPatch(channel, rows))
-    onSaved(r.ok ? '已保存' + (r.removed.length ? `（清理：${r.removed.join(', ')}）` : '') : '保存失败')
+    onSaved(r.ok
+      ? (r.removed.length ? tr('Saved (cleaned up: {removed})', { removed: r.removed.join(', ') }) : tr('Saved'))
+      : tr('Save failed'))
   }
   return (
     <div style={{ display: 'grid', gap: 6 }}>
       {rows.map((row, i) => (
         <div key={i} style={{ display: 'flex', gap: 6 }}>
-          <input placeholder="字段名" value={row.k}
+          <input placeholder={tr('Field name')} value={row.k}
                  onChange={e => updateRow(i, { k: e.target.value })} />
-          <input placeholder="值" value={row.v}
+          <input placeholder={tr('Value')} value={row.v}
                  onChange={e => updateRow(i, { v: e.target.value })} />
         </div>
       ))}
-      <button onClick={() => setRows([...rows, { k: '', v: '' }])}>+ 添加字段</button>
-      <button onClick={save}>保存配置</button>
+      <button onClick={() => setRows([...rows, { k: '', v: '' }])}>{tr('+ Add field')}</button>
+      <button onClick={save}>{tr('Save configuration')}</button>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import ModelPanel from './ModelPanel'
 import ChannelPanel from './ChannelPanel'
 import AssistantChat from './AssistantChat'
 import GroupRenderer from './GroupRenderer'
+import { t } from '../i18n'
 
 // 智能体统一配置中心。openclaw / hermes 一期；claude-code 等仅在总览显示状态。
 export default function ConfigCenter() {
@@ -32,7 +33,7 @@ export default function ConfigCenter() {
                   gridTemplateColumns: '1.6fr 1fr' }}>
       <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
         <div className="panel" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <b style={{ marginRight: 8 }}>智能体配置中心</b>
+          <b style={{ marginRight: 8 }}>{t('Agent Config Center')}</b>
           {agents.map(a => (
             <button key={a.id} onClick={() => setAgentId(a.id)}
                     disabled={a.id !== 'openclaw' && a.id !== 'hermes'}
@@ -43,17 +44,17 @@ export default function ConfigCenter() {
             </button>
           ))}
           <span style={{ flex: 1 }} />
-          <button onClick={runHealth}>一键体检</button>
+          <button onClick={runHealth}>{t('One-click health check')}</button>
         </div>
 
         {diags.length > 0 && (
           <div className="panel" style={{ display: 'grid', gap: 4 }}>
-            <b>体检</b>
+            <b>{t('Health check')}</b>
             {diags.map(d => (
               <div key={d.id} style={{ fontSize: 13 }}>
                 <span className={'dot ' + (d.level === 'ok' ? 'ok' : d.level === 'error' ? 'err' : 'warn')} />
                 {d.message}
-                {d.auto_fix ? <span className="muted" style={{ fontSize: 11 }}>（可自愈：{d.auto_fix}）</span> : null}
+                {d.auto_fix ? <span className="muted" style={{ fontSize: 11 }}>（{t('auto-fix: {fix}', { fix: d.auto_fix })}）</span> : null}
               </div>
             ))}
           </div>
@@ -71,7 +72,7 @@ export default function ConfigCenter() {
         )}
         {agentId === 'openclaw' && channelGroup && channelGroup.channels.length === 0 && (
           <div className="panel muted" style={{ fontSize: 12 }}>
-            通道清单尚未就绪（需 openclaw 目录快照）。可在容器内运行目录采集后刷新。
+            {t('Channel list not ready (needs an openclaw directory snapshot). Refresh after running directory collection inside the container.')}
           </div>
         )}
       </div>

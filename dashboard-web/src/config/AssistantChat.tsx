@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { askAssistant, type AssistantReply } from './configApi'
+import { t as tr } from '../i18n'
 
 interface Turn { role: 'user' | 'bot'; text: string; reply?: AssistantReply }
 
@@ -18,20 +19,20 @@ export default function AssistantChat({ agentId, onAction }: {
     setTurns(t => [...t, { role: 'user', text: q }])
     try {
       const r = await askAssistant(q, agentId)
-      setTurns(t => [...t, { role: 'bot', text: r.reply || '（无回复）', reply: r }])
+      setTurns(t => [...t, { role: 'bot', text: r.reply || tr('(no reply)'), reply: r }])
       for (const a of r.actions || []) onAction(a)
     } catch {
-      setTurns(t => [...t, { role: 'bot', text: '助手暂不可用，请直接说「接入企业微信」「配 deepseek 模型」。' }])
+      setTurns(t => [...t, { role: 'bot', text: tr('Assistant unavailable right now — just say "connect WeCom" or "configure deepseek model".') }])
     } finally { setBusy(false) }
   }
 
   return (
     <div className="panel" style={{ display: 'grid', gap: 8, gridTemplateRows: 'auto 1fr auto' }}>
-      <b>配置助手</b>
+      <b>{tr('Config Assistant')}</b>
       <div style={{ overflowY: 'auto', maxHeight: 280, display: 'grid', gap: 6, alignContent: 'start' }}>
         {turns.length === 0 && (
           <div className="muted" style={{ fontSize: 12 }}>
-            试试：「帮我接入企业微信」「配 deepseek 模型」「微信怎么扫码」
+            {tr('Try: "help me connect WeCom" / "configure deepseek model" / "how do I scan the WeChat QR code"')}
           </div>
         )}
         {turns.map((t, i) => (
@@ -43,17 +44,17 @@ export default function AssistantChat({ agentId, onAction }: {
             }}>{t.text}</div>
             {t.reply?.tools_used?.length ? (
               <div className="muted" style={{ fontSize: 11 }}>
-                调用：{t.reply.tools_used.map(x => x.name).join(', ')}
+                {tr('Tools used: {names}', { names: t.reply.tools_used.map(x => x.name).join(', ') })}
               </div>
             ) : null}
           </div>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <input value={text} placeholder="用一句话描述你想配置什么…" style={{ flex: 1 }}
+        <input value={text} placeholder={tr('Describe in one sentence what you want to configure…')} style={{ flex: 1 }}
                onChange={e => setText(e.target.value)}
                onKeyDown={e => { if (e.key === 'Enter') send() }} />
-        <button disabled={busy} onClick={send}>发送</button>
+        <button disabled={busy} onClick={send}>{tr('Send')}</button>
       </div>
     </div>
   )
