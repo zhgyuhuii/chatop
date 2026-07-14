@@ -172,6 +172,238 @@ DETAILED = {
         "credential_fields": [],
         "troubleshooting": ["确认已启用 chat.googleapis.com 且配置了正确的服务账号。"],
     },
+    # ------------------------------------------------------------------
+    # 以下 13 条为长尾通道，2026-07-14 核对 https://docs.openclaw.ai/channels/<id>
+    # 官方文档逐条写入（docs.openclaw.ai 是 openclaw 项目自身文档站，与本文件顶部
+    # DOCS 常量同源）。clickclack 的 auth 与 catalog_overrides.CHANNEL_AUTH 里的
+    # 陈旧 "builtin" 不一致——官方文档明确要求 bot token（ccb_...），此处按文档
+    # 更正为 "token"，未回改 catalog_overrides（超出本任务范围，教程以真实步骤为准）。
+    # ------------------------------------------------------------------
+    "clickclack": {
+        "label": "ClickClack", "auth": "token",
+        "steps": [
+            "在 ClickClack 服务端用管理 CLI 创建 Bot Token："
+            "clickclack admin bot create --workspace <id> --name \"OpenClaw\" "
+            "--handle openclaw --scopes bot:write --plain"
+            "（需要发布智能体动态时再加 agent_activity:write scope）。",
+            "记下返回的 Token（格式 ccb_...），建议导出为环境变量后再启动网关，避免明文写进配置文件。",
+            "在本页启用 ClickClack，填入 baseUrl（ClickClack 服务器地址）、token、"
+            "workspace（ID/slug/name 均可，启动时自动解析），保存配置。",
+            "执行 openclaw gateway 启动网关生效。",
+        ],
+        "credential_fields": ["baseUrl", "token (ccb_...)", "workspace"],
+        "troubleshooting": [
+            "动态发布失败：确认 Token 的 scopes 含 agent_activity:write，仅 bot:write 不够。",
+            "启动即报未就绪：baseUrl/token/workspace 三项均为必填，缺一不可。",
+        ],
+    },
+    "irc": {
+        "label": "IRC", "auth": "token",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/irc。",
+            "在 ~/.openclaw/openclaw.json 配置 host（服务器地址）、nick（机器人昵称）、"
+            "port（默认 TLS 6697 / 明文 6667）与要加入的 channels 列表。",
+            "如服务器要求 NickServ 注册，在配置里开启 nickserv.enabled 并填 password；"
+            "也可单独设置 username/realname。",
+            "在本页保存配置，执行 openclaw gateway run 启动网关，机器人会自动加入配置的频道。",
+            "私聊机器人触发配对码，openclaw pairing approve irc <码> 批准；"
+            "频道内消息受 groupPolicy 与 allowFrom 名单控制。",
+        ],
+        "credential_fields": ["host", "nick", "port（可选）", "password / NickServ 密码（可选）"],
+        "troubleshooting": [
+            "连不上服务器：检查 TLS 端口 6697 是否被网络策略拦截，或改用明文 6667。",
+            "昵称被占用/未注册：开启 NickServ 认证解决常见 IRC 网络的身份校验要求。",
+        ],
+    },
+    "matrix": {
+        "label": "Matrix", "auth": "token",
+        "steps": [
+            "在你选定的 Matrix homeserver（自建 Synapse 或公共服务器）注册一个专用的机器人账号。",
+            "获取 Access Token：在客户端「设置 → 帮助与关于 → 高级」查看，"
+            "或用 openclaw configure --section channels 向导交互式登录获取（也支持 userId+password 方式）。",
+            "在本页启用 Matrix，填入 Homeserver 地址与 Access Token（或改填 userId/password），"
+            "保存配置并启动网关。",
+            "邀请机器人加入房间：默认不会自动接受邀请，需在配置里开启 autoJoin 或由管理员手动确认。",
+            "私聊机器人发送消息触发配对，openclaw pairing approve matrix <码> 批准。",
+        ],
+        "credential_fields": ["Homeserver 地址", "Access Token（或 User ID + 密码）"],
+        "troubleshooting": [
+            "机器人不进房间：默认关闭 autoJoin，需要显式配置或手动邀请后接受。",
+            "Token 方式与密码方式二选一，两者不要同时留空。",
+        ],
+    },
+    "mattermost": {
+        "label": "Mattermost", "auth": "token",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/mattermost。",
+            "在 Mattermost 后台创建一个 Bot 账号，复制其 Bot Token，"
+            "并把该 Bot 加入需要收发消息的团队与频道。",
+            "在本页启用 Mattermost，填入 Bot Token 与服务器 Base URL"
+            "（形如 https://chat.example.com，末尾 /api/v4 会自动去除），保存配置并启动网关。",
+            "如为内网自建实例，需要在配置里打开 dangerouslyAllowPrivateNetwork 以绕过 SSRF 防护。",
+            "给 Bot 发私信触发配对，openclaw pairing approve mattermost <码> 批准。",
+        ],
+        "credential_fields": ["Bot Token", "Base URL", "dmPolicy（默认 pairing）"],
+        "troubleshooting": [
+            "内网部署连不上：确认已开启 dangerouslyAllowPrivateNetwork。",
+            "收不到消息：确认 Bot 已被加入对应团队和频道。",
+        ],
+    },
+    "nextcloud-talk": {
+        "label": "Nextcloud Talk", "auth": "webhook",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/nextcloud-talk。",
+            "用 Nextcloud 的 occ 命令在服务器上创建 Bot（勾选 webhook、response、reaction 等特性），"
+            "得到 Base URL 与 Bot Secret。",
+            "在目标会话（房间）里为该 Bot 开启启用状态。",
+            "在本页启用 Nextcloud Talk，填入 Base URL 与 Bot Secret，保存配置并启动网关"
+            "（Webhook 请求以 HMAC-SHA256 用 Bot Secret 签名校验）。",
+            "机器人不能主动发起私聊，需用户先给机器人发消息才能触发配对流程。",
+        ],
+        "credential_fields": ["Base URL", "Bot Secret", "apiUser / apiPassword（可选，用于区分私聊/群聊）"],
+        "troubleshooting": [
+            "签名校验失败：确认 Bot Secret 与服务器端 occ 创建时的一致。",
+            "私聊无响应：Bot 不能主动发起对话，必须由用户先发消息。",
+        ],
+    },
+    "nostr": {
+        "label": "Nostr", "auth": "token",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/nostr。",
+            "生成一对 Nostr 密钥（没有可用 nak key generate 生成），得到 nsec 私钥。",
+            "在本页启用 Nostr，填入 privateKey（支持 nsec 或 64 位十六进制格式），"
+            "可选填写 relays 中继地址与 profile 资料，保存配置并启动网关。",
+            "默认 dmPolicy 为 pairing：陌生发送者私信会收到配对码，"
+            "openclaw pairing approve nostr <码> 批准；也可切换为 allowlist 或 open。",
+        ],
+        "credential_fields": ["privateKey（nsec / hex）", "relays（可选）"],
+        "troubleshooting": [
+            "私钥务必妥善保管，泄露等同账号被盗。",
+            "收不到私信：检查配置的 relays 是否可达，或对方使用的中继与你不重合。",
+        ],
+    },
+    "openclaw-zaloclawbot": {
+        "label": "Zalo ClawBot（免注册 OA）", "auth": "qr",
+        "steps": [
+            "推荐走向导：运行 openclaw onboard，从通道菜单选择 Zalo ClawBot，"
+            "用 Zalo App 扫描生成的二维码并在小程序内同意条款。",
+            "手动方式：openclaw plugins install \"@zalo-platforms/openclaw-zaloclawbot@0.1.4\"，"
+            "然后 openclaw config set plugins.entries.openclaw-zaloclawbot.enabled true。",
+            "执行 openclaw channels login --channel openclaw-zaloclawbot 生成二维码并完成认证"
+            "（登录码 5 分钟内有效，超时需重新生成）。",
+            "执行 openclaw gateway restart 重启网关生效。",
+            "与官方 Zalo 通道不同，此方式无需注册 Zalo 官方账号（OA）也无需配置固定开发者凭据；"
+            "机器人只服务于扫码绑定的那个 Zalo 账号，其他人的消息会在平台侧被丢弃。",
+        ],
+        "credential_fields": [],
+        "troubleshooting": [
+            "二维码过期：登录码 5 分钟内有效，超时需重新执行 login 命令生成新码。",
+            "别人给机器人发消息没反应：属设计如此——机器人只服务于绑定的所有者账号。",
+        ],
+    },
+    "sms": {
+        "label": "SMS（短信）", "auth": "token",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/sms。",
+            "在 Twilio 控制台取 Account SID、Auth Token，以及用于收发的号码"
+            "（E.164 格式，如 +15551234567）或 Messaging Service SID。",
+            "在本页启用 SMS，填入以上凭据与网关可公网访问的 Webhook 地址"
+            "（如 https://gateway.example.com/webhooks/sms），保存配置。",
+            "在 Twilio 后台把该号码/Messaging Service 的入站 Webhook 指向上面的地址，"
+            "启动网关后测试收发短信。",
+            "默认按 X-Twilio-Signature 校验签名；仅本地调试可临时设置 "
+            "dangerouslyDisableSignatureValidation 关闭校验，上线前务必改回。",
+        ],
+        "credential_fields": ["Account SID", "Auth Token", "手机号（E.164）/ Messaging Service SID", "Webhook URL"],
+        "troubleshooting": [
+            "收不到短信：确认 Twilio 后台的入站 Webhook 地址与网关暴露地址一致且可公网访问。",
+            "签名校验失败：检查配置的 Webhook URL 与 Twilio 实际请求 URL 完全一致（含协议、域名）。",
+        ],
+    },
+    "synology-chat": {
+        "label": "Synology Chat", "auth": "webhook",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/synology-chat。",
+            "在群晖 Synology Chat 里创建两个集成：一个 Incoming Webhook（复制其 URL）、"
+            "一个 Outgoing Webhook（记录其 Token）。",
+            "把 Outgoing Webhook 的地址指向本机网关：https://<你的网关地址>/webhook/synology。",
+            "在本页启用 Synology Chat，填入 Token 与 Incoming Webhook URL，保存配置并启动网关。",
+            "给机器人发一条私信测试，确认收发正常。",
+        ],
+        "credential_fields": ["Outgoing Webhook Token", "Incoming Webhook URL"],
+        "troubleshooting": [
+            "校验失败：Token 需与 Synology 后台一致，支持从请求体/query/header"
+            "（x-synology-token 等）任一处传入，缺失一律拒绝。",
+            "收不到消息：确认 Outgoing Webhook 地址填的是网关的 /webhook/synology 路径且网络可达。",
+        ],
+    },
+    "tlon": {
+        "label": "Tlon（Urbit）", "auth": "token",
+        "steps": [
+            "准备好你的 Urbit 星舰（ship）身份，如 ~sampel-palnet，及其托管地址（url）。",
+            "从 ship 后台复制登录码（code，会周期性轮换），执行 "
+            "openclaw channels add --channel tlon --ship ~sampel-palnet "
+            "--url https://your-ship-host --code <登录码>，或直接在配置文件里写入 ship/url/code。",
+            "在本页保存配置并启动网关。",
+            "私聊机器人或在群组 @ 提及它触发交互；可选配置 ownerShip 指定受信任的星舰，"
+            "未授权访问会向其发送 approve / deny / block 的审批请求。",
+        ],
+        "credential_fields": ["ship（~sampel-palnet）", "url", "code（登录码，会轮换）"],
+        "troubleshooting": [
+            "code 周期性轮换失效：从 ship 后台重新获取最新登录码。",
+            "群里无响应：默认要求 @ 提及机器人才会回复。",
+        ],
+    },
+    "twitch": {
+        "label": "Twitch", "auth": "token",
+        "steps": [
+            "在 Twitch 上注册一个专用的机器人账号（不要用你的主播账号）。",
+            "用该机器人账号登录第三方工具 Twitch Token Generator，选择 Bot Token 类型，"
+            "确认勾选 chat:read 与 chat:write 权限范围，生成 Access Token 与 Client ID。",
+            "用 StreamWeasels 的用户名转 ID 工具查出目标频道对应的 Twitch 用户 ID。",
+            "在本页启用 Twitch，填入 username（机器人账号名）、accessToken、clientId、"
+            "channel（要加入的频道），保存配置并启动网关。",
+            "Token Generator 生成的令牌几小时后过期需重新生成；如需自动刷新，"
+            "去 Twitch 开发者控制台建应用取 clientSecret 与 refreshToken 一并配置。",
+        ],
+        "credential_fields": ["username", "accessToken（oauth: 前缀可选）", "clientId", "channel",
+                               "clientSecret / refreshToken（可选，用于自动刷新）"],
+        "troubleshooting": [
+            "机器人掉线/无响应：Token Generator 令牌几小时后过期，需重新生成或配置自动刷新。",
+            "加入频道失败：确认机器人账号未被目标频道封禁/拉黑。",
+        ],
+    },
+    "zalo": {
+        "label": "Zalo（官方账号 OA）", "auth": "token",
+        "steps": [
+            "在 https://bot.zaloplatforms.com 登录并创建一个 Bot，完成基础配置。",
+            "复制生成的 Bot Token（格式为 数字ID:secret；Marketplace 类型 Bot 需在欢迎消息里找可用的运行期 Token）。",
+            "在本页启用 Zalo，填入 Bot Token（也可用环境变量 ZALO_BOT_TOKEN），"
+            "保存配置并启动网关。",
+            "默认 dmPolicy 为 pairing：私信机器人后获取配对码，"
+            "openclaw pairing approve zalo <码> 批准；群聊需要 @ 提及机器人才会响应。",
+        ],
+        "credential_fields": ["Bot Token（数字ID:secret）"],
+        "troubleshooting": [
+            "Marketplace 类型 Bot 拿不到 Token：查看 Bot 首次发出的欢迎消息，里面附带可用的运行期 Token。",
+            "群里不回复：确认已 @ 提及机器人，群策略默认要求提及。",
+        ],
+    },
+    "zalouser": {
+        "label": "Zalo 个人号", "auth": "qr",
+        "steps": [
+            "安装通道插件：openclaw plugins install @openclaw/zalouser。",
+            "在网关所在机器上执行 openclaw channels login --channel zalouser，"
+            "用手机 Zalo App 扫描弹出的二维码登录。",
+            "在本页启用 Zalo 个人号并保存配置（dmPolicy 默认 pairing），启动网关。",
+            "私聊触发配对码后批准；群聊可另设 allowlist / open / disabled 及 @提及门槛。",
+        ],
+        "credential_fields": [],
+        "troubleshooting": [
+            "这是非官方接入，存在账号被限制/封禁的风险，请勿滥用。",
+            "扫码后掉线：可用 ZALOUSER_PROFILE / ZCA_PROFILE 环境变量切换已保存的登录态重新选择。",
+        ],
+    },
 }
 
 

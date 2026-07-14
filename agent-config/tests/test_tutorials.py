@@ -30,3 +30,22 @@ def test_missing_channel_generic_fallback():
     assert t["source"] == "generic"
     assert t["steps"]
     assert t["docs_url"].endswith("some-unknown-channel")
+
+
+def test_all_27_channels_have_tutorial():
+    from agentconfig.tutorials import _build_data as b
+    data = b.build()["openclaw"]
+    # 27 通道全覆盖
+    assert len(data) >= 27
+    for cid, e in data.items():
+        assert e["steps"], f"{cid} 无步骤"
+        assert e.get("docs_url"), f"{cid} 无 docs_url"
+
+
+def test_longtail_channels_are_detailed_not_generic():
+    from agentconfig.tutorials import _build_data as b
+    longtail = ["matrix", "mattermost", "irc", "twitch", "nostr", "zalo",
+                "clickclack", "nextcloud-talk", "sms", "synology-chat",
+                "tlon", "zalouser", "openclaw-zaloclawbot"]
+    for cid in longtail:
+        assert cid in b.DETAILED, f"{cid} 仍走通用模板，未手写"
