@@ -23,3 +23,14 @@ def test_parse_channel_fields_maps_types_and_secret():
 
 def test_parse_channel_fields_bad_json():
     assert oc.parse_channel_fields("not json") == {}
+
+def test_build_and_roundtrip_channel_fields(tmp_path):
+    cat = oc.build_catalog(
+        channels_json=json.dumps({"chat": {"telegram": {"accounts": [], "installed": True, "origin": "configured"}}}),
+        schema_json=SCHEMA, catalog_js="", models_json="")
+    assert cat["channel_fields"]["telegram"][0]["key"].startswith("channels.telegram.")
+    p = str(tmp_path / "cat.json")
+    oc.save_catalog(p, cat)
+    loaded = oc.load_catalog(cache_path=p, factory_path="/nonexistent")
+    assert "channels.telegram.botToken" in {
+        f["key"] for f in loaded["channel_fields"]["telegram"]}

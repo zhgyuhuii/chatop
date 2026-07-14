@@ -402,10 +402,15 @@ def build_catalog(channels_json, schema_json, catalog_js, models_json="",
         for sid, url in sorted(_ov.SEARCH_APPLY_URLS.items())
     ]
 
+    field_map = parse_channel_fields(schema_json)
+    chan_ids = {c.id for c in channels}
+    channel_fields = {cid: field_map.get(cid, []) for cid in chan_ids}
+
     return {
         "channels": channels,
         "providers": providers,
         "search": search,
+        "channel_fields": channel_fields,
         "meta": {"openclaw_version": openclaw_version, "source": "live"},
     }
 
@@ -423,6 +428,7 @@ def _to_jsonable(catalog):
     out = {"meta": dict(catalog.get("meta") or {})}
     for key in _ENTRY_TYPES:
         out[key] = [dict(e._asdict()) for e in catalog.get(key) or []]
+    out["channel_fields"] = dict(catalog.get("channel_fields") or {})
     return out
 
 
@@ -436,6 +442,7 @@ def _from_jsonable(data):
                 kwargs["accounts"] = tuple(kwargs["accounts"] or ())
             rows.append(typ(**kwargs))
         out[key] = rows
+    out["channel_fields"] = dict(data.get("channel_fields") or {})
     return out
 
 
