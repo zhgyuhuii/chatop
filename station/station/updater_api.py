@@ -36,19 +36,37 @@ def _inbox() -> Path:
 
 
 def _hmac_keys() -> dict:
-    """调用期读许可密钥文件 → {kid: keybytes}；失败回落镜像内 license gate。"""
+    """调用期汇总热更验签密钥 → {kid: keybytes}。
+
+    密钥来源两路，互相独立、可同时生效：
+    1. 许可密钥文件（CHATOP_LICENSE_KEYS_FILE，缺省回落镜像内 license gate）——
+       历史行为，兼容既有部署。
+    2. 专用 bundle 签名密钥（CHATOP_BUNDLE_HMAC_KEY，hex 字符串）——
+       热更 /apply 的第一公民密钥源，跟 license 闸门是否启用无关；
+       license 闸门关闭（生产默认）时，这是唯一还在生效的密钥来源。
+    """
     path = Path(os.environ.get("CHATOP_LICENSE_KEYS_FILE", "/opt/chatop/license-keys.json"))
     try:
         cfg = json.loads(path.read_text())
-        return {str(k): bytes.fromhex(v) for k, v in (cfg.get("hmac_keys") or {}).items()}
+        keys = {str(k): bytes.fromhex(v) for k, v in (cfg.get("hmac_keys") or {}).items()}
     except Exception as e:
         _log.warning("读取许可密钥文件失败 %s: %s（回落 license gate）", path, e)
         try:
             from chatop_license.gate import hmac_keys as _lg
-            return _lg()
+            keys = _lg()
         except Exception as e2:
             _log.warning("回落 license gate 也失败: %s", e2)
-            return {}
+            keys = {}
+
+    bundle_key_hex = os.environ.get("CHATOP_BUNDLE_HMAC_KEY")
+    if bundle_key_hex:
+        try:
+            keys = dict(keys)
+            keys["bundle"] = bytes.fromhex(bundle_key_hex)
+        except ValueError as e:
+            _log.warning("CHATOP_BUNDLE_HMAC_KEY 不是合法 hex，已忽略: %s", e)
+
+    return keys
 
 
 def _active_version(name: str) -> str:

@@ -27,6 +27,10 @@ services:
       FILES_UPLOAD: "true"
       FILES_DOWNLOAD: "true"
       CHATOP_LICENSE_HMAC_KEY: ""     # 留空 = 关闭序列号闸门
+      # 卷内热更 bundle 的专用签名密钥（hex，独立于 license 闸门）。
+      # 留空 = 关闭热更验签来源之一；要启用 /apply 必须设为厂商 bundle 签名密钥，
+      # 且必须与 tools/build-bundle.sh 打包时用的 hex 密钥一致。切勿把真实密钥提交进 git。
+      CHATOP_BUNDLE_HMAC_KEY: "${CHATOP_BUNDLE_HMAC_KEY:-}"
     volumes:
       - chatop-home:/home/admin       # 家目录：智能体配置/密钥/工作区/已装应用
 

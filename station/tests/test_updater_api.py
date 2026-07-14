@@ -53,6 +53,30 @@ def _make_inbox_bundle(inbox: Path, name: str, ver: str, key: bytes):
     return tar
 
 
+def test_hmac_keys_reads_dedicated_bundle_key(tmp_path, monkeypatch):
+    from station import updater_api
+    monkeypatch.delenv("CHATOP_LICENSE_KEYS_FILE", raising=False)
+    monkeypatch.setenv("CHATOP_BUNDLE_HMAC_KEY", ("ab" * 32))  # 64 hex chars
+    keys = updater_api._hmac_keys()
+    assert bytes.fromhex("ab" * 32) in keys.values()
+
+
+def test_apply_works_with_dedicated_bundle_key(tmp_path, monkeypatch):
+    key = b"k" * 32
+    monkeypatch.setenv("CHATOP_SERVICES_DIR", str(tmp_path / "services"))
+    monkeypatch.setenv("CHATOP_FACTORY_DIR", str(tmp_path / "factory"))
+    monkeypatch.setenv("CHATOP_UPDATER_INBOX", str(tmp_path / "inbox"))
+    monkeypatch.delenv("CHATOP_LICENSE_KEYS_FILE", raising=False)
+    monkeypatch.setenv("CHATOP_BUNDLE_HMAC_KEY", key.hex())
+    _make_inbox_bundle(tmp_path / "inbox", "agent-config", "1.6.0", key)
+    c = _client(tmp_path)
+    r = c.post("/dashboard/api/updater/apply",
+               json={"name": "agent-config", "version": "1.6.0", "health": "skip"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    cur = tmp_path / "services" / "agent-config" / "current"
+    assert (cur / "v.txt").read_text() == "1.6.0"
+
+
 def test_apply_endpoint_applies_bundle(tmp_path, monkeypatch):
     key = b"k" * 32
     monkeypatch.setenv("CHATOP_SERVICES_DIR", str(tmp_path / "services"))
