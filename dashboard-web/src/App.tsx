@@ -6,6 +6,7 @@ import SystemPanel, { type Sys } from './components/SystemPanel'
 import TaskList, { type Task } from './components/TaskList'
 import TopBar from './components/TopBar'
 import ConfigCenter from './config/ConfigCenter'
+import { UpdaterPanel } from './updater/UpdaterPanel'
 
 // 极简 hash 路由：#/config → 配置中心，否则大屏。桌面「智能体配置」图标打开 #/config。
 function useHashRoute(): string {
@@ -21,6 +22,7 @@ function useHashRoute(): string {
 export default function App() {
   const route = useHashRoute()
   if (route.startsWith('#/config')) return <ConfigCenter />
+  if (route.startsWith('#/updater')) return <UpdaterPanel />
   return <Dashboard />
 }
 
