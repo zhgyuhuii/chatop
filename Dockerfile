@@ -154,6 +154,14 @@ RUN if [ "$APP_USER" != "kasm-user" ]; then \
     fi
 WORKDIR /home/${APP_USER}
 ENV HOME=/home/${APP_USER}
+# === 免密 sudo：登录用户直接执行 sudo，不再要系统密码 ===
+# 说明：kasm/admin 账户系统密码是 ! (锁定)，继承的 %admin 规则又要密码，桌面内 sudo 死锁。
+#   坑：本 RUN 必须放在上面的 WORKDIR 之后。若放在 rename 与 WORKDIR 之间，运行时会以
+#   已被 rename 移走的 /home/kasm-user 为 WorkingDir、自动重建成空目录，触发下面
+#   `! test -e /home/kasm-user` 断言失败（2026-07-13 实测）。
+RUN printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$APP_USER" > /etc/sudoers.d/90-${APP_USER}-nopasswd && \
+    chmod 0440 /etc/sudoers.d/90-${APP_USER}-nopasswd && \
+    visudo -cf /etc/sudoers.d/90-${APP_USER}-nopasswd
 RUN mkdir -p /opt/chatop && \
     mv /home/kasm-default-profile /opt/chatop/default-profile && \
     sed -i 's#/home/kasm-default-profile#/opt/chatop/default-profile#' /dockerstartup/kasm_default_profile.sh && \
@@ -373,7 +381,7 @@ RUN printf '%s\n' \
   > /usr/local/bin/start-filebrowser.sh && chmod +x /usr/local/bin/start-filebrowser.sh
 
 # === custom_startup（常驻，末尾 wait；否则被 KASM_PROCS 判死无限重启拖垮 VNC） ===
-RUN printf '#!/bin/bash\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW:-${VNC_PW:-password}}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/chatop-seed-services.sh >/tmp/seed-services.log 2>&1\n( while true; do /usr/local/bin/start-station.sh >/tmp/station.log 2>&1; sleep 1; done ) &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
+RUN printf '#!/bin/bash\nif [ -z "${FILES_PW:-}" ]; then echo "[FATAL] FILES_PW is not set. vnc_startup.sh un-exports VNC_PW, so it is invisible to this process and MUST NOT be used as a fallback -- falling back would silently downgrade the login to admin:password. Set BOTH VNC_PW and FILES_PW (use a YAML anchor to keep them identical)." >&2; exit 1; fi\nexport KASM_BASIC="$(echo -n "${LOGIN_USER:-admin}:${FILES_PW}" | base64 -w0)"\n/usr/local/bin/chatop-seed-home.sh >/tmp/seed.log 2>&1\n/usr/local/bin/start-filebrowser.sh >/tmp/filebrowser.log 2>&1 &\nXDG_DATA_HOME=/tmp/caddy XDG_CONFIG_HOME=/tmp/caddy /usr/local/bin/start-caddy.sh >/tmp/caddy.log 2>&1 &\n/usr/local/bin/start-app-manager.sh >/tmp/app-mgr.log 2>&1 &\n/usr/local/bin/chatop-seed-services.sh >/tmp/seed-services.log 2>&1\n( while true; do /usr/local/bin/start-station.sh >/tmp/station.log 2>&1; sleep 1; done ) &\n/usr/local/bin/set-wallpaper.sh >/tmp/set-wallpaper.log 2>&1 &\nmkdir -p $HOME/.local/bin; ln -sf /usr/local/bin/proot /usr/local/bin/jq /usr/local/bin/ncat /usr/local/bin/proot-apps $HOME/.local/bin/ 2>/dev/null\nwait\n' > /dockerstartup/custom_startup.sh && \
     chmod +x /dockerstartup/custom_startup.sh
 
 # === 注入定制前端 dist（放最后：前端迭代只重跑这层）+ 品牌图标/splash 覆盖 ===
