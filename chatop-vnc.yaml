@@ -22,10 +22,18 @@ runtime_configuration:
   allow_override_list:
     - pointer.enabled
 server:
+  # ↓ 这行是 CLIPBOARD_IN / CLIPBOARD_OUT 能生效的【必要条件】，删了开关会静默失效（见下）。
   allow_environment_variables_to_override_config_settings: true
+
+# === 剪贴板方向开关 ===
+# 真值在这里，不在命令行。vncserver 是个 perl 包装脚本，它把本文件的配置经
+# ConfigToCmd() 派生成 CLI 参数、追加在 vnc_startup.sh 自己拼的参数【之后】，
+# 而 Xvnc 是后到者胜 —— 所以往命令行前面塞 -SendCutText=0 会被本文件静默盖掉。
+# 实测(2026-07-16)：CLIPBOARD_OUT=0 时 vncconfig -get SendCutText 仍返回 1，
+# 即开关整整一段时间形同虚设。故 Dockerfile 改走 KVNC_* 环境变量覆盖本配置。
 data_loss_prevention:
   clipboard:
-    server_to_client:
+    server_to_client:    # 桌面 → 浏览器（把东西复制出去）；由 CLIPBOARD_OUT 覆盖
       enabled: true
-    client_to_server:
+    client_to_server:    # 浏览器 → 桌面（把东西粘贴进来）；由 CLIPBOARD_IN 覆盖
       enabled: true

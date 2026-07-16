@@ -69,10 +69,15 @@ RUN set -eux; \
       >> /etc/bash.bashrc
 
 # === vnc_startup 登录名 + 剪贴板补丁 ===
+# CLIPBOARD_IN/OUT 必须走 KasmVNC 的 KVNC_* 配置覆盖通道，不能往 vncserver 命令行塞
+# -SendCutText=0：vncserver 会把 chatop-vnc.yaml 的值派生成同名参数追加在【后面】，
+# 后到者胜，命令行那份被静默盖掉。2026-07-16 实测：老写法下 CLIPBOARD_OUT=0 时
+# vncconfig -get SendCutText 仍返回 1 —— 开关形同虚设，DLP 承诺不成立。
+# 依赖 chatop-vnc.yaml 里 server.allow_environment_variables_to_override_config_settings: true。
 RUN sed -i 's/-u kasm_user -wo/-u "${LOGIN_USER:-admin}" -wo/' /dockerstartup/vnc_startup.sh && \
     sed -i 's/kasm_user:\$VNC_PW/${LOGIN_USER:-admin}:\$VNC_PW/g' /dockerstartup/vnc_startup.sh && \
-    sed -i '/^APP_NAME=/a if [ "${CLIPBOARD_OUT:-1}" = "0" ]; then export KASM_SVC_SEND_CUT_TEXT="-SendCutText=0"; else export KASM_SVC_SEND_CUT_TEXT="-SendCutText=1"; fi; if [ "${CLIPBOARD_IN:-1}" = "0" ]; then export KASM_SVC_ACCEPT_CUT_TEXT="-AcceptCutText=0"; else export KASM_SVC_ACCEPT_CUT_TEXT="-AcceptCutText=1"; fi' /dockerstartup/vnc_startup.sh && \
-    echo "=== patched login-user + clipboard lines ===" && grep -nE 'LOGIN_USER|kasm_user|CLIPBOARD|CUT_TEXT' /dockerstartup/vnc_startup.sh
+    sed -i '/^APP_NAME=/a if [ "${CLIPBOARD_OUT:-1}" = "0" ]; then export KVNC_DATA_LOSS_PREVENTION_CLIPBOARD_SERVER_TO_CLIENT_ENABLED=false; else export KVNC_DATA_LOSS_PREVENTION_CLIPBOARD_SERVER_TO_CLIENT_ENABLED=true; fi; if [ "${CLIPBOARD_IN:-1}" = "0" ]; then export KVNC_DATA_LOSS_PREVENTION_CLIPBOARD_CLIENT_TO_SERVER_ENABLED=false; else export KVNC_DATA_LOSS_PREVENTION_CLIPBOARD_CLIENT_TO_SERVER_ENABLED=true; fi' /dockerstartup/vnc_startup.sh && \
+    echo "=== patched login-user + clipboard lines ===" && grep -nE 'LOGIN_USER|kasm_user|CLIPBOARD|KVNC_DATA_LOSS' /dockerstartup/vnc_startup.sh
 ENV LOGIN_USER=admin
 
 # === Python 3.11（Sovyx 需 >=3.11；deadsnakes PPA）。加完 PPA 即 purge software-properties-common(纯构建期工具) ===
